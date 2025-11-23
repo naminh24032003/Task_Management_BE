@@ -2,28 +2,25 @@ package data
 
 import (
 	"context"
-	"log"
 
-	userpb "api-gateway/api/user/v1"
-
+	userv1 "github.com/naminh24032003/task_management_be/shared-proto/gen/go/api/user/v1"
 	"google.golang.org/grpc"
 )
 
 type UserClient struct {
-	client userpb.UserServiceClient
+	client userv1.UserServiceClient
 }
 
-func NewUserClient(target string) *UserClient {
-	conn, err := grpc.Dial(target, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("failed to connect user-service: %v", err)
+func NewUserClient(conn *grpc.ClientConn) *UserClient {
+	return &UserClient{
+		client: userv1.NewUserServiceClient(conn),
 	}
-	client := userpb.NewUserServiceClient(conn)
-	return &UserClient{client: client}
 }
 
-func (u *UserClient) Hello(ctx context.Context, name string) (string, error) {
-	resp, err := u.client.Hello(ctx, &userpb.HelloRequest{Name: name})
+func (c *UserClient) Hello(ctx context.Context, name string) (string, error) {
+	resp, err := c.client.Hello(ctx, &userv1.HelloRequest{
+		Name: name,
+	})
 	if err != nil {
 		return "", err
 	}

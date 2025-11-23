@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package api.user.v1;
+
+option go_package = "github.com/yourusername/task_management_be/shared-proto/gen/go/api/user/v1;userv1";
+
+service UserService {
+  rpc Hello(HelloRequest) returns (HelloResponse);
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloResponse {
+  string message = 1;
+}
