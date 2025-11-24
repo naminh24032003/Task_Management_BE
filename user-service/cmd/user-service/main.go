@@ -4,23 +4,25 @@ import (
 	"log"
 	"net"
 
-	userpb "user-service/api/user/v1"
+	"user-service/internal/server"
 	"user-service/internal/service"
-
-	"google.golang.org/grpc"
 )
 
 func main() {
-	lis, err := net.Listen("tcp", ":50051")
+	// Tạo UserService
+	userSvc := service.NewUserService()
+
+	// Tạo gRPC server
+	grpcServer := server.NewGRPCServer(userSvc)
+
+	// Listen trên port 50050
+	lis, err := net.Listen("tcp", ":50050")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	server := grpc.NewServer()
-	userpb.RegisterUserServiceServer(server, &service.UserServiceServer{})
-
-	log.Println("User Service running at :50051")
-	if err := server.Serve(lis); err != nil {
+	log.Println("User Service gRPC server running at :50050")
+	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }

@@ -1,20 +1,15 @@
 package server
 
 import (
-	stdHttp "net/http" // alias cho net/http
+	"user-service/internal/service"
 
-	kratosHttp "github.com/go-kratos/kratos/v2/transport/http" // alias cho Kratos HTTP
+	userv1 "github.com/naminh24032003/task_management_be/shared-proto/gen/go/api/user/v1"
+	"google.golang.org/grpc"
 )
 
-func NewHTTPServer1() *kratosHttp.Server {
-	srv := kratosHttp.NewServer(
-		kratosHttp.Address(":8000"),
-	)
-
-	srv.HandleFunc("/hello", func(w stdHttp.ResponseWriter, r *stdHttp.Request) {
-		w.WriteHeader(stdHttp.StatusOK)
-		w.Write([]byte("Hello world from API Gateway!"))
-	})
-
+// NewGRPCServer creates a gRPC server.
+func NewGRPCServer(userSvc *service.UserService) *grpc.Server {
+	srv := grpc.NewServer()
+	userv1.RegisterUserServiceServer(srv, userSvc)
 	return srv
 }

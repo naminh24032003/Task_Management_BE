@@ -6,10 +6,22 @@ import (
 
 	"api-gateway/internal/data"
 	"api-gateway/internal/server"
+
+	"google.golang.org/grpc"
 )
 
 func main() {
-	userClient := data.NewUserClient("localhost:50051")
+	// 1. Dial tới UserService gRPC
+	conn, err := grpc.Dial("localhost:50050", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("failed to connect to user service: %v", err)
+	}
+	defer conn.Close()
+
+	// 2. Tạo client từ connection
+	userClient := data.NewUserClient(conn) // <-- nhận *grpc.ClientConn
+
+	// 3. Đăng ký HTTP handler với client
 	server.RegisterHTTPHandler(userClient)
 
 	log.Println("API Gateway running at :8080")
