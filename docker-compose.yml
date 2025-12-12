@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  kong:
+    image: kong:3.6
+    container_name: kong
+    ports:
+      - "8000:8000"   # proxy (gRPC)
+      - "8001:8001"   # admin API
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: "/kong/kong.yaml"
+    volumes:
+      - ./infrastructure/gateways/kong.yaml:/kong/kong.yaml
+    depends_on:
+      - user-service
+
+  user-service:
+    build: ./service/user-service
+    container_name: user-service
+    ports:
+      - "50050:50050"
