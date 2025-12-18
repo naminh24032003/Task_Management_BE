@@ -28,7 +28,7 @@ func NewGRPCServer(
 	srv := grpc.NewServer(opts...)
 
 	// Register gRPC services here
-	// Example: taskv1.RegisterTaskServiceServer(srv, taskService)
+	// Example: userv1.RegisterUserServiceServer(srv, userService)
 
 	return srv
 }
