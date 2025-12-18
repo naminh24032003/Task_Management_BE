@@ -1,0 +1,60 @@
+{{- if .Values.kong.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "infrastructure.fullname" . }}-kong-plugins
+  labels:
+    app: kong
+    {{- include "infrastructure.labels" . | nindent 4 }}
+data:
+  jwt-config.yaml: |
+    apiVersion: configuration.konghq.com/v1
+    kind: KongPlugin
+    metadata:
+      name: jwt-auth
+    plugin: jwt
+    config:
+      uri_param_names:
+        - jwt
+      cookie_names:
+        - jwt
+      claims_to_verify:
+        - exp
+  
+  rate-limit-config.yaml: |
+    apiVersion: configuration.konghq.com/v1
+    kind: KongPlugin
+    metadata:
+      name: rate-limiting
+    plugin: rate-limiting
+    config:
+      second: 100
+      minute: 1000
+      hour: 10000
+      policy: local
+  
+  cors-config.yaml: |
+    apiVersion: configuration.konghq.com/v1
+    kind: KongPlugin
+    metadata:
+      name: cors
+    plugin: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - PATCH
+        - OPTIONS
+      headers:
+        - Accept
+        - Authorization
+        - Content-Type
+      exposed_headers:
+        - X-Auth-Token
+      credentials: true
+      max_age: 3600
+{{- end }}

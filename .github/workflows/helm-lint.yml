@@ -1,0 +1,70 @@
+name: Helm Lint
+
+on:
+  pull_request:
+    paths:
+      - 'helm-charts/**'
+      - '.github/workflows/helm-lint.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'helm-charts/**'
+
+jobs:
+  helm-lint:
+    name: Lint Helm Charts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.13.0'
+
+      - name: Lint Infrastructure Chart
+        run: |
+          helm lint helm-charts/charts/infrastructure
+          helm lint helm-charts/charts/infrastructure -f helm-charts/charts/infrastructure/values/values-dev.yaml
+          helm lint helm-charts/charts/infrastructure -f helm-charts/charts/infrastructure/values/values-staging.yaml
+          helm lint helm-charts/charts/infrastructure -f helm-charts/charts/infrastructure/values/values-prod.yaml
+
+      - name: Lint Observability Chart
+        run: |
+          helm lint helm-charts/charts/observability
+
+      - name: Lint Microservice Template
+        run: |
+          helm lint helm-charts/charts/microservice
+
+      - name: Lint Task Service
+        run: |
+          helm lint helm-charts/services/task-service
+          helm lint helm-charts/services/task-service -f helm-charts/services/task-service/values/values-dev.yaml
+          helm lint helm-charts/services/task-service -f helm-charts/services/task-service/values/values-prod.yaml
+
+      - name: Lint User Service
+        run: |
+          helm lint helm-charts/services/user-service
+          helm lint helm-charts/services/user-service -f helm-charts/services/user-service/values/values-dev.yaml
+          helm lint helm-charts/services/user-service -f helm-charts/services/user-service/values/values-prod.yaml
+
+      - name: Lint Umbrella Chart
+        run: |
+          helm lint helm-charts/umbrella-chart
+          helm lint helm-charts/umbrella-chart -f helm-charts/umbrella-chart/values/values-dev.yaml
+
+      - name: Template Rendering Test
+        run: |
+          helm template test helm-charts/umbrella-chart -f helm-charts/umbrella-chart/values/values-dev.yaml > /dev/null
+          echo "✓ Template rendering successful"
+
+      - name: Validate YAML
+        run: |
+          find helm-charts -name '*.yaml' -o -name '*.yml' | while read file; do
+            echo "Validating $file"
+            yamllint -d relaxed "$file" || true
+          done

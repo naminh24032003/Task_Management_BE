@@ -1,0 +1,26 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "observability.fullname" . }}-grafana-datasources
+  labels:
+    app: grafana
+    {{- include "observability.labels" . | nindent 4 }}
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://{{ include "observability.fullname" . }}-prometheus:9090
+        isDefault: true
+        editable: false
+      {{- if .Values.loki.enabled }}
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://{{ include "observability.fullname" . }}-loki:3100
+        editable: false
+      {{- end }}
+{{- end }}

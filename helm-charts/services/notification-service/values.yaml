@@ -1,0 +1,9 @@
+microservice:
+  service:
+    name: notification-service
+    type: ClusterIP
+    port: 8080
+  image:
+    repository: notification-service
+    tag: "1.0.0"
+  replicas: 2

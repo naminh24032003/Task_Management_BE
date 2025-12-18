@@ -1,0 +1,15 @@
+apiVersion: v2
+name: infrastructure
+description: Infrastructure components for K8s cluster (NGINX, Kong, Kafka, Redis, Consul)
+type: application
+version: 1.0.0
+appVersion: "1.0"
+keywords:
+  - infrastructure
+  - nginx
+  - kong
+  - kafka
+  - redis
+  - consul
+maintainers:
+  - name: Task Management Team

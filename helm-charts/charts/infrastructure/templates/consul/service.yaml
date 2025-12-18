@@ -1,0 +1,39 @@
+{{- if .Values.consul.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "infrastructure.fullname" . }}-consul
+  labels:
+    app: consul
+    {{- include "infrastructure.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    app: consul
+  ports:
+  - name: http
+    port: 8500
+    targetPort: 8500
+  - name: dns
+    port: 8600
+    targetPort: 8600
+  - name: server
+    port: 8300
+    targetPort: 8300
+  - name: serf-lan-tcp
+    port: 8301
+    targetPort: 8301
+    protocol: TCP
+  - name: serf-lan-udp
+    port: 8301
+    targetPort: 8301
+    protocol: UDP
+  - name: serf-wan-tcp
+    port: 8302
+    targetPort: 8302
+    protocol: TCP
+  - name: serf-wan-udp
+    port: 8302
+    targetPort: 8302
+    protocol: UDP
+{{- end }}

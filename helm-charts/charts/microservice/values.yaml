@@ -1,0 +1,81 @@
+# Default values for microservice template
+
+# Service configuration
+service:
+  name: microservice
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+  grpcPort: 50051
+
+# Image configuration
+image:
+  repository: myapp
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Deployment configuration
+replicas: 2
+
+# Resource limits
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Auto-scaling
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Health checks
+healthCheck:
+  enabled: true
+  liveness:
+    path: /healthz
+    port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readiness:
+    path: /ready
+    port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+# Environment variables
+env: []
+  # - name: ENV_VAR_NAME
+  #   value: "value"
+
+# Secrets
+secrets: {}
+  # DB_PASSWORD: "changeme"
+
+# ConfigMap data
+config: {}
+  # application.yaml: |
+  #   server:
+  #     port: 8080
+
+# Service monitoring (Prometheus)
+monitoring:
+  enabled: true
+  path: /metrics
+  port: 8080
+
+# Network Policy
+networkPolicy:
+  enabled: false
+  ingress: []
+  egress: []

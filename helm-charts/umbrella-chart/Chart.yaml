@@ -1,0 +1,50 @@
+apiVersion: v2
+name: task-management-platform
+description: Complete Task Management Platform - Umbrella Chart
+type: application
+version: 1.0.0
+appVersion: "1.0"
+keywords:
+  - task-management
+  - microservices
+  - umbrella
+dependencies:
+  # Infrastructure components
+  - name: infrastructure
+    version: 1.0.0
+    repository: "file://../charts/infrastructure"
+    condition: infrastructure.enabled
+  
+  # Observability stack
+  - name: observability
+    version: 1.0.0
+    repository: "file://../charts/observability"
+    condition: observability.enabled
+  
+  # Microservices
+  - name: task-service
+    version: 1.0.0
+    repository: "file://../services/task-service"
+    condition: services.taskService.enabled
+  
+  - name: user-service
+    version: 1.0.0
+    repository: "file://../services/user-service"
+    condition: services.userService.enabled
+  
+  - name: project-service
+    version: 1.0.0
+    repository: "file://../services/project-service"
+    condition: services.projectService.enabled
+  
+  - name: notification-service
+    version: 1.0.0
+    repository: "file://../services/notification-service"
+    condition: services.notificationService.enabled
+  
+  - name: auth-service
+    version: 1.0.0
+    repository: "file://../services/auth-service"
+    condition: services.authService.enabled
+maintainers:
+  - name: Task Management Team

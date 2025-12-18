@@ -1,0 +1,104 @@
+# Default values for infrastructure chart
+
+# NGINX Ingress Controller
+nginx:
+  enabled: true
+  replicas: 2
+  image:
+    repository: k8s.gcr.io/ingress-nginx/controller
+    tag: v1.9.4
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Kong API Gateway
+kong:
+  enabled: true
+  replicas: 2
+  image:
+    repository: kong
+    tag: "3.6"
+  proxy:
+    type: NodePort
+    http:
+      enabled: true
+      port: 8000
+    grpc:
+      enabled: true
+      port: 9080
+  admin:
+    enabled: true
+    type: NodePort
+    port: 8001
+  env:
+    database: "off"
+    plugins: "bundled,jwt,rate-limiting,cors"
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+# Kafka Message Broker
+kafka:
+  enabled: true
+  replicas: 3
+  image:
+    repository: confluentinc/cp-kafka
+    tag: "7.5.0"
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  jvmHeap: "-Xms1g -Xmx1g"
+
+# Redis Cache
+redis:
+  enabled: true
+  replicas: 1
+  image:
+    repository: redis
+    tag: "7-alpine"
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Consul Service Discovery
+consul:
+  enabled: true
+  replicas: 3
+  image:
+    repository: hashicorp/consul
+    tag: "1.17"
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi

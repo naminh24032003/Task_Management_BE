@@ -1,0 +1,17 @@
+{{- if .Values.nginx.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "infrastructure.fullname" . }}-nginx-config
+  labels:
+    app: nginx-ingress
+    {{- include "infrastructure.labels" . | nindent 4 }}
+data:
+  proxy-body-size: "10m"
+  proxy-connect-timeout: "60"
+  proxy-read-timeout: "60"
+  proxy-send-timeout: "60"
+  use-forwarded-headers: "true"
+  compute-full-forwarded-for: "true"
+  use-proxy-protocol: "false"
+{{- end }}

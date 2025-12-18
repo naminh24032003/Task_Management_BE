@@ -1,0 +1,40 @@
+# Staging Environment Configuration
+
+# Infrastructure with moderate resources
+infrastructure:
+  enabled: true
+  nginx:
+    replicas: 2
+  kong:
+    replicas: 2
+  kafka:
+    replicas: 2
+  redis:
+    replicas: 1
+  consul:
+    replicas: 2
+
+# Observability
+observability:
+  enabled: true
+  prometheus:
+    retention: 15d
+  loki:
+    retention: 7d
+  jaeger:
+    enabled: true
+  sentry:
+    enabled: false
+
+# Services
+services:
+  taskService:
+    enabled: true
+  userService:
+    enabled: true
+  projectService:
+    enabled: false
+  notificationService:
+    enabled: false
+  authService:
+    enabled: false
