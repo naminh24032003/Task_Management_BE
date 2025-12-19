@@ -1,9 +1,0 @@
-microservice:
-  service:
-    name: project-service
-    type: ClusterIP
-    port: 8080
-  image:
-    repository: project-service
-    tag: "1.0.0"
-  replicas: 2

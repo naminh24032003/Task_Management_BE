@@ -1,0 +1,26 @@
+image:
+  repository: kong
+  tag: "3.6"
+
+env:
+  database: "off"
+  declarative_config: /kong/kong.yaml
+  log_level: debug
+
+admin:
+  enabled: true
+  type: ClusterIP
+
+proxy:
+  type: NodePort
+  http:
+    nodePort: 30080
+
+extraVolumes:
+  - name: kong-config
+    configMap:
+      name: kong-config
+
+extraVolumeMounts:
+  - name: kong-config
+    mountPath: /kong   

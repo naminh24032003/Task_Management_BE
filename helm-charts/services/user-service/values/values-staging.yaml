@@ -1,8 +1,0 @@
-# Staging environment
-microservice:
-  replicas: 2
-  
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 4

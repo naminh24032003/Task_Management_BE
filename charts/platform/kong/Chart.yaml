@@ -1,0 +1,10 @@
+apiVersion: v2
+name: platform-kong
+description: Platform wrapper for Kong Gateway
+type: application
+version: 0.1.0
+
+dependencies:
+  - name: kong
+    version: "2.38.0"
+    repository: https://charts.konghq.com
