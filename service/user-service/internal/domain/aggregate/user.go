@@ -27,10 +27,10 @@ type User struct {
 	Status    UserStatus
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	
+
 	// Entities
 	Profile *entity.Profile
-	
+
 	// Domain Events (unpublished)
 	domainEvents []event.DomainEvent
 }
@@ -46,7 +46,7 @@ func NewUser(id string, email *valueobject.Email, password *valueobject.Password
 	if password == nil {
 		return nil, errors.New("password cannot be nil")
 	}
-	
+
 	now := time.Now()
 	user := &User{
 		ID:           id,
@@ -57,21 +57,19 @@ func NewUser(id string, email *valueobject.Email, password *valueobject.Password
 		UpdatedAt:    now,
 		domainEvents: make([]event.DomainEvent, 0),
 	}
-	
+
 	// Raise domain event
 	user.addDomainEvent(event.NewUserCreatedEvent(id, email.Value(), now))
-	
+
 	return user, nil
 }
 
-// Activate activ
-
-ates the user account
+// Activate activates the user account
 func (u *User) Activate() error {
 	if u.Status == UserStatusActive {
 		return errors.New("user already active")
 	}
-	
+
 	u.Status = UserStatusActive
 	u.UpdatedAt = time.Now()
 	return nil
@@ -82,13 +80,13 @@ func (u *User) Disable() error {
 	if u.Status == UserStatusDisabled {
 		return errors.New("user already disabled")
 	}
-	
+
 	u.Status = UserStatusDisabled
 	u.UpdatedAt = time.Now()
-	
+
 	// Raise domain event
 	u.addDomainEvent(event.NewUserDisabledEvent(u.ID, time.Now()))
-	
+
 	return nil
 }
 
@@ -98,13 +96,13 @@ func (u *User) ChangePassword(oldPassword, newPassword string) error {
 	if !u.Password.VerifyPassword(oldPassword) {
 		return errors.New("invalid current password")
 	}
-	
+
 	// Create new password
 	newPass, err := valueobject.NewPassword(newPassword)
 	if err != nil {
 		return err
 	}
-	
+
 	u.Password = newPass
 	u.UpdatedAt = time.Now()
 	return nil
