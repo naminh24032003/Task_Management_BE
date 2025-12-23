@@ -5,7 +5,11 @@
     "compilerOptions": {
         "deleteOutDir": true,
         "assets": [
-            "**/*.proto"
+            {
+                "include": "../../packages/proto/user/v1/user.proto",
+                "outDir": "./proto/user/v1",
+                "watchAssets": true
+            }
         ]
     }
 }

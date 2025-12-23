@@ -9,10 +9,10 @@ ifeq ($(GOHOSTOS), windows)
 	#Git_Bash= $(subst cmd\,bin\bash.exe,$(dir $(shell where git)))
 	Git_Bash=$(subst \,/,$(subst cmd\,bin\bash.exe,$(dir $(shell where git))))
 	INTERNAL_PROTO_FILES=$(shell $(Git_Bash) -c "find internal -name *.proto")
-	API_PROTO_FILES=$(shell $(Git_Bash) -c "find api -name *.proto")
+	API_PROTO_FILES=$(shell $(Git_Bash) -c "find ../../packages/proto/task -name *.proto")
 else
 	INTERNAL_PROTO_FILES=$(shell find internal -name *.proto)
-	API_PROTO_FILES=$(shell find api -name *.proto)
+	API_PROTO_FILES=$(shell find ../../packages/proto/task -name *.proto)
 endif
 
 .PHONY: init
@@ -36,7 +36,7 @@ config:
 .PHONY: api
 # generate api proto
 api:
-	protoc --proto_path=./api \
+	protoc --proto_path=../../packages/proto \
 	       --proto_path=./third_party \
  	       --go_out=paths=source_relative:./api \
  	       --go-http_out=paths=source_relative:./api \
