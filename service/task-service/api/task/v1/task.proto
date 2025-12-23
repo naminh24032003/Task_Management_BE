@@ -1,115 +1,133 @@
+// syntax = "proto3";
+//
+// package task.v1;
+//
+// option go_package = "task-service/api/task/v1;taskv1";
+//
+// import "google/api/annotations.proto";
+//
+// service TaskService {
+//   // CreateTask creates a new task
+//   rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse) {
+//     option (google.api.http) = {
+//       post: "/v1/tasks"
+//       body: "*"
+//     };
+//   }
+//
+//   // GetTask retrieves a task by ID
+//   rpc GetTask(GetTaskRequest) returns (GetTaskResponse) {
+//     option (google.api.http) = {
+//       get: "/v1/tasks/{id}"
+//     };
+//   }
+//
+//   // ListTasks lists all tasks with pagination
+//   rpc ListTasks(ListTasksRequest) returns (ListTasksResponse) {
+//     option (google.api.http) = {
+//       get: "/v1/tasks"
+//     };
+//   }
+//
+//   // AssignTask assigns a task to a user
+//   rpc AssignTask(AssignTaskRequest) returns (AssignTaskResponse) {
+//     option (google.api.http) = {
+//       post: "/v1/tasks/{task_id}/assign"
+//       body: "*"
+//     };
+//   }
+//
+//   // CompleteTask marks a task as completed
+//   rpc CompleteTask(CompleteTaskRequest) returns (CompleteTaskResponse) {
+//     option (google.api.http) = {
+//       post: "/v1/tasks/{task_id}/complete"
+//     };
+//   }
+// }
+//
+// // Task represents a task entity
+// message Task {
+//   string id = 1;
+//   string title = 2;
+//   string description = 3;
+//   string status = 4;
+//   string priority = 5;
+//   string assignee_id = 6;
+//   string project_id = 7;
+//   string created_at = 8;
+//   string updated_at = 9;
+//   string due_date = 10;
+// }
+//
+// // CreateTaskRequest
+// message CreateTaskRequest {
+//   string title = 1;
+//   string description = 2;
+//   string priority = 3;
+//   string project_id = 4;
+//   string due_date = 5;
+// }
+//
+// message CreateTaskResponse {
+//   Task task = 1;
+// }
+//
+// // GetTaskRequest
+// message GetTaskRequest {
+//   string id = 1;
+// }
+//
+// message GetTaskResponse {
+//   Task task = 1;
+// }
+//
+// // ListTasksRequest
+// message ListTasksRequest {
+//   int32 page = 1;
+//   int32 page_size = 2;
+//   string project_id = 3;
+//   string assignee_id = 4;
+//   string status = 5;
+// }
+//
+// message ListTasksResponse {
+//   repeated Task tasks = 1;
+//   int32 total = 2;
+// }
+//
+// // AssignTaskRequest
+// message AssignTaskRequest {
+//   string task_id = 1;
+//   string assignee_id = 2;
+// }
+//
+// message AssignTaskResponse {
+//   Task task = 1;
+// }
+//
+// // CompleteTaskRequest
+// message CompleteTaskRequest {
+//   string task_id = 1;
+// }
+//
+// message CompleteTaskResponse {
+//   Task task = 1;
+// }
+
 syntax = "proto3";
 
 package task.v1;
 
 option go_package = "task-service/api/task/v1;taskv1";
 
-import "google/api/annotations.proto";
-
 service TaskService {
-  // CreateTask creates a new task
-  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse) {
-    option (google.api.http) = {
-      post: "/v1/tasks"
-      body: "*"
-    };
-  }
-
-  // GetTask retrieves a task by ID
-  rpc GetTask(GetTaskRequest) returns (GetTaskResponse) {
-    option (google.api.http) = {
-      get: "/v1/tasks/{id}"
-    };
-  }
-
-  // ListTasks lists all tasks with pagination
-  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse) {
-    option (google.api.http) = {
-      get: "/v1/tasks"
-    };
-  }
-
-  // AssignTask assigns a task to a user
-  rpc AssignTask(AssignTaskRequest) returns (AssignTaskResponse) {
-    option (google.api.http) = {
-      post: "/v1/tasks/{task_id}/assign"
-      body: "*"
-    };
-  }
-
-  // CompleteTask marks a task as completed
-  rpc CompleteTask(CompleteTaskRequest) returns (CompleteTaskResponse) {
-    option (google.api.http) = {
-      post: "/v1/tasks/{task_id}/complete"
-    };
-  }
+  rpc Hello(HelloRequest) returns (HelloResponse);
 }
 
-// Task represents a task entity
-message Task {
-  string id = 1;
-  string title = 2;
-  string description = 3;
-  string status = 4;
-  string priority = 5;
-  string assignee_id = 6;
-  string project_id = 7;
-  string created_at = 8;
-  string updated_at = 9;
-  string due_date = 10;
+message HelloRequest {
+  string name = 1;
 }
 
-// CreateTaskRequest
-message CreateTaskRequest {
-  string title = 1;
-  string description = 2;
-  string priority = 3;
-  string project_id = 4;
-  string due_date = 5;
-}
-
-message CreateTaskResponse {
-  Task task = 1;
-}
-
-// GetTaskRequest
-message GetTaskRequest {
-  string id = 1;
-}
-
-message GetTaskResponse {
-  Task task = 1;
-}
-
-// ListTasksRequest
-message ListTasksRequest {
-  int32 page = 1;
-  int32 page_size = 2;
-  string project_id = 3;
-  string assignee_id = 4;
-  string status = 5;
-}
-
-message ListTasksResponse {
-  repeated Task tasks = 1;
-  int32 total = 2;
-}
-
-// AssignTaskRequest
-message AssignTaskRequest {
-  string task_id = 1;
-  string assignee_id = 2;
-}
-
-message AssignTaskResponse {
-  Task task = 1;
-}
-
-// CompleteTaskRequest
-message CompleteTaskRequest {
-  string task_id = 1;
-}
-
-message CompleteTaskResponse {
-  Task task = 1;
+message HelloResponse {
+  string message = 1;
 }

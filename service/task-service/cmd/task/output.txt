@@ -1,0 +1,5 @@
+wire: D:\react\task_management_be\service\task-service\cmd\task\wire.go:16:1: inject wireApp: no provider found for *task-service/internal/transport/grpc.TaskService
+	needed by *github.com/go-kratos/kratos/v2/transport/grpc.Server in provider set "ProviderSet" (D:\react\task_management_be\service\task-service\internal\server\server.go:6:19)
+	needed by *github.com/go-kratos/kratos/v2.App in provider "newApp" (D:\react\task_management_be\service\task-service\cmd\task\main.go:33:6)
+wire: task-service/cmd/task: generate failed
+wire: at least one generate failure
