@@ -27,7 +27,7 @@ func NewGRPCServer(
 	}
 
 	// Default configuration
-	opts = append(opts, grpc.Address(":50051"))
+	opts = append(opts, grpc.Address(":50052"))
 
 	srv := grpc.NewServer(opts...)
 

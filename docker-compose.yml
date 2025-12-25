@@ -16,7 +16,9 @@ services:
       - user-service
 
   user-service:
-    build: ./service/user-service
+    build:
+      context: .
+      dockerfile: ./service/user-service/Dockerfile
     container_name: user-service
     ports:
-      - "50050:50050"
+      - "50051:50051"

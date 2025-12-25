@@ -4,17 +4,24 @@ import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-    const app = await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
-        transport: Transport.GRPC,
-        options: {
-            package: 'user',
-            protoPath: join(process.cwd(), '../../packages/proto/user/v1/user.proto'),
-            url: 'localhost:50051',
+    const protoPath = process.env.PROTO_PATH || join(process.cwd(), '../../packages/proto/user/v1/user.proto');
+    const url = process.env.GRPC_URL || '0.0.0.0:50051';
+
+    const app = await NestFactory.createMicroservice<MicroserviceOptions>(
+        AppModule,
+        {
+            transport: Transport.GRPC,
+            options: {
+                package: 'user',
+                protoPath: protoPath,
+                url: url,
+            },
         },
-    });
-    // Enable graceful shutdown
-    app.enableShutdownHooks();
+    );
+
     await app.listen();
-    console.log('User Service is listening on localhost:50051');
+    console.log(`🚀 User Service gRPC is running on ${url}`);
+    console.log(`📄 Proto file: ${protoPath}`);
 }
+
 bootstrap();
