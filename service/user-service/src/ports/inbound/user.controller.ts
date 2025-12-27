@@ -1,17 +1,15 @@
 import { Controller } from '@nestjs/common';
-import { GrpcMethod } from '@nestjs/microservices';
-
-interface HelloRequest {
-    name: string;
-}
-
-interface HelloResponse {
-    message: string;
-}
+// Import generated types - auto-synced with proto file!
+import {
+    HelloRequest,
+    HelloResponse,
+    UserServiceController,
+    UserServiceControllerMethods,
+} from '../../generated/user/v1/user';
 
 @Controller()
-export class UserController {
-    @GrpcMethod('UserService', 'HelloWorld')
+@UserServiceControllerMethods()
+export class UserController implements UserServiceController {
     helloWorld(data: HelloRequest): HelloResponse {
         console.log('📨 Received HelloWorld request:', data);
         return {

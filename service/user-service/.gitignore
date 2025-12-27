@@ -2,6 +2,9 @@
 /dist
 /node_modules
 
+# Generated proto files (comment out if you want to commit generated files)
+# /src/generated
+
 # logs
 logs
 *.log

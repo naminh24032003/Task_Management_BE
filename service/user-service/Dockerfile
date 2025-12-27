@@ -1,41 +1,87 @@
-# NOTE: This Dockerfile MUST be built from the PROJECT ROOT.
-# Command: docker build -t user-service -f service/user-service/Dockerfile .
+# NOTE: Build from PROJECT ROOT
+# docker build -t user-service -f service/user-service/Dockerfile .
 
-# --- Stage 1: Build ---
+# ---------- Stage 1: Build ----------
 FROM node:20-alpine AS builder
 
-WORKDIR /app
+WORKDIR /app/service/user-service
 
-# Copy dependencies first for better caching
-COPY service/user-service/package*.json ./service/user-service/
-RUN cd service/user-service && npm install
+# Copy package files first (cache-friendly)
+COPY service/user-service/package*.json ./
 
-# Copy source code and protos
-COPY service/user-service ./service/user-service
-COPY packages/proto ./packages/proto
+# Install full deps (include dev)
+RUN npm ci
 
-# Build the app
-RUN cd service/user-service && npm run build
+# Copy source code
+COPY service/user-service ./
 
-# Remove development dependencies
-RUN cd service/user-service && npm prune --production
 
-# --- Stage 2: Production ---
+# Build TS -> JS
+RUN npm run build
+
+
+# ---------- Stage 2: Production ----------
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /app/service/user-service
 
-# Copy production files
-COPY --from=builder /app/service/user-service/dist ./service/user-service/dist
-COPY --from=builder /app/service/user-service/node_modules ./service/user-service/node_modules
-COPY --from=builder /app/service/user-service/package*.json ./service/user-service/
-COPY --from=builder /app/packages/proto ./packages/proto
+# Runtime invariant env only
+ENV NODE_ENV=production
 
-# Set environment variables so the app can find the protos
-ENV PROTO_PATH=/app/packages/proto/user/v1/user.proto
-ENV GRPC_URL=0.0.0.0:50051
+# Copy package files
+COPY service/user-service/package*.json ./
 
+# Install production deps only
+RUN npm ci --omit=dev \
+  && npm cache clean --force
+
+# Copy compiled output
+COPY --from=builder /app/service/user-service/dist ./dist
+
+# Copy proto definitions (required at runtime for gRPC)
+COPY packages/proto/user ./proto/user
+
+# gRPC port (documentation purpose)
 EXPOSE 50051
 
-WORKDIR /app/service/user-service
-CMD ["npm", "run", "start:prod"]
+# Start app
+CMD ["node", "dist/main.js"]
+
+
+
+# ---------- Stage 1: Build ----------
+# FROM node:20-alpine AS builder
+
+# WORKDIR /app/service/user-service
+
+# COPY service/user-service/package*.json ./
+# RUN npm ci
+
+# COPY service/user-service ./
+# RUN npm run build
+
+# # ---------- Stage 2: Production ----------
+# FROM node:20-alpine
+
+# # add dumb-init
+# RUN apk add --no-cache dumb-init
+
+# # non-root user
+# RUN addgroup -S app && adduser -S app -G app
+
+# WORKDIR /app/service/user-service
+
+# ENV NODE_ENV=production
+
+# COPY service/user-service/package*.json ./
+# RUN npm ci --omit=dev && npm cache clean --force
+
+# COPY --from=builder /app/service/user-service/dist ./dist
+# COPY packages/proto/user ./proto/user
+
+# USER app
+
+# EXPOSE 50051
+
+# ENTRYPOINT ["dumb-init", "--"]
+# CMD ["node", "dist/main.js"]
