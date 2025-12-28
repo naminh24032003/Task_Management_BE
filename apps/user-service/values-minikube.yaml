@@ -1,0 +1,28 @@
+nameOverride: user-service
+replicaCount: 1
+
+image:
+  repository: user-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+containerPort: 50051
+
+service:
+  type: ClusterIP
+  port: 50051
+
+env:
+  NODE_ENV: development
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 300m
+    memory: 256Mi
+
+# ❌ KHÔNG dùng HTTP probe cho gRPC
+livenessProbe: null
+readinessProbe: null

@@ -3,4 +3,4 @@ dependencies:
   repository: https://charts.konghq.com
   version: 2.38.0
 digest: sha256:133f3aec36a8f23f88be9938ec1232e6ff373d18a5d14bc0602e15d0a9c152c3
-generated: "2025-12-20T01:32:37.7248967+07:00"
+generated: "2025-12-28T20:48:10.7061055+07:00"

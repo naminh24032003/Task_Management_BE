@@ -1,21 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "microservice.fullname" . }}
+  name: kong
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ include "microservice.name" . }}
+      app: kong
   template:
     metadata:
       labels:
-        app: {{ include "microservice.name" . }}
+        app: kong
     spec:
       containers:
-        - name: {{ include "microservice.name" . }}
+        - name: kong
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: KONG_DATABASE
+              value: {{ .Values.env.database | quote }}
+            - name: KONG_DECLARATIVE_CONFIG
+              value: {{ .Values.env.declarative_config | quote }}
           ports:
-            - name: grpc
-              containerPort: {{ .Values.containerPort }}
+            - containerPort: 8000
