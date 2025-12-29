@@ -14,9 +14,13 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "proto:gen": "scripts\\generate-proto.cmd",
-    "proto:gen:unix": "bash ./scripts/generate-proto.sh",
+    "proto:sync": "node -e \"require('child_process').execSync(process.platform === 'win32' ? 'scripts\\\\sync-proto.cmd' : 'sh ./scripts/sync-proto.sh', {stdio: 'inherit'})\"",
+    "proto:sync:unix": "sh ./scripts/sync-proto.sh",
+    "proto:sync:win": "scripts\\sync-proto.cmd",
+    "proto:gen": "node -e \"require('child_process').execSync(process.platform === 'win32' ? 'scripts\\\\generate-proto.cmd' : 'sh ./scripts/generate-proto.sh', {stdio: 'inherit'})\"",
+    "proto:gen:unix": "sh ./scripts/sync-proto.sh && sh ./scripts/generate-proto.sh",
     "proto:watch": "nodemon --watch ../../packages/proto/user -e proto --exec \"npm run proto:gen\"",
+    "prebuild": "npm run proto:sync",
     "prestart:dev": "npm run proto:gen"
   },
   "dependencies": {

@@ -2,6 +2,10 @@
 /dist
 /node_modules
 
+# Runtime proto artifact (synced from packages/proto)
+# Source of truth: packages/proto
+/proto
+
 # Generated proto files (comment out if you want to commit generated files)
 # /src/generated
 
