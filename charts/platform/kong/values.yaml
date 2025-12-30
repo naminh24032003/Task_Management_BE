@@ -1,26 +1,33 @@
-image:
-  repository: kong
-  tag: "3.6"
+# Kong subchart configuration
+kong:
+  image:
+    repository: kong
+    tag: "3.6"
 
-env:
-  database: "off"
-  declarative_config: /kong/kong.yaml
-  log_level: debug
+  env:
+    database: "off"
+    declarative_config: /kong/kong.yaml
+    log_level: debug
 
-admin:
-  enabled: true
-  type: ClusterIP
+  admin:
+    enabled: true
+    type: ClusterIP
 
-proxy:
-  type: NodePort
-  http:
-    nodePort: 30080
+  proxy:
+    enabled: true
+    type: NodePort
+    http:
+      enabled: true
+      nodePort: 30080
 
-extraVolumes:
-  - name: kong-config
-    configMap:
-      name: kong-config
-
-extraVolumeMounts:
-  - name: kong-config
-    mountPath: /kong   
+  deployment:
+    kong:
+      enabled: true
+    # Mount ConfigMap vào Kong container
+    userDefinedVolumes:
+      - name: kong-config
+        configMap:
+          name: kong-config
+    userDefinedVolumeMounts:
+      - name: kong-config
+        mountPath: /kong

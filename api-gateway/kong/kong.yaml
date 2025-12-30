@@ -1,9 +1,39 @@
 _format_version: "3.0"
 
 services:
+  # Mock service for testing
   - name: mock
     url: http://httpbin.org
     routes:
       - name: mock-route
         paths:
           - /test
+
+  # User Service - gRPC
+  - name: user-service-grpc
+    url: grpc://user-service-user-service.default.svc.cluster.local:50051
+    routes:
+      - name: user-service-grpc-route
+        protocols:
+          - grpc
+          - grpcs
+        paths:
+          - /user.v1.UserService
+        strip_path: false
+
+  # User Service - gRPC-Web (for browser clients)
+  - name: user-service-grpc-web
+    url: grpc://user-service-user-service.default.svc.cluster.local:50051
+    routes:
+      - name: user-service-grpc-web-route
+        protocols:
+          - http
+          - https
+        paths:
+          - /api/users
+        strip_path: true
+    plugins:
+      - name: grpc-web
+        config:
+          proto: null
+          pass_stripped_path: true
