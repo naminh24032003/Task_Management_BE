@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: kong
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  kong.yaml: |
+    _format_version: "3.0"
+    services:
+      # Mock service for testing
+      - name: mock
+        url: http://httpbin.org
+        routes:
+          - name: mock-route
+            protocols:
+              - http
+              - https
+            paths:
+              - /test
+            strip_path: true
+
+      # Shared gRPC-Gateway - handles HTTP->gRPC for ALL services
+      - name: grpc-gateway
+        url: http://grpc-gateway.kong.svc.cluster.local:8080
+        plugins:
+          - name: file-log
+            config:
+              path: /dev/stdout
+              reopen: true
+        routes:
+          - name: user-service-route
+            protocols:
+              - http
+              - https
+            paths:
+              - /v1/users
+            strip_path: false
+          - name: task-service-route
+            protocols:
+              - http
+              - https
+            paths:
+              - /v1/tasks
+            strip_path: false
