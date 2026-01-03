@@ -1,0 +1,12 @@
+{{- if .Values.envVarsCM -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "microservice.fullname" . }}-config
+  labels:
+    {{- include "microservice.labels" . | nindent 4 }}
+data:
+  {{- range $key, $value := .Values.envVarsCM }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end -}}

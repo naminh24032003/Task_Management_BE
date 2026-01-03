@@ -1,0 +1,67 @@
+# =========================================================
+# GLOBAL SETTINGS
+# =========================================================
+nameOverride: task-service
+replicaCount: 1
+
+# =========================================================
+# CONTAINER IMAGE SETTINGS
+# =========================================================
+image:
+  repository: task-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# =========================================================
+# ENVIRONMENT VARIABLES (ConfigMap)
+# =========================================================
+envVarsCM:
+  NODE_ENV: development
+  # Add other non-sensitive configs here
+
+# =========================================================
+# SENSITIVE ENVIRONMENT VARIABLES (Secrets)
+# =========================================================
+envVarsSecret:
+  # DB_PASSWORD: "secret-password"
+
+# =========================================================
+# CONTAINER PORTS
+# =========================================================
+containerPorts:
+  grpc:
+    port: 50052
+
+# =========================================================
+# SERVICE CONFIGURATION
+# =========================================================
+service:
+  type: ClusterIP
+  ports:
+    grpc:
+      port: 50052
+      targetPort: grpc
+
+# =========================================================
+# RESOURCE REQUESTS & LIMITS
+# =========================================================
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 300m
+    memory: 256Mi
+
+# =========================================================
+# HEALTH PROBES
+# =========================================================
+# gRPC services often don't use standard HTTP probes without extra tools
+livenessProbe: null
+readinessProbe: null
+
+# =========================================================
+# VOLUMES
+# =========================================================
+extraVolumes: []
+extraVolumeMounts: []

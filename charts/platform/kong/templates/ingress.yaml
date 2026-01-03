@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway
+  namespace: kong
+  annotations:
+    konghq.com/strip-path: "false"
+    konghq.com/preserve-host: "true"
+    konghq.com/protocols: "http,https"
+spec:
+  ingressClassName: kong
+  rules:
+  - http:
+      paths:
+      # Route all /v1/* to grpc-gateway
+      - path: /v1
+        pathType: Prefix
+        backend:
+          service:
+            name: grpc-gateway
+            port:
+              number: 8080
+      # Health check endpoint
+      - path: /healthz
+        pathType: Exact
+        backend:
+          service:
+            name: grpc-gateway
+            port:
+              number: 8080

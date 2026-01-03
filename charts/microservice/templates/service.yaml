@@ -2,11 +2,16 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "microservice.fullname" . }}
+  labels:
+    {{- include "microservice.labels" . | nindent 4 }}
 spec:
-  type: ClusterIP
-  selector:
-    app: {{ include "microservice.name" . }}
+  type: {{ .Values.service.type | default "ClusterIP" }}
   ports:
-    - name: grpc
-      port: {{ .Values.service.port }}
-      targetPort: {{ .Values.containerPort }}
+    {{- range $name, $config := .Values.service.ports }}
+    - port: {{ $config.port }}
+      targetPort: {{ $config.targetPort | default $name }}
+      protocol: {{ $config.protocol | default "TCP" }}
+      name: {{ $name }}
+    {{- end }}
+  selector:
+    {{- include "microservice.selectorLabels" . | nindent 4 }}

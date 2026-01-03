@@ -6,12 +6,12 @@ kong:
 
   env:
     database: "off"
-    declarative_config: /kong/kong.yaml
     log_level: debug
 
-  # Tắt hoàn toàn Ingress Controller
+  # Bật Ingress Controller để dùng Kubernetes Ingress
   ingressController:
-    enabled: false
+    enabled: true
+    installCRDs: false
 
   admin:
     enabled: true
@@ -27,14 +27,11 @@ kong:
       enabled: true
       nodePort: 30080
 
+  # RBAC - ServiceAccount cho Kong pods
+  serviceAccount:
+    create: true  # Để Kong chart tạo, nhưng sẽ dùng name custom
+    name: "kong-kong"  # ServiceAccount name (Kong chart sẽ dùng tên này)
+
   deployment:
     kong:
       enabled: true
-    # Mount ConfigMap vào Kong container
-    userDefinedVolumes:
-      - name: kong-config
-        configMap:
-          name: kong-config
-    userDefinedVolumeMounts:
-      - name: kong-config
-        mountPath: /kong

@@ -1,0 +1,59 @@
+# Git
+.git
+.gitignore
+
+# Executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# IDE/Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build output
+/bin/
+/build/
+/dist/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+output.txt
+
+# Local config overrides (keep base config)
+configs/*.local.yaml
+configs/*.dev.yaml
+
+# Documentation
+*.md
+!README.md
+LICENSE
+
+# Compiled binaries in cmd folder
+cmd/task/task.exe
+cmd/task/task
+
+# Test files
+*_test.go

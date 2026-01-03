@@ -1,20 +1,48 @@
+# =========================================================
+# GLOBAL SETTINGS
+# =========================================================
 nameOverride: user-service
 replicaCount: 1
 
+# =========================================================
+# CONTAINER IMAGE SETTINGS
+# =========================================================
 image:
   repository: user-service
   tag: latest
   pullPolicy: IfNotPresent
 
-containerPort: 50051
-
-service:
-  type: ClusterIP
-  port: 50051
-
-env:
+# =========================================================
+# ENVIRONMENT VARIABLES (ConfigMap)
+# =========================================================
+envVarsCM:
   NODE_ENV: development
 
+# =========================================================
+# SENSITIVE ENVIRONMENT VARIABLES (Secrets)
+# =========================================================
+envVarsSecret: {}
+
+# =========================================================
+# CONTAINER PORTS
+# =========================================================
+containerPorts:
+  grpc:
+    port: 50051
+
+# =========================================================
+# SERVICE CONFIGURATION
+# =========================================================
+service:
+  type: ClusterIP
+  ports:
+    grpc:
+      port: 50051
+      targetPort: grpc
+
+# =========================================================
+# RESOURCE REQUESTS & LIMITS
+# =========================================================
 resources:
   requests:
     cpu: 100m
@@ -23,6 +51,14 @@ resources:
     cpu: 300m
     memory: 256Mi
 
-# ❌ KHÔNG dùng HTTP probe cho gRPC
+# =========================================================
+# HEALTH PROBES
+# =========================================================
 livenessProbe: null
 readinessProbe: null
+
+# =========================================================
+# VOLUMES
+# =========================================================
+extraVolumes: []
+extraVolumeMounts: []

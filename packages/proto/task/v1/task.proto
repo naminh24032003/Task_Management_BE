@@ -4,46 +4,14 @@ package task.v1;
 
 option go_package = "task-service/api/task/v1;taskv1";
 
-// import "google/api/annotations.proto";
+import "google/api/annotations.proto";
 
 service TaskService {
-  // CreateTask creates a new task
-  // rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse) {
-  //   option (google.api.http) = {
-  //     post: "/v1/tasks"
-  //     body: "*"
-  //   };
-  // }
-
-  // GetTask retrieves a task by ID
-  // rpc GetTask(GetTaskRequest) returns (GetTaskResponse) {
-  //   option (google.api.http) = {
-  //     get: "/v1/tasks/{id}"
-  //   };
-  // }
-
-  // ListTasks lists all tasks with pagination
-  // rpc ListTasks(ListTasksRequest) returns (ListTasksResponse) {
-  //   option (google.api.http) = {
-  //     get: "/v1/tasks"
-  //   };
-  // }
-
-  // AssignTask assigns a task to a user
-  // rpc AssignTask(AssignTaskRequest) returns (AssignTaskResponse) {
-  //   option (google.api.http) = {
-  //     post: "/v1/tasks/{task_id}/assign"
-  //     body: "*"
-  //   };
-  // }
-
-  // CompleteTask marks a task as completed
-  // rpc CompleteTask(CompleteTaskRequest) returns (CompleteTaskResponse) {
-  //   option (google.api.http) = {
-  //     post: "/v1/tasks/{task_id}/complete"
-  //   };
-  // }
-  rpc Hello(HelloRequest) returns (HelloResponse);
+  rpc Hello(HelloRequest) returns (HelloResponse) {
+    option (google.api.http) = {
+      get: "/v1/tasks/hello"
+    };
+  }
 }
 
 // Task represents a task entity
