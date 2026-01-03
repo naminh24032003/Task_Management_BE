@@ -129,6 +129,16 @@ port-forward-grafana: ## Port forward Grafana
 port-forward-jaeger: ## Port forward Jaeger
 	kubectl port-forward -n $(ENV) svc/observability-jaeger 16686:16686
 
+port-forward-loki: ## Port forward Loki
+	kubectl port-forward -n logging svc/logging-loki 3100:3100
+
+helm-deploy-logging: ## Deploy logging chart
+	@echo "$(GREEN)Deploying logging stack (Loki + Promtail)...$(NC)"
+	helm upgrade --install logging ./charts/platform/logging \
+		-n logging \
+		--create-namespace \
+		--wait
+
 # Validation
 validate: ## Validate all configurations
 	@echo "$(GREEN)Validating configurations...$(NC)"

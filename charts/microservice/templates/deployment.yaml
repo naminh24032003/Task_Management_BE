@@ -32,14 +32,25 @@ spec:
               containerPort: {{ $config.port }}
               protocol: {{ $config.protocol | default "TCP" }}
             {{- end }}
-          {{- if .Values.envVarsCM }}
+          {{- if or .Values.envVarsCM .Values.envVarsSecret }}
           envFrom:
+            {{- if .Values.envVarsCM }}
             - configMapRef:
                 name: {{ include "microservice.fullname" . }}-config
-          {{- end }}
-          {{- if .Values.envVarsSecret }}
+            {{- end }}
+            {{- if .Values.envVarsSecret }}
             - secretRef:
                 name: {{ include "microservice.fullname" . }}-secret
+            {{- end }}
+          {{- end }}
+          {{- if .Values.sentry.enabled }}
+        env:
+          - name: SENTRY_DSN
+            value: {{ .Values.sentry.dsn | quote }}
+          - name: SENTRY_ENVIRONMENT
+            value: {{ .Values.sentry.environment | default "development" | quote }}
+          - name: SENTRY_TRACES_SAMPLE_RATE
+            value: {{ .Values.sentry.tracesSampleRate | quote }}
           {{- end }}
           {{- with .Values.livenessProbe }}
           livenessProbe:

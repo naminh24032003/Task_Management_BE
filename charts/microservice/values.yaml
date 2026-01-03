@@ -1,0 +1,6 @@
+# Sentry Configuration
+sentry:
+  enabled: false
+  dsn: ""
+  environment: "development"
+  tracesSampleRate: 1.0

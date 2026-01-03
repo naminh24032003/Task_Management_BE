@@ -24,6 +24,7 @@ RUN npm ci
 # ─────────────────────────────────────────────────────────────
 COPY packages/proto/user ./proto/user
 COPY packages/proto/common ./proto/common
+COPY packages/proto/google ./proto/google
 
 # Copy source code
 COPY service/user-service ./
@@ -59,10 +60,12 @@ COPY --from=builder /app/service/user-service/dist ./dist
 # Same structure as local dev: ./proto/user/v1/user.proto
 # ─────────────────────────────────────────────────────────────
 COPY packages/proto/user ./proto/user
+COPY packages/proto/google ./proto/google
 
 USER app
 
 EXPOSE 50051
+EXPOSE 9090
 
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/main.js"]
