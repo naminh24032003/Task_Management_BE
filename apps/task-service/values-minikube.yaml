@@ -1,93 +1,85 @@
 # =========================================================
 # GLOBAL SETTINGS
 # =========================================================
-nameOverride: task-service
-replicaCount: 1
+microservice:
+  nameOverride: task-service
+  replicaCount: 1
 
-# =========================================================
-# CONTAINER IMAGE SETTINGS
-# =========================================================
-image:
-  repository: task-service
-  tag: latest
-  pullPolicy: IfNotPresent
+  # =========================================================
+  # CONTAINER IMAGE SETTINGS
+  # =========================================================
+  image:
+    repository: task-service
+    tag: v2
+    pullPolicy: IfNotPresent
 
-# =========================================================
-# ENVIRONMENT VARIABLES (ConfigMap)
-# =========================================================
-envVarsCM:
-  NODE_ENV: development
-  # Add other non-sensitive configs here
+  # =========================================================
+  # ENVIRONMENT VARIABLES (ConfigMap)
+  # =========================================================
+  envVarsCM:
+    GO_ENV: development
 
-# =========================================================
-# SENSITIVE ENVIRONMENT VARIABLES (Secrets)
-# =========================================================
-envVarsSecret:
-  # DB_PASSWORD: "secret-password"
+  # =========================================================
+  # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
+  # =========================================================
+  envVarsSecret: {}
 
-# =========================================================
-# CONTAINER PORTS
-# =========================================================
-containerPorts:
-  grpc:
-    port: 50052
-  http-metrics:
-    port: 9091
-
-# =========================================================
-# SERVICE CONFIGURATION
-# =========================================================
-service:
-  type: ClusterIP
-  ports:
+  # =========================================================
+  # CONTAINER PORTS
+  # =========================================================
+  containerPorts:
     grpc:
       port: 50052
-      targetPort: grpc
     http-metrics:
       port: 9091
-      targetPort: http-metrics
 
-# =========================================================
-# RESOURCE REQUESTS & LIMITS
-# =========================================================
-resources:
-  requests:
-    cpu: 100m
-    memory: 128Mi
-  limits:
-    cpu: 300m
-    memory: 256Mi
+  # =========================================================
+  # SERVICE CONFIGURATION
+  # =========================================================
+  service:
+    type: ClusterIP
+    ports:
+      grpc:
+        port: 50052
+        targetPort: grpc
+      http-metrics:
+        port: 9091
+        targetPort: http-metrics
 
-# =========================================================
-# HEALTH PROBES
-# =========================================================
-# gRPC services often don't use standard HTTP probes without extra tools
-livenessProbe: null
-readinessProbe: null
+  # =========================================================
+  # RESOURCE REQUESTS & LIMITS
+  # =========================================================
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
 
-# =========================================================
-# VOLUMES
-# =========================================================
-# =========================================================
-# METRICS CONFIGURATION
-# =========================================================
-# =========================================================
-# MONITORING & ERROR TRACKING
-# =========================================================
-sentry:
-  enabled: false # Set to true and provide DSN to enable
-  dsn: "https://your-dsn@sentry.io/project"
-  environment: development
-  tracesSampleRate: 1.0
+  # =========================================================
+  # HEALTH PROBES
+  # =========================================================
+  livenessProbe: null
+  readinessProbe: null
 
-metrics:
-  enabled: true
-  port: http-metrics
-  path: /metrics
-  interval: 30s
-  serviceMonitor:
-    labels:
-      release: monitoring
+  # =========================================================
+  # MONITORING & ERROR TRACKING
+  # =========================================================
+  sentry:
+    enabled: false
+    dsn: "https://your-dsn@sentry.io/project"
+    environment: development
+    tracesSampleRate: 1.0
 
-extraVolumes: []
-extraVolumeMounts: []
+  metrics:
+    enabled: true
+    port: http-metrics
+    path: /metrics
+    interval: 30s
+    serviceMonitor:
+      labels:
+        release: monitoring
+
+  extraVolumes: []
+  extraVolumeMounts: []

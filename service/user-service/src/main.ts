@@ -6,18 +6,7 @@ import * as http from 'http';
 import { register } from 'prom-client';
 
 async function bootstrap() {
-  /**
-   * Proto Resolution Strategy:
-   * ─────────────────────────────────────────────────────────────
-   * Source of truth: packages/proto/user/v1/user.proto
-   * Runtime artifact: service/user-service/proto/user/v1/user.proto
-   * 
-   * Local dev: `npm run proto:sync` copies proto to ./proto
-   * Docker:    Dockerfile COPY packages/proto/user/v1 ./proto/user/v1
-   * 
-   * Result: Both environments use same relative path from dist/
-   * ─────────────────────────────────────────────────────────────
-   */
+
   const protoPath = join(__dirname, '../proto/user/v1/user.proto');
   const grpcUrl = process.env.GRPC_URL || '0.0.0.0:50051';
   const metricsPort = parseInt(process.env.METRICS_PORT || '9090');

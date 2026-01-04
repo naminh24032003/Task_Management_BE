@@ -4,6 +4,7 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
 	"github.com/go-kratos/kratos/v2/transport/http"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // HTTPServerConfig holds HTTP server configuration
@@ -22,10 +23,13 @@ func NewHTTPServer(
 		),
 	}
 
-	// Default configuration
-	opts = append(opts, http.Address(":8000"))
+	// Use port 9091 for metrics (different from gRPC 50052)
+	opts = append(opts, http.Address(":9091"))
 
 	srv := http.NewServer(opts...)
+
+	// Register Prometheus metrics endpoint
+	srv.Handle("/metrics", promhttp.Handler())
 
 	// Register routes here
 	// Example: taskv1.RegisterTaskServiceHTTPServer(srv, taskService)

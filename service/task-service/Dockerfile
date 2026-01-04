@@ -56,8 +56,9 @@ RUN chown -R appuser:appgroup /app
 # Switch to non-root user
 USER appuser
 
-# Expose gRPC port
+# Expose gRPC port and metrics port
 EXPOSE 50052
+EXPOSE 9091
 
 # Run the application
 ENTRYPOINT ["./task-service"]

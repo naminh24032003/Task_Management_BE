@@ -10,7 +10,7 @@ microservice:
   # =========================================================
   image:
     repository: user-service
-    tag: latest
+    tag: v2
     pullPolicy: IfNotPresent
 
   # =========================================================
