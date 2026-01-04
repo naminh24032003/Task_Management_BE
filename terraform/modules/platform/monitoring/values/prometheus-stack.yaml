@@ -1,0 +1,179 @@
+# =============================================================================
+# kube-prometheus-stack Helm Values
+# =============================================================================
+# Managed by Terraform - Do not edit manually
+# =============================================================================
+
+# =============================================================================
+# Prometheus Configuration
+# =============================================================================
+prometheus:
+  enabled: ${prometheus_enabled}
+  prometheusSpec:
+    # Retention configuration
+    retention: ${prometheus_retention}
+    
+    # Storage configuration
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: ${prometheus_storage_class}
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: ${prometheus_storage_size}
+    
+    # Resource limits
+    resources:
+      requests:
+        cpu: ${prometheus_request_cpu}
+        memory: ${prometheus_request_memory}
+      limits:
+        cpu: ${prometheus_limit_cpu}
+        memory: ${prometheus_limit_memory}
+    
+    # ServiceMonitor selector - discover all ServiceMonitors
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    serviceMonitorNamespaceSelector: {}
+    serviceMonitorSelector: {}
+    podMonitorNamespaceSelector: {}
+    podMonitorSelector: {}
+
+# =============================================================================
+# Alertmanager Configuration
+# =============================================================================
+alertmanager:
+  enabled: ${alertmanager_enabled}
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: ${alertmanager_storage_size}
+    resources:
+      requests:
+        cpu: ${alertmanager_request_cpu}
+        memory: ${alertmanager_request_memory}
+      limits:
+        cpu: ${alertmanager_limit_cpu}
+        memory: ${alertmanager_limit_memory}
+
+# =============================================================================
+# Grafana Configuration
+# =============================================================================
+grafana:
+  enabled: ${grafana_enabled}
+  adminUser: ${grafana_admin_user}
+  adminPassword: ${grafana_admin_password}
+  
+  # Persistence
+  persistence:
+    enabled: ${grafana_storage_enabled}
+    size: ${grafana_storage_size}
+  
+  # Resources
+  resources:
+    requests:
+      cpu: ${grafana_request_cpu}
+      memory: ${grafana_request_memory}
+    limits:
+      cpu: ${grafana_limit_cpu}
+      memory: ${grafana_limit_memory}
+  
+  # Sidecar for auto-loading dashboards and datasources
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+    datasources:
+      enabled: true
+      label: grafana_datasource
+      searchNamespace: ALL
+  
+  # Additional datasources
+  additionalDataSources:
+%{ if loki_url != "" }
+    - name: Loki
+      type: loki
+      url: ${loki_url}
+      access: proxy
+      isDefault: false
+      jsonData:
+        maxLines: 1000
+%{ endif }
+%{ if jaeger_url != "" }
+    - name: Jaeger
+      type: jaeger
+      url: ${jaeger_url}
+      access: proxy
+      isDefault: false
+%{ endif }
+
+# =============================================================================
+# Node Exporter
+# =============================================================================
+nodeExporter:
+  enabled: ${node_exporter_enabled}
+
+# =============================================================================
+# Kube State Metrics
+# =============================================================================
+kubeStateMetrics:
+  enabled: ${kube_state_metrics_enabled}
+
+# =============================================================================
+# Prometheus Operator
+# =============================================================================
+prometheusOperator:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# =============================================================================
+# Default Rules
+# =============================================================================
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: true
+    configReloaders: true
+    general: true
+    k8sContainerCpuUsageSecondsTotal: true
+    k8sContainerMemoryCache: true
+    k8sContainerMemoryRss: true
+    k8sContainerMemorySwap: true
+    k8sContainerResource: true
+    k8sPodOwner: true
+    kubeApiserverAvailability: true
+    kubeApiserverBurnrate: true
+    kubeApiserverHistogram: true
+    kubeApiserverSlos: true
+    kubeControllerManager: true
+    kubelet: true
+    kubeProxy: true
+    kubePrometheusGeneral: true
+    kubePrometheusNodeRecording: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    kubeSchedulerAlerting: true
+    kubeSchedulerRecording: true
+    kubeStateMetrics: true
+    network: true
+    node: true
+    nodeExporterAlerting: true
+    nodeExporterRecording: true
+    prometheus: true
+    prometheusOperator: true

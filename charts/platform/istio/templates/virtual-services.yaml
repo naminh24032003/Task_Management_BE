@@ -1,0 +1,181 @@
+# =============================================================================
+# VirtualService - Task Service
+# =============================================================================
+# Step 5 & 6: Traffic routing with canary deployment support
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.services.taskService.name }}-vs
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "istio-config.labels" . | nindent 4 }}
+spec:
+  hosts:
+    - {{ .Values.services.taskService.host }}
+  http:
+    # HTTP routes
+    - match:
+        - port: {{ .Values.services.taskService.port }}
+      # Timeout (Step 7)
+      timeout: {{ .Values.resilience.timeout }}
+      # Retry policy (Step 7)
+      retries:
+        attempts: {{ .Values.resilience.retries.attempts }}
+        perTryTimeout: {{ .Values.resilience.retries.perTryTimeout }}
+        retryOn: {{ .Values.resilience.retries.retryOn }}
+      route:
+        {{- if .Values.trafficManagement.canary.enabled }}
+        # Canary deployment - split traffic between v1 and v2 (Step 6)
+        - destination:
+            host: {{ .Values.services.taskService.host }}
+            subset: v1
+            port:
+              number: {{ .Values.services.taskService.port }}
+          weight: {{ .Values.trafficManagement.canary.v1Weight }}
+        - destination:
+            host: {{ .Values.services.taskService.host }}
+            subset: v2
+            port:
+              number: {{ .Values.services.taskService.port }}
+          weight: {{ .Values.trafficManagement.canary.v2Weight }}
+        {{- else }}
+        # Route 100% traffic to v1 (Step 5)
+        - destination:
+            host: {{ .Values.services.taskService.host }}
+            subset: v1
+            port:
+              number: {{ .Values.services.taskService.port }}
+          weight: 100
+        {{- end }}
+    # gRPC routes
+    - match:
+        - port: {{ .Values.services.taskService.grpcPort }}
+      timeout: {{ .Values.resilience.timeout }}
+      retries:
+        attempts: {{ .Values.resilience.retries.attempts }}
+        perTryTimeout: {{ .Values.resilience.retries.perTryTimeout }}
+        retryOn: {{ .Values.resilience.retries.retryOn }}
+      route:
+        {{- if .Values.trafficManagement.canary.enabled }}
+        - destination:
+            host: {{ .Values.services.taskService.host }}
+            subset: v1
+            port:
+              number: {{ .Values.services.taskService.grpcPort }}
+          weight: {{ .Values.trafficManagement.canary.v1Weight }}
+        - destination:
+            host: {{ .Values.services.taskService.host }}
+            subset: v2
+            port:
+              number: {{ .Values.services.taskService.grpcPort }}
+          weight: {{ .Values.trafficManagement.canary.v2Weight }}
+        {{- else }}
+        - destination:
+            host: {{ .Values.services.taskService.host }}
+            subset: v1
+            port:
+              number: {{ .Values.services.taskService.grpcPort }}
+          weight: 100
+        {{- end }}
+---
+# =============================================================================
+# VirtualService - User Service
+# =============================================================================
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.services.userService.name }}-vs
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "istio-config.labels" . | nindent 4 }}
+spec:
+  hosts:
+    - {{ .Values.services.userService.host }}
+  http:
+    # HTTP routes
+    - match:
+        - port: {{ .Values.services.userService.port }}
+      timeout: {{ .Values.resilience.timeout }}
+      retries:
+        attempts: {{ .Values.resilience.retries.attempts }}
+        perTryTimeout: {{ .Values.resilience.retries.perTryTimeout }}
+        retryOn: {{ .Values.resilience.retries.retryOn }}
+      route:
+        {{- if .Values.trafficManagement.canary.enabled }}
+        - destination:
+            host: {{ .Values.services.userService.host }}
+            subset: v1
+            port:
+              number: {{ .Values.services.userService.port }}
+          weight: {{ .Values.trafficManagement.canary.v1Weight }}
+        - destination:
+            host: {{ .Values.services.userService.host }}
+            subset: v2
+            port:
+              number: {{ .Values.services.userService.port }}
+          weight: {{ .Values.trafficManagement.canary.v2Weight }}
+        {{- else }}
+        - destination:
+            host: {{ .Values.services.userService.host }}
+            subset: v1
+            port:
+              number: {{ .Values.services.userService.port }}
+          weight: 100
+        {{- end }}
+    # gRPC routes
+    - match:
+        - port: {{ .Values.services.userService.grpcPort }}
+      timeout: {{ .Values.resilience.timeout }}
+      retries:
+        attempts: {{ .Values.resilience.retries.attempts }}
+        perTryTimeout: {{ .Values.resilience.retries.perTryTimeout }}
+        retryOn: {{ .Values.resilience.retries.retryOn }}
+      route:
+        {{- if .Values.trafficManagement.canary.enabled }}
+        - destination:
+            host: {{ .Values.services.userService.host }}
+            subset: v1
+            port:
+              number: {{ .Values.services.userService.grpcPort }}
+          weight: {{ .Values.trafficManagement.canary.v1Weight }}
+        - destination:
+            host: {{ .Values.services.userService.host }}
+            subset: v2
+            port:
+              number: {{ .Values.services.userService.grpcPort }}
+          weight: {{ .Values.trafficManagement.canary.v2Weight }}
+        {{- else }}
+        - destination:
+            host: {{ .Values.services.userService.host }}
+            subset: v1
+            port:
+              number: {{ .Values.services.userService.grpcPort }}
+          weight: 100
+        {{- end }}
+---
+# =============================================================================
+# VirtualService - gRPC Gateway
+# =============================================================================
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.services.grpcGateway.name }}-vs
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "istio-config.labels" . | nindent 4 }}
+spec:
+  hosts:
+    - {{ .Values.services.grpcGateway.host }}
+  http:
+    - timeout: {{ .Values.resilience.timeout }}
+      retries:
+        attempts: {{ .Values.resilience.retries.attempts }}
+        perTryTimeout: {{ .Values.resilience.retries.perTryTimeout }}
+        retryOn: {{ .Values.resilience.retries.retryOn }}
+      route:
+        - destination:
+            host: {{ .Values.services.grpcGateway.host }}
+            subset: v1
+            port:
+              number: {{ .Values.services.grpcGateway.port }}
+          weight: 100

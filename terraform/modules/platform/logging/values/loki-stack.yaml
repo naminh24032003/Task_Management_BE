@@ -1,0 +1,199 @@
+# =============================================================================
+# Loki Stack Helm Values Template
+# =============================================================================
+# This file is rendered by Terraform templatefile() function
+# Available variables are passed from main.tf
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Loki Configuration
+# -----------------------------------------------------------------------------
+loki:
+  enabled: ${loki_enabled}
+  
+  # Loki server configuration
+  config:
+    auth_enabled: false
+    
+    # Ingester config for better performance
+    ingester:
+      chunk_idle_period: 3m
+      chunk_block_size: 262144
+      chunk_retain_period: 1m
+      max_transfer_retries: 0
+      lifecycler:
+        ring:
+          kvstore:
+            store: inmemory
+          replication_factor: 1
+    
+    # Limits config
+    limits_config:
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h  # 7 days
+      max_entries_limit_per_query: 5000
+    
+    # Schema config
+    schema_config:
+      configs:
+        - from: "2020-10-24"
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+    
+    # Storage config
+    storage_config:
+      boltdb_shipper:
+        active_index_directory: /data/loki/boltdb-shipper-active
+        cache_location: /data/loki/boltdb-shipper-cache
+        cache_ttl: 24h
+        shared_store: filesystem
+      filesystem:
+        directory: /data/loki/chunks
+    
+    # Compactor config
+    compactor:
+      working_directory: /data/loki/boltdb-shipper-compactor
+      shared_store: filesystem
+    
+    # Table manager for retention
+    table_manager:
+      retention_deletes_enabled: true
+      retention_period: ${loki_retention_period}
+  
+  # Persistence
+  persistence:
+    enabled: ${loki_storage_enabled}
+    size: ${loki_storage_size}
+%{ if loki_storage_class != "" ~}
+    storageClassName: "${loki_storage_class}"
+%{ endif ~}
+  
+  # Resources
+  resources:
+    requests:
+      cpu: "${loki_request_cpu}"
+      memory: "${loki_request_memory}"
+    limits:
+      cpu: "${loki_limit_cpu}"
+      memory: "${loki_limit_memory}"
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 3100
+
+# -----------------------------------------------------------------------------
+# Promtail Configuration
+# -----------------------------------------------------------------------------
+promtail:
+  enabled: ${promtail_enabled}
+  
+  # Promtail config
+  config:
+    # Loki client configuration
+    clients:
+      - url: http://${release_name}-loki:3100/loki/api/v1/push
+    
+    # Position tracking
+    positions:
+      filename: /run/promtail/positions.yaml
+    
+    # Scrape configs for Kubernetes logs
+    scrapeConfigs:
+      # Pod logs
+      - job_name: kubernetes-pods
+        pipeline_stages:
+          - cri: {}
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          # Keep only labeled pods
+          - source_labels:
+              - __meta_kubernetes_pod_controller_name
+            regex: ([0-9a-z-.]+?)(-[0-9a-f]{8,10})?
+            action: replace
+            target_label: __tmp_controller_name
+          - source_labels:
+              - __meta_kubernetes_pod_label_app_kubernetes_io_name
+              - __meta_kubernetes_pod_label_app
+              - __tmp_controller_name
+              - __meta_kubernetes_pod_name
+            regex: ^;*([^;]+)(;.*)?$
+            action: replace
+            target_label: app
+          - source_labels:
+              - __meta_kubernetes_pod_label_app_kubernetes_io_instance
+              - __meta_kubernetes_pod_label_release
+            regex: ^;*([^;]+)(;.*)?$
+            action: replace
+            target_label: instance
+          - source_labels:
+              - __meta_kubernetes_pod_label_app_kubernetes_io_component
+              - __meta_kubernetes_pod_label_component
+            regex: ^;*([^;]+)(;.*)?$
+            action: replace
+            target_label: component
+          - action: replace
+            source_labels:
+              - __meta_kubernetes_pod_node_name
+            target_label: node_name
+          - action: replace
+            source_labels:
+              - __meta_kubernetes_namespace
+            target_label: namespace
+          - action: replace
+            replacement: $1
+            separator: /
+            source_labels:
+              - namespace
+              - app
+            target_label: job
+          - action: replace
+            source_labels:
+              - __meta_kubernetes_pod_name
+            target_label: pod
+          - action: replace
+            source_labels:
+              - __meta_kubernetes_pod_container_name
+            target_label: container
+          - action: replace
+            replacement: /var/log/pods/*$1/*.log
+            separator: /
+            source_labels:
+              - __meta_kubernetes_pod_uid
+              - __meta_kubernetes_pod_container_name
+            target_label: __path__
+          - action: replace
+            regex: true/(.*)
+            replacement: /var/log/pods/*$1/*.log
+            separator: /
+            source_labels:
+              - __meta_kubernetes_pod_annotationpresent_kubernetes_io_config_hash
+              - __meta_kubernetes_pod_annotation_kubernetes_io_config_hash
+              - __meta_kubernetes_pod_container_name
+            target_label: __path__
+  
+  # Resources
+  resources:
+    requests:
+      cpu: "${promtail_request_cpu}"
+      memory: "${promtail_request_memory}"
+    limits:
+      cpu: "${promtail_limit_cpu}"
+      memory: "${promtail_limit_memory}"
+
+# -----------------------------------------------------------------------------
+# Disabled Components
+# -----------------------------------------------------------------------------
+# We use external Grafana from monitoring module
+grafana:
+  enabled: false
+
+# Fluent-bit disabled, using Promtail instead
+fluent-bit:
+  enabled: false

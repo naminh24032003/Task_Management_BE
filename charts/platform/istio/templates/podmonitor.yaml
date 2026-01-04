@@ -1,0 +1,65 @@
+# =============================================================================
+# PodMonitor - Scrape Istio Envoy sidecars
+# =============================================================================
+# This allows existing Prometheus (kube-prometheus-stack) to scrape Istio metrics
+{{- if .Values.observability.metrics.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: istio-envoy-stats
+  namespace: {{ .Values.monitoring.namespace }}
+  labels:
+    {{- include "istio-config.labels" . | nindent 4 }}
+    release: {{ .Values.monitoring.prometheusRelease }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.namespace }}
+  selector:
+    matchExpressions:
+      - key: security.istio.io/tlsMode
+        operator: Exists
+  podMetricsEndpoints:
+    - path: /stats/prometheus
+      port: http-envoy-prom
+      interval: {{ .Values.observability.metrics.scrapeInterval }}
+      relabelings:
+        - action: keep
+          sourceLabels: [__meta_kubernetes_pod_container_name]
+          regex: "istio-proxy"
+        - action: replace
+          sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+        - action: replace
+          sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod
+        - action: replace
+          sourceLabels: [__meta_kubernetes_pod_label_app]
+          targetLabel: app
+        - action: replace
+          sourceLabels: [__meta_kubernetes_pod_label_version]
+          targetLabel: version
+---
+# =============================================================================
+# ServiceMonitor - Scrape Istiod (Pilot)
+# =============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: istiod
+  namespace: {{ .Values.monitoring.namespace }}
+  labels:
+    {{- include "istio-config.labels" . | nindent 4 }}
+    release: {{ .Values.monitoring.prometheusRelease }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - istio-system
+  selector:
+    matchLabels:
+      app: istiod
+  endpoints:
+    - port: http-monitoring
+      interval: {{ .Values.observability.metrics.scrapeInterval }}
+      path: /metrics
+{{- end }}

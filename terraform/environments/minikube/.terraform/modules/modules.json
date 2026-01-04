@@ -1,0 +1,1 @@
+{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"istio","Source":"../../modules/platform/istio","Dir":"../../modules/platform/istio"},{"Key":"logging","Source":"../../modules/platform/logging","Dir":"../../modules/platform/logging"},{"Key":"monitoring","Source":"../../modules/platform/monitoring","Dir":"../../modules/platform/monitoring"}]}

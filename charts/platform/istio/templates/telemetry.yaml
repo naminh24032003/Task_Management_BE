@@ -1,0 +1,45 @@
+{{- if .Values.observability.tracing.enabled }}
+# =============================================================================
+# Telemetry - Tracing Configuration
+# =============================================================================
+# Step 9: Observability - Configure tracing with Jaeger
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: mesh-tracing
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "istio-config.labels" . | nindent 4 }}
+spec:
+  tracing:
+    - providers:
+        - name: "jaeger"
+      randomSamplingPercentage: {{ .Values.observability.tracing.samplingRate }}
+      customTags:
+        environment:
+          literal:
+            value: "{{ .Values.namespace }}"
+        service.version:
+          header:
+            name: x-service-version
+            defaultValue: "unknown"
+{{- end }}
+---
+{{- if .Values.observability.metrics.enabled }}
+# =============================================================================
+# Telemetry - Metrics Configuration for existing Prometheus
+# =============================================================================
+# Integrates with kube-prometheus-stack in monitoring namespace
+# Note: Using default Istio metrics, no custom tagOverrides needed
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: mesh-metrics
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "istio-config.labels" . | nindent 4 }}
+spec:
+  metrics:
+    - providers:
+        - name: prometheus
+{{- end }}

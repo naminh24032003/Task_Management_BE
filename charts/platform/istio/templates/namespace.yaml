@@ -1,0 +1,29 @@
+# =============================================================================
+# Namespace Configuration - Enable Istio Injection
+# =============================================================================
+# Step 2: Label namespace for automatic sidecar injection
+# NOTE: Namespaces are created externally, only apply labels via kubectl
+# kubectl label namespace dev istio-injection=enabled --overwrite
+# kubectl label namespace kong istio-injection=disabled --overwrite
+#
+# Uncomment below if you want Helm to manage namespaces:
+#
+# {{- if .Values.createNamespace }}
+# apiVersion: v1
+# kind: Namespace
+# metadata:
+#   name: {{ .Values.namespace }}
+#   labels:
+#     istio-injection: enabled
+#     {{- include "istio-config.labels" . | nindent 4 }}
+# ---
+# {{- if .Values.kong.excludeFromMesh }}
+# apiVersion: v1
+# kind: Namespace
+# metadata:
+#   name: {{ .Values.kong.namespace }}
+#   labels:
+#     istio-injection: disabled
+#     {{- include "istio-config.labels" . | nindent 4 }}
+# {{- end }}
+# {{- end }}
