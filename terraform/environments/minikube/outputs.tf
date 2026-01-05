@@ -42,6 +42,27 @@ output "istio" {
 }
 
 # -----------------------------------------------------------------------------
+# MongoDB Sharded
+# -----------------------------------------------------------------------------
+
+output "mongodb" {
+  description = "MongoDB Sharded cluster information"
+  value = var.mongodb_enabled ? {
+    namespace    = module.mongodb_sharded[0].namespace
+    release_name = module.mongodb_sharded[0].release_name
+    mongos_host  = module.mongodb_sharded[0].mongos_host
+    mongos_port  = module.mongodb_sharded[0].mongos_port
+    service_name = module.mongodb_sharded[0].mongos_service_name
+  } : null
+}
+
+output "mongodb_connection_string" {
+  description = "MongoDB connection string (sensitive)"
+  value       = var.mongodb_enabled ? module.mongodb_sharded[0].connection_string : null
+  sensitive   = true
+}
+
+# -----------------------------------------------------------------------------
 # Access Commands
 # -----------------------------------------------------------------------------
 
@@ -59,5 +80,9 @@ output "access_commands" {
     # Port-forward Alertmanager:
     kubectl port-forward -n monitoring svc/monitoring-kube-prometheus-alertmanager 9093:9093
     # Open: http://localhost:9093
+    
+    # Port-forward MongoDB:
+    kubectl port-forward -n mongodb svc/mongodb-sharded 27017:27017
+    # Connect: mongosh mongodb://root:<password>@localhost:27017
   EOT
 }

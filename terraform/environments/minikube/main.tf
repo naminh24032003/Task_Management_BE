@@ -152,3 +152,61 @@ module "istio" {
 
   depends_on = [module.monitoring]
 }
+
+# -----------------------------------------------------------------------------
+# MongoDB Sharded Module
+# -----------------------------------------------------------------------------
+
+module "mongodb_sharded" {
+  source = "../../modules/platform/mongodb_sharded"
+  count  = var.mongodb_enabled ? 1 : 0
+
+  environment      = var.environment
+  namespace        = "mongodb"
+  create_namespace = true
+
+  # Authentication
+  root_password   = var.mongodb_root_password
+  replica_set_key = var.mongodb_replica_set_key
+
+  # Cluster Configuration (minimal for minikube)
+  shard_count             = 1
+  configsvr_replica_count = 1
+  shardsvr_replica_count  = 1
+  mongos_replica_count    = 1
+
+  # Resource Presets (nano/micro for minikube)
+  configsvr_resources_preset = "nano"
+  shardsvr_resources_preset  = "micro"
+  mongos_resources_preset    = "nano"
+
+  # Persistence
+  persistence_enabled        = var.mongodb_persistence_enabled
+  storage_class              = ""  # Use minikube default storage class
+  configsvr_persistence_size = "1Gi"
+  shardsvr_persistence_size  = "2Gi"
+
+  # Image Configuration (bitnamilegacy)
+  image_registry    = "docker.io"
+  image_repository  = "bitnamilegacy/mongodb-sharded"
+  image_tag         = "8.0.13-debian-12-r0"
+  image_pull_policy = "IfNotPresent"
+
+  # Volume Permissions (required for PV/PVC on minikube)
+  volume_permissions_enabled          = true
+  volume_permissions_image_registry   = "docker.io"
+  volume_permissions_image_repository = "bitnamilegacy/os-shell"
+  volume_permissions_image_tag        = "12-debian-12-r51"
+
+  # Network
+  service_type           = "ClusterIP"
+  network_policy_enabled = false
+
+  # Platform
+  is_minikube = true  # Disables node selectors
+
+  # Metrics
+  metrics_enabled = var.mongodb_metrics_enabled
+
+  depends_on = [module.monitoring]
+}

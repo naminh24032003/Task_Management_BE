@@ -52,6 +52,7 @@ resource "helm_release" "kube_prometheus_stack" {
       
       # Grafana
       grafana_enabled        = var.grafana_enabled
+      grafana_admin_user     = var.grafana_admin_user
       grafana_admin_password = var.grafana_admin_password
       grafana_storage_enabled = var.grafana_storage_enabled
       grafana_storage_size   = var.grafana_storage_size
@@ -60,6 +61,12 @@ resource "helm_release" "kube_prometheus_stack" {
       grafana_request_memory = var.grafana_resources.requests.memory
       grafana_limit_cpu      = var.grafana_resources.limits.cpu
       grafana_limit_memory   = var.grafana_resources.limits.memory
+      
+      # Additional
+      loki_url                   = var.loki_url
+      jaeger_url                 = var.jaeger_url
+      node_exporter_enabled      = var.node_exporter_enabled
+      kube_state_metrics_enabled = var.kube_state_metrics_enabled
       
       # Service
       service_type = var.service_type

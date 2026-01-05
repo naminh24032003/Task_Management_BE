@@ -54,6 +54,12 @@ variable "prometheus_storage_size" {
   default     = "10Gi"
 }
 
+variable "prometheus_storage_enabled" {
+  type        = bool
+  description = "Enable persistent storage for Prometheus"
+  default     = true
+}
+
 variable "prometheus_storage_class" {
   type        = string
   description = "Storage class for Prometheus PVC"
@@ -94,10 +100,22 @@ variable "alertmanager_enabled" {
   default     = true
 }
 
+variable "alertmanager_storage_enabled" {
+  type        = bool
+  description = "Enable persistent storage for Alertmanager"
+  default     = true
+}
+
 variable "alertmanager_storage_size" {
   type        = string
   description = "Alertmanager persistent storage size"
   default     = "5Gi"
+}
+
+variable "alertmanager_storage_class" {
+  type        = string
+  description = "Storage class for Alertmanager PVC"
+  default     = "standard"
 }
 
 variable "alertmanager_resources" {
@@ -234,4 +252,20 @@ variable "jaeger_url" {
   type        = string
   description = "Jaeger datasource URL for Grafana"
   default     = ""
+}
+
+# =============================================================================
+# Service Configuration
+# =============================================================================
+
+variable "service_type" {
+  type        = string
+  description = "Kubernetes service type (ClusterIP, NodePort, LoadBalancer)"
+  default     = "ClusterIP"
+}
+
+variable "grafana_storage_class" {
+  type        = string
+  description = "Storage class for Grafana PVC"
+  default     = "standard"
 }
