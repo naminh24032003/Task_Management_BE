@@ -54,12 +54,6 @@ variable "prometheus_storage_size" {
   default     = "10Gi"
 }
 
-variable "prometheus_storage_enabled" {
-  type        = bool
-  description = "Enable persistent storage for Prometheus"
-  default     = true
-}
-
 variable "prometheus_storage_class" {
   type        = string
   description = "Storage class for Prometheus PVC"
@@ -104,18 +98,6 @@ variable "alertmanager_storage_size" {
   type        = string
   description = "Alertmanager persistent storage size"
   default     = "5Gi"
-}
-
-variable "alertmanager_storage_enabled" {
-  type        = bool
-  description = "Enable persistent storage for Alertmanager"
-  default     = true
-}
-
-variable "alertmanager_storage_class" {
-  type        = string
-  description = "Storage class for Alertmanager PVC"
-  default     = "standard"
 }
 
 variable "alertmanager_resources" {
@@ -200,18 +182,6 @@ variable "grafana_resources" {
       memory = "512Mi"
     }
   }
-}
-
-variable "grafana_storage_class" {
-  type        = string
-  description = "Storage class for Grafana PVC"
-  default     = "standard"
-}
-
-variable "service_type" {
-  type        = string
-  description = "Service type for all services (ClusterIP, NodePort, LoadBalancer)"
-  default     = "ClusterIP"
 }
 
 # =============================================================================

@@ -193,6 +193,18 @@ promtail:
 # We use external Grafana from monitoring module
 grafana:
   enabled: false
+  sidecar:
+    datasources:
+      # Disable datasource configmap creation - we create our own with correct FQDN
+      enabled: false
+
+# Disable loki datasource configmap (uses wrong URL without namespace)
+loki:
+  datasource:
+    # This prevents loki-stack from creating a datasource configmap with wrong URL
+    # We create our own configmap in grafana-integration.tf with correct FQDN
+    jsonData: ""
+    uid: ""
 
 # Fluent-bit disabled, using Promtail instead
 fluent-bit:
