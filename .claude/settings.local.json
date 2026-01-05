@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(kubectl get:*)",
-      "Bash(terraform state list:*)"
-    ]
-  }
-}
