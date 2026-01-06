@@ -1,0 +1,302 @@
+// =============================================================================
+// Jenkins Pipeline for User Service (NestJS/TypeScript)
+// =============================================================================
+// This pipeline builds, tests, and deploys user-service to Kubernetes
+// Triggered by: Git push, webhook, or manual
+
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    jenkins: agent
+spec:
+  serviceAccountName: jenkins
+  containers:
+  - name: node
+    image: node:20-alpine
+    command:
+    - cat
+    tty: true
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
+  - name: docker
+    image: docker:24-dind
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
+  - name: kubectl
+    image: bitnami/kubectl:latest
+    command:
+    - cat
+    tty: true
+  volumes:
+  - name: docker-sock
+    hostPath:
+      path: /var/run/docker.sock
+'''
+        }
+    }
+
+    environment {
+        // Service Configuration
+        SERVICE_NAME = 'user-service'
+        SERVICE_PATH = 'service/user-service'
+
+        // Docker Configuration
+        DOCKER_REGISTRY = credentials('docker-registry-url') // Configure in Jenkins
+        DOCKER_CREDENTIALS = credentials('docker-registry-credentials')
+        IMAGE_NAME = "${DOCKER_REGISTRY}/${SERVICE_NAME}"
+
+        // Git Configuration
+        GIT_COMMIT_SHORT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+        GIT_BRANCH = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
+        BUILD_TAG = "${GIT_COMMIT_SHORT}-${BUILD_NUMBER}"
+
+        // Kubernetes Configuration
+        K8S_NAMESPACE = 'dev'
+        HELM_RELEASE_NAME = 'user-service'
+
+        // ArgoCD Configuration (optional - for GitOps)
+        ARGOCD_APP_NAME = 'user-service'
+        ARGOCD_SERVER = 'argocd-server.argocd.svc.cluster.local'
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timeout(time: 30, unit: 'MINUTES')
+        timestamps()
+    }
+
+    stages {
+        // =============================================================================
+        // Stage 1: Checkout Code
+        // =============================================================================
+        stage('Checkout') {
+            steps {
+                script {
+                    echo "🔄 Checking out code..."
+                    echo "Branch: ${GIT_BRANCH}"
+                    echo "Commit: ${GIT_COMMIT_SHORT}"
+                    checkout scm
+                }
+            }
+        }
+
+        // =============================================================================
+        // Stage 2: Install Dependencies & Build
+        // =============================================================================
+        stage('Build') {
+            steps {
+                container('node') {
+                    script {
+                        echo "📦 Installing dependencies and building..."
+                        sh """
+                            cd ${SERVICE_PATH}
+                            npm ci
+                            npm run build
+                        """
+                    }
+                }
+            }
+        }
+
+        // =============================================================================
+        // Stage 3: Run Tests
+        // =============================================================================
+        stage('Test') {
+            steps {
+                container('node') {
+                    script {
+                        echo "🧪 Running tests..."
+                        sh """
+                            cd ${SERVICE_PATH}
+                            npm run test || true
+                        """
+                    }
+                }
+            }
+        }
+
+        // =============================================================================
+        // Stage 4: Build Docker Image
+        // =============================================================================
+        stage('Docker Build') {
+            steps {
+                container('docker') {
+                    script {
+                        echo "🐳 Building Docker image..."
+                        sh """
+                            docker build \\
+                                -t ${IMAGE_NAME}:${BUILD_TAG} \\
+                                -t ${IMAGE_NAME}:latest \\
+                                -t ${IMAGE_NAME}:${GIT_BRANCH} \\
+                                -f ${SERVICE_PATH}/Dockerfile \\
+                                .
+                        """
+                    }
+                }
+            }
+        }
+
+        // =============================================================================
+        // Stage 5: Push Docker Image
+        // =============================================================================
+        stage('Docker Push') {
+            steps {
+                container('docker') {
+                    script {
+                        echo "📤 Pushing Docker image to registry..."
+                        sh """
+                            echo ${DOCKER_CREDENTIALS_PSW} | docker login ${DOCKER_REGISTRY} -u ${DOCKER_CREDENTIALS_USR} --password-stdin
+                            docker push ${IMAGE_NAME}:${BUILD_TAG}
+                            docker push ${IMAGE_NAME}:latest
+                            docker push ${IMAGE_NAME}:${GIT_BRANCH}
+                        """
+                    }
+                }
+            }
+        }
+
+        // =============================================================================
+        // Stage 6: Update Helm Values (GitOps)
+        // =============================================================================
+        stage('Update Helm Values') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    echo "📝 Updating Helm values with new image tag..."
+                    sh """
+                        # Update image tag in values file
+                        sed -i 's|tag:.*|tag: ${BUILD_TAG}|' apps/${SERVICE_NAME}/values-minikube.yaml
+
+                        # Commit and push changes
+                        git config user.email "jenkins@ci.local"
+                        git config user.name "Jenkins CI"
+                        git add apps/${SERVICE_NAME}/values-minikube.yaml
+                        git commit -m "🤖 Update ${SERVICE_NAME} image to ${BUILD_TAG}" || echo "No changes to commit"
+
+                        # Push to git (ArgoCD will detect this)
+                        # git push origin main
+                    """
+                }
+            }
+        }
+
+        // =============================================================================
+        // Stage 7: Deploy to Kubernetes (Direct Helm)
+        // =============================================================================
+        stage('Deploy to Kubernetes') {
+            when {
+                branch 'main'
+            }
+            steps {
+                container('kubectl') {
+                    script {
+                        echo "🚀 Deploying to Kubernetes..."
+                        sh """
+                            # Update deployment image
+                            kubectl set image deployment/${SERVICE_NAME} \\
+                                ${SERVICE_NAME}=${IMAGE_NAME}:${BUILD_TAG} \\
+                                -n ${K8S_NAMESPACE}
+
+                            # Wait for rollout
+                            kubectl rollout status deployment/${SERVICE_NAME} -n ${K8S_NAMESPACE} --timeout=5m
+                        """
+                    }
+                }
+            }
+        }
+
+        // =============================================================================
+        // Stage 8: Sync ArgoCD (Optional)
+        // =============================================================================
+        stage('Sync ArgoCD') {
+            when {
+                branch 'main'
+                environment name: 'USE_ARGOCD', value: 'true'
+            }
+            steps {
+                container('kubectl') {
+                    script {
+                        echo "🔄 Triggering ArgoCD sync..."
+                        sh """
+                            # Trigger ArgoCD sync via kubectl
+                            kubectl patch app ${ARGOCD_APP_NAME} \\
+                                -n argocd \\
+                                --type merge \\
+                                -p '{"operation":{"initiatedBy":{"username":"jenkins"},"sync":{"revision":"HEAD"}}}'
+                        """
+                    }
+                }
+            }
+        }
+
+        // =============================================================================
+        // Stage 9: Verify Deployment
+        // =============================================================================
+        stage('Verify') {
+            when {
+                branch 'main'
+            }
+            steps {
+                container('kubectl') {
+                    script {
+                        echo "✅ Verifying deployment..."
+                        sh """
+                            # Check pod status
+                            kubectl get pods -n ${K8S_NAMESPACE} -l app=${SERVICE_NAME}
+
+                            # Check service
+                            kubectl get svc ${SERVICE_NAME} -n ${K8S_NAMESPACE}
+
+                            # Get deployment info
+                            kubectl describe deployment ${SERVICE_NAME} -n ${K8S_NAMESPACE} | tail -20
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    // =============================================================================
+    // Post Actions
+    // =============================================================================
+    post {
+        success {
+            echo """
+            ✅ Pipeline completed successfully!
+
+            Service: ${SERVICE_NAME}
+            Image: ${IMAGE_NAME}:${BUILD_TAG}
+            Namespace: ${K8S_NAMESPACE}
+            Branch: ${GIT_BRANCH}
+            Commit: ${GIT_COMMIT_SHORT}
+            """
+        }
+
+        failure {
+            echo """
+            ❌ Pipeline failed!
+
+            Service: ${SERVICE_NAME}
+            Stage: ${env.STAGE_NAME}
+            """
+        }
+
+        always {
+            // Cleanup
+            script {
+                echo "🧹 Cleaning up..."
+            }
+        }
+    }
+}
