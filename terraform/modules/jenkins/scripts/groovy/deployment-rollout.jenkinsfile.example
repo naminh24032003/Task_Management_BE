@@ -1,0 +1,119 @@
+/**
+ * Jenkins Pipeline for Kubernetes Deployment Rollout
+ *
+ * This pipeline restarts a Kubernetes deployment to pull the latest image
+ * Useful for CI/CD workflows where image tags don't change (e.g., 'latest')
+ */
+
+// Configuration (templated by Terraform)
+def deploymentName = "${deployment_name}"  // e.g., "api-gateway"
+def namespace = "${namespace}"  // e.g., "default"
+def inheritFrom = "${inherit_from}"  // e.g., "deployment-rollout-jenkins-agent"
+
+pipeline {
+    agent {
+        kubernetes {
+            label inheritFrom
+            defaultContainer 'jnlp'
+        }
+    }
+
+    stages {
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    echo "=== Verifying deployment: $deploymentName in namespace: $namespace ==="
+
+                    // Check if deployment exists
+                    def deploymentExists = sh(
+                        script: "kubectl get deployment $deploymentName -n $namespace --ignore-not-found",
+                        returnStatus: true
+                    ) == 0
+
+                    if (!deploymentExists) {
+                        error "Deployment $deploymentName not found in namespace $namespace"
+                    }
+
+                    echo "Deployment verified successfully"
+                }
+            }
+        }
+
+        stage('Rollout Restart') {
+            steps {
+                script {
+                    echo "=== Rolling out deployment: $deploymentName ==="
+
+                    // Perform rollout restart
+                    sh """
+                        kubectl rollout restart deployment/$deploymentName -n $namespace
+                    """
+
+                    echo "Rollout restart initiated"
+                }
+            }
+        }
+
+        stage('Wait for Rollout') {
+            steps {
+                script {
+                    echo "=== Waiting for rollout to complete ==="
+
+                    // Wait for rollout to complete (timeout: 5 minutes)
+                    def rolloutStatus = sh(
+                        script: """
+                            kubectl rollout status deployment/$deploymentName -n $namespace --timeout=5m
+                        """,
+                        returnStatus: true
+                    )
+
+                    if (rolloutStatus != 0) {
+                        error "Rollout failed or timed out"
+                    }
+
+                    echo "Rollout completed successfully"
+                }
+            }
+        }
+
+        stage('Verify Deployment Health') {
+            steps {
+                script {
+                    echo "=== Verifying deployment health ==="
+
+                    // Get deployment status
+                    sh """
+                        kubectl get deployment $deploymentName -n $namespace
+                        kubectl get pods -n $namespace -l app=$deploymentName
+                    """
+
+                    echo "Deployment health verified"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "=== Deployment rollout successful ==="
+            echo "Deployment: $deploymentName"
+            echo "Namespace: $namespace"
+        }
+
+        failure {
+            echo "=== Deployment rollout failed ==="
+            echo "Deployment: $deploymentName"
+            echo "Namespace: $namespace"
+
+            // Show recent events for debugging
+            sh """
+                echo "Recent events:"
+                kubectl get events -n $namespace --sort-by='.lastTimestamp' | tail -20
+            """
+        }
+
+        always {
+            echo "=== Pipeline execution complete ==="
+        }
+    }
+}

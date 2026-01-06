@@ -1,0 +1,67 @@
+import jenkins.model.*
+import org.jenkinsci.plugins.workflow.job.WorkflowJob
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition
+import org.jenkinsci.plugins.gwt.GenericTrigger
+import org.jenkinsci.plugins.gwt.GenericVariable
+
+/**
+ * Create Jenkins Pipeline Job
+ * This script creates a pipeline job with webhook trigger
+ */
+
+def jenkins = Jenkins.getInstance()
+
+// Configuration variables (templated by Terraform)
+def jobName = "${job_name}"  // Templated
+def jobDescription = "${job_description}"  // Templated
+def webhookToken = "${webhook_token}"  // Templated
+def pipelineScript = '''${pipeline_script}'''  // Templated
+
+println "=== Creating Pipeline Job: " + jobName + " ==="
+
+// Remove existing job if it exists
+def existingJob = jenkins.getItem(jobName)
+if (existingJob != null) {
+    println "Removing existing job: " + jobName
+    existingJob.delete()
+}
+
+// Create new pipeline job
+def job = jenkins.createProject(WorkflowJob.class, jobName)
+job.setDescription(jobDescription)
+
+// Set pipeline script
+def flowDefinition = new CpsFlowDefinition(pipelineScript, true)
+job.setDefinition(flowDefinition)
+
+// Configure Generic Webhook Trigger (if plugin is installed)
+try {
+    Class.forName("org.jenkinsci.plugins.gwt.GenericTrigger")
+
+    def trigger = new GenericTrigger(
+        [], // genericVariables
+        [], // genericHeaderVariables
+        [], // genericRequestVariables
+        "", // causeString
+        webhookToken, // token
+        "", // tokenCredentialId
+        "", // printContributedVariables
+        "", // printPostContent
+        "", // silentResponse
+        "", // regexpFilterText
+        "" // regexpFilterExpression
+    )
+
+    job.addTrigger(trigger)
+    println "Added webhook trigger with token"
+} catch (ClassNotFoundException e) {
+    println "Generic Webhook Trigger plugin not installed. Skipping webhook configuration."
+}
+
+// Save job
+job.save()
+
+println "Pipeline job created successfully: " + jobName
+println "Webhook URL: /generic-webhook-trigger/invoke?token=" + webhookToken
+
+println "=== Pipeline Job Creation Complete ==="

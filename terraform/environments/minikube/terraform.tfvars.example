@@ -1,0 +1,29 @@
+# =========================
+# Minikube Environment Configuration
+# =========================
+# This file contains NON-SENSITIVE configuration only
+#
+# For SENSITIVE data (passwords, tokens), use secrets.auto.tfvars.example
+# Copy secrets.auto.tfvars.example to secrets.auto.tfvars and set your secrets there
+
+# =========================
+# Jenkins Configuration
+# =========================
+
+# Enable Jenkins init groovy scripts for auto-configuration
+enable_jenkins_init_scripts = false
+
+# Namespace where Jenkins will deploy applications
+jenkins_deployment_namespace = "default"
+
+# =========================
+# Notes
+# =========================
+# DO NOT put passwords or sensitive data in this file!
+# Use secrets.auto.tfvars for all sensitive values
+#
+# Setup steps:
+# 1. cp secrets.auto.tfvars.example secrets.auto.tfvars
+# 2. Edit secrets.auto.tfvars with your actual secrets
+# 3. terraform init
+# 4. terraform apply

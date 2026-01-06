@@ -1,0 +1,38 @@
+{{- if .Values.customConfig.enableInitScripts }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-agent-deploy-role
+  namespace: {{ .Values.customConfig.deploymentNamespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "jenkins.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: agent-rbac
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "patch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-agent-deploy-binding
+  namespace: {{ .Values.customConfig.deploymentNamespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "jenkins.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: agent-rbac
+subjects:
+  - kind: ServiceAccount
+    name: jenkins-agent
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: jenkins-agent-deploy-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

@@ -1,0 +1,68 @@
+import jenkins.model.*
+import org.csanchez.jenkins.plugins.kubernetes.*
+import org.csanchez.jenkins.plugins.kubernetes.volumes.*
+import org.csanchez.jenkins.plugins.kubernetes.pod.*
+
+/**
+ * Configure Kubernetes Cloud for Jenkins
+ * This script sets up Jenkins to use Kubernetes for dynamic agent provisioning
+ */
+
+def jenkins = Jenkins.getInstance()
+
+// Check if Kubernetes plugin is installed
+try {
+    Class.forName("org.csanchez.jenkins.plugins.kubernetes.KubernetesCloud")
+} catch (ClassNotFoundException e) {
+    println "Kubernetes plugin not found. Skipping Kubernetes cloud configuration."
+    return
+}
+
+// Configuration variables (these will be templated by Terraform)
+def kubernetesCloudName = "kubernetes"
+def kubernetesNamespace = "${namespace}"  // Templated by Terraform
+def kubernetesServiceAccount = "${service_account}"  // Templated by Terraform
+def containerCapStr = "${container_cap}"  // Templated by Terraform
+def nodeSelector = "${node_selector}"  // Templated by Terraform
+
+println "=== Configuring Kubernetes Cloud ==="
+println "Cloud Name: " + kubernetesCloudName
+println "Namespace: " + kubernetesNamespace
+println "Service Account: " + kubernetesServiceAccount
+println "Container Cap: " + containerCapStr
+
+// Remove existing Kubernetes cloud if it exists
+def existingCloud = jenkins.clouds.find { it.name == kubernetesCloudName }
+if (existingCloud != null) {
+    println "Removing existing Kubernetes cloud configuration..."
+    jenkins.clouds.remove(existingCloud)
+}
+
+// Create new Kubernetes cloud
+def kubernetesCloud = new KubernetesCloud(kubernetesCloudName)
+
+// Set namespace
+kubernetesCloud.setNamespace(kubernetesNamespace)
+
+// Set container cap
+kubernetesCloud.setContainerCapStr(containerCapStr)
+
+// Set connection timeout
+kubernetesCloud.setConnectTimeout(5)
+kubernetesCloud.setReadTimeout(15)
+
+// Set retention timeout (how long to keep idle agents)
+kubernetesCloud.setRetentionTimeout(5)
+
+// Set max requests per host
+kubernetesCloud.setMaxRequestsPerHostStr("32")
+
+// Add the cloud to Jenkins
+jenkins.clouds.add(kubernetesCloud)
+
+println "Kubernetes cloud configured successfully!"
+
+// Save configuration
+jenkins.save()
+
+println "=== Kubernetes Cloud Configuration Complete ==="

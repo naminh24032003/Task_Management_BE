@@ -1,0 +1,249 @@
+# Default values for Jenkins platform chart
+# This is a YAML-formatted file.
+
+# Jenkins configuration
+jenkins:
+  # Override global settings
+  global:
+    imageRegistry: ""
+    imagePullSecrets: []
+    defaultStorageClass: ""
+
+  # Replica count
+  replicaCount: 1
+
+  # Jenkins admin credentials
+  jenkinsUser: admin
+  jenkinsPassword: ""  # Should be set via values override or terraform
+
+  # Jenkins home directory
+  jenkinsHome: /bitnami/jenkins/home
+
+  # Disable initialization for faster restarts
+  disableInitialization: "no"
+
+  # Plugins to install
+  plugins:
+    - kubernetes
+    - workflow-job
+    - workflow-aggregator
+    - github
+    - generic-webhook-trigger
+    - git
+    - docker-workflow
+
+  # Latest plugins
+  latestPlugins: true
+  latestSpecifiedPlugins: false
+  skipImagePlugins: false
+  overridePlugins: false
+
+  # Init scripts from ConfigMap
+  initScriptsCM: ""
+  initScriptsSecret: ""
+
+  # Init hook scripts (run on every startup)
+  initHookScriptsCM: ""
+  initHookScriptsSecret: ""
+
+  # Configuration as Code
+  configAsCode:
+    enabled: false
+    autoReload:
+      enabled: true
+      initialDelay: 360
+      reqRetries: 12
+      interval: 10
+
+  # Jenkins agents
+  agent:
+    enabled: true
+    image:
+      registry: docker.io
+      repository: bitnamilegacy/jenkins-agent
+      tag: 0.3327.0-debian-12-r1
+      pullPolicy: IfNotPresent
+    templateLabel: "kubernetes-agent"
+    podLabels: {}
+    annotations: {}
+    sidecars: []
+    resourcesPreset: "small"
+    resources: {}
+    containerSecurityContext:
+      enabled: false
+      runAsUser: ""
+      runAsGroup: ""
+      privileged: false
+
+  # Resources for Jenkins server
+  resourcesPreset: "medium"
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2048Mi
+
+  # Container ports
+  containerPorts:
+    http: 8080
+    https: 8443
+    agentListener: 50000
+
+  # Security contexts
+  podSecurityContext:
+    enabled: true
+    fsGroupChangePolicy: Always
+    sysctls: []
+    supplementalGroups: []
+    fsGroup: 1001
+
+  containerSecurityContext:
+    enabled: true
+    seLinuxOptions: {}
+    runAsUser: 1001
+    runAsGroup: 1001
+    runAsNonRoot: true
+    privileged: false
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: "RuntimeDefault"
+
+  # Probes configuration
+  startupProbe:
+    enabled: false
+    initialDelaySeconds: 180
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 6
+
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 180
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 6
+
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    ports:
+      http: 80
+      https: 443
+    nodePorts:
+      http: ""
+      https: ""
+    annotations: {}
+    sessionAffinity: None
+
+  # Agent listener service
+  agentListenerService:
+    enabled: true
+    type: ClusterIP
+    ports:
+      agentListener: 50000
+    nodePorts:
+      agentListener: ""
+    annotations: {}
+    sessionAffinity: None
+
+  # Network policy
+  networkPolicy:
+    enabled: true
+    allowExternal: true
+    allowExternalEgress: true
+    kubeAPIServerPorts: [443, 6443, 8443]
+    extraIngress: []
+    extraEgress: []
+
+  # Ingress configuration
+  ingress:
+    enabled: false
+    pathType: ImplementationSpecific
+    hostname: jenkins.local
+    path: /
+    annotations: {}
+    tls: false
+    selfSigned: false
+    ingressClassName: ""
+
+  # Persistence
+  persistence:
+    enabled: true
+    storageClass: ""
+    existingClaim: ""
+    annotations: {}
+    accessModes:
+      - ReadWriteOnce
+    size: 8Gi
+    selector: {}
+
+  # Volume permissions
+  volumePermissions:
+    enabled: false
+    resourcesPreset: "nano"
+    resources:
+      requests:
+        cpu: 16m
+        memory: 32Mi
+      limits:
+        cpu: 128m
+        memory: 256Mi
+    securityContext:
+      runAsUser: 0
+
+  # RBAC
+  rbac:
+    create: true
+    rules: []
+
+  # Service Account
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+    automountServiceAccountToken: false
+
+  # Pod Disruption Budget
+  pdb:
+    create: true
+    minAvailable: ""
+    maxUnavailable: ""
+
+  # Node selector, affinity, tolerations
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+
+  # Extra volumes and mounts
+  extraVolumes: []
+  extraVolumeMounts: []
+  sidecars: []
+  initContainers: []
+
+# Custom configuration for task management system
+customConfig:
+  # Enable custom init scripts
+  enableInitScripts: false
+
+  # Namespace for deployments
+  deploymentNamespace: "default"
+
+  # Jenkins agent configuration
+  agentConfig:
+    containerCap: 10
+    nodeSelector: ""

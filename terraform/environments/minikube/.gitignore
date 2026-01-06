@@ -1,0 +1,58 @@
+# Terraform files
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# =========================
+# SENSITIVE FILES - NEVER COMMIT!
+# =========================
+# Secrets configuration
+secrets.auto.tfvars
+*secrets*.auto.tfvars
+
+# Legacy tfvars (if you still use them)
+terraform.tfvars
+*.auto.tfvars
+
+# Environment-specific secrets
+dev.secrets.tfvars
+staging.secrets.tfvars
+prod.secrets.tfvars
+
+# Backup files that might contain secrets
+*.backup
+*.bak
+*.old
+
+# =========================
+# Temporary and generated files
+# =========================
+# Crash logs
+crash.log
+crash.*.log
+
+# Override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI configuration files
+.terraformrc
+terraform.rc
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Jenkins backup files (might contain sensitive data)
+jenkins-backup-*.tar.gz
