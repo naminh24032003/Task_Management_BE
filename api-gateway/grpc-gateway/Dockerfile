@@ -52,9 +52,10 @@ import (
 )
 
 var (
-    userServiceEndpoint = flag.String("user-service", "user-service-user-service.default.svc.cluster.local:50051", "User gRPC service endpoint")
-    taskServiceEndpoint = flag.String("task-service", "task-service-task-service.default.svc.cluster.local:50052", "Task gRPC service endpoint")
+    userServiceEndpoint = flag.String("user-service", "user-service.dev.svc.cluster.local:50051", "User gRPC service endpoint")
+    taskServiceEndpoint = flag.String("task-service", "task-service.dev.svc.cluster.local:50052", "Task gRPC service endpoint")
     httpPort = flag.String("http-port", ":8080", "HTTP port")
+    useMTLS = flag.Bool("use-mtls", true, "Enable mTLS for gRPC connections")
 )
 
 func run() error {
@@ -63,7 +64,22 @@ func run() error {
     defer cancel()
 
     mux := runtime.NewServeMux()
-    opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+
+    var opts []grpc.DialOption
+
+    // In Istio service mesh, mTLS is handled transparently by the sidecar proxy
+    // The application connects to services using plaintext, and Istio sidecar
+    // automatically encrypts traffic with mTLS between sidecars
+    if *useMTLS {
+        log.Printf("🔒 Running in Istio mesh - mTLS handled by sidecar proxy")
+        log.Printf("📝 Using insecure connection to local Envoy sidecar (127.0.0.1)")
+        log.Printf("🔐 Istio sidecar will handle mTLS encryption to backend services")
+    } else {
+        log.Printf("🔓 Using insecure gRPC connection (development mode)")
+    }
+
+    // Always use insecure connection - Istio sidecar handles encryption
+    opts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
     log.Printf("📡 Connecting to User Service: %s", *userServiceEndpoint)
     if err := userpb.RegisterUserServiceHandlerFromEndpoint(ctx, mux, *userServiceEndpoint, opts); err != nil {
@@ -76,7 +92,7 @@ func run() error {
     }
 
     log.Printf("🚀 gRPC-Gateway listening on %s", *httpPort)
-    
+
     // Logging wrapper
     handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         log.Printf("📥 Incoming Request: %s %s", r.Method, r.URL.Path)
@@ -101,6 +117,13 @@ func main() {
     }
     if port := os.Getenv("HTTP_PORT"); port != "" {
         *httpPort = port
+    }
+    if mtls := os.Getenv("USE_MTLS"); mtls != "" {
+        if mtls == "false" || mtls == "0" {
+            *useMTLS = false
+        } else {
+            *useMTLS = true
+        }
     }
 
     log.SetFlags(log.LstdFlags | log.Lshortfile)

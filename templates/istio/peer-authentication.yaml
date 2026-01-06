@@ -1,0 +1,89 @@
+# PeerAuthentication for default namespace - STRICT mTLS
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: default
+spec:
+  mtls:
+    mode: STRICT
+---
+# PeerAuthentication for dev namespace - STRICT mTLS
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: dev
+spec:
+  mtls:
+    mode: STRICT
+---
+# PeerAuthentication for kong namespace - STRICT mTLS
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: kong
+spec:
+  mtls:
+    mode: STRICT
+---
+# DestinationRule for user-service
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: user-service
+  namespace: default
+spec:
+  host: user-service.default.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+# DestinationRule for user-service in dev namespace
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: user-service
+  namespace: dev
+spec:
+  host: user-service.dev.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+# DestinationRule for task-service
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: task-service
+  namespace: default
+spec:
+  host: task-service.default.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+# DestinationRule for task-service in dev namespace
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: task-service
+  namespace: dev
+spec:
+  host: task-service.dev.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+# DestinationRule for grpc-gateway in kong namespace
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: grpc-gateway
+  namespace: kong
+spec:
+  host: grpc-gateway.kong.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL

@@ -16,10 +16,13 @@ spec:
       labels:
         app: grpc-gateway
         component: api-gateway
+      annotations:
+        # Enable Istio sidecar injection for mTLS
+        sidecar.istio.io/inject: "true"
     spec:
       containers:
       - name: grpc-gateway
-        image: grpc-gateway:v2
+        image: grpc-gateway:v5
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -28,11 +31,14 @@ spec:
         env:
         # User Service
         - name: USER_SERVICE_ENDPOINT
-          value: "user-service.default.svc.cluster.local:50051"
+          value: "user-service.dev.svc.cluster.local:50051"
         - name: TASK_SERVICE_ENDPOINT
-          value: "task-service.default.svc.cluster.local:50052"
+          value: "task-service.dev.svc.cluster.local:50052"
         - name: HTTP_PORT
           value: ":8080"
+        # Enable mTLS - Istio sidecar handles encryption
+        - name: USE_MTLS
+          value: "true"
         # Không dùng health check vì gRPC backend cần connection
         # Gateway sẽ tự restart nếu có lỗi
         resources:
