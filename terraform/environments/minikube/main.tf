@@ -268,3 +268,45 @@ module "kafka" {
   # Platform
   is_minikube = true
 }
+
+# -----------------------------------------------------------------------------
+# Redis Cluster Module
+# -----------------------------------------------------------------------------
+
+module "redis" {
+  source = "../../modules/platform/redis"
+  count  = var.redis_enabled ? 1 : 0
+
+  environment      = var.environment
+  namespace        = "redis"
+  create_namespace = true
+
+  # Helm configuration
+  release_name  = "redis-cluster"
+  chart_version = "11.0.7"
+
+  # Authentication
+  redis_password = var.redis_password
+
+  # Cluster topology (minimal for minikube)
+  redis_nodes    = 6  # Minimum for cluster mode
+  redis_replicas = 1  # 1 replica per primary
+
+  # Resources (optimized for minikube)
+  redis_resources = {
+    requests = { cpu = "100m", memory = "256Mi" }
+    limits   = { cpu = "200m", memory = "512Mi" }
+  }
+
+  # Storage
+  persistence_enabled = var.redis_persistence_enabled
+  persistence_size    = "2Gi"
+  storage_class       = ""  # Use minikube default
+
+  # Platform
+  is_minikube = true
+
+  # Redis configuration
+  maxmemory_policy = "allkeys-lru"
+  enable_metrics   = true
+}

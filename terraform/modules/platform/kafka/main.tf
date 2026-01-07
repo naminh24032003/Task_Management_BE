@@ -142,11 +142,8 @@ resource "kubernetes_deployment" "kafka_ui" {
       }
 
       spec {
-        dynamic "node_selector" {
-          for_each = var.is_minikube ? [] : [1]
-          content {
-            "node-role" = "platform"
-          }
+        node_selector = var.is_minikube ? {} : {
+          "node-role" = "platform"
         }
 
         container {
@@ -200,8 +197,10 @@ resource "kubernetes_deployment" "kafka_ui" {
               path = "/actuator/health"
               port = 8080
             }
-            initial_delay_seconds = 30
+            initial_delay_seconds = 90
             period_seconds        = 10
+            timeout_seconds       = 5
+            failure_threshold     = 3
           }
 
           readiness_probe {
@@ -209,8 +208,10 @@ resource "kubernetes_deployment" "kafka_ui" {
               path = "/actuator/health"
               port = 8080
             }
-            initial_delay_seconds = 20
+            initial_delay_seconds = 60
             period_seconds        = 5
+            timeout_seconds       = 3
+            failure_threshold     = 3
           }
         }
       }

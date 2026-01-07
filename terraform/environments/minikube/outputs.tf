@@ -83,6 +83,26 @@ output "kafka_connection" {
 }
 
 # -----------------------------------------------------------------------------
+# Redis
+# -----------------------------------------------------------------------------
+
+output "redis" {
+  description = "Redis cluster information"
+  value = var.redis_enabled ? {
+    namespace          = module.redis[0].namespace
+    connection_string  = module.redis[0].redis_connection_string
+    nodes              = module.redis[0].redis_nodes
+    replicas           = module.redis[0].redis_replicas
+  } : null
+}
+
+output "redis_connection" {
+  description = "Redis connection details"
+  value       = var.redis_enabled ? module.redis[0].connection_info : null
+  sensitive   = false
+}
+
+# -----------------------------------------------------------------------------
 # Access Commands
 # -----------------------------------------------------------------------------
 
@@ -112,5 +132,9 @@ output "access_commands" {
     # Test Kafka connection:
     kubectl run kafka-client --rm -ti --image=bitnami/kafka:latest -- bash
     # Then: kafka-console-producer.sh --bootstrap-server kafka.kafka.svc.cluster.local:9092 ...
+
+    # Test Redis connection:
+    kubectl run redis-client --rm -ti --image=bitnami/redis-cluster:latest -- bash
+    # Then: redis-cli -c -h redis-cluster.redis.svc.cluster.local -a <password>
   EOT
 }

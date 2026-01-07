@@ -95,3 +95,18 @@ variable "kafka_persistence_enabled" {
   description = "Enable persistence for Kafka"
   default     = false
 }
+
+# =========================
+# Redis Configuration
+# =========================
+variable "redis_enabled" {
+  type        = bool
+  description = "Enable Redis cluster"
+  default     = false
+}
+
+variable "redis_persistence_enabled" {
+  type        = bool
+  description = "Enable persistence for Redis"
+  default     = false
+}

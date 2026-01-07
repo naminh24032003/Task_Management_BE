@@ -1,0 +1,181 @@
+# =============================================================================
+# Redis Cluster Helm Chart Values Template
+# =============================================================================
+# Bitnami Redis Cluster Chart Configuration
+# Optimized for both Minikube and EKS environments
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Global Settings
+# -----------------------------------------------------------------------------
+global:
+  redis:
+    password: "${password}"
+  storageClass: "${storage_class}"
+
+# -----------------------------------------------------------------------------
+# Image Configuration
+# -----------------------------------------------------------------------------
+image:
+  registry: docker.io
+  repository: bitnamilegacy/redis
+  tag: "8.2.1-debian-12-r0"
+  digest: ""
+  pullPolicy: IfNotPresent
+
+# -----------------------------------------------------------------------------
+# Cluster Configuration
+# -----------------------------------------------------------------------------
+cluster:
+  nodes: ${nodes}
+  replicas: ${replicas}
+  externalAccess:
+    enabled: false
+
+# -----------------------------------------------------------------------------
+# Redis Configuration
+# -----------------------------------------------------------------------------
+usePassword: true
+password: "${password}"
+
+redis:
+  # Resources per Redis node
+  resources:
+    requests:
+      cpu: "${request_cpu}"
+      memory: "${request_memory}"
+    limits:
+      cpu: "${limit_cpu}"
+      memory: "${limit_memory}"
+
+  # Liveness and readiness probes
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+    successThreshold: 1
+
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 1
+    failureThreshold: 5
+    successThreshold: 1
+
+%{~ if !is_minikube ~}
+  # Node selector for production (EKS)
+  nodeSelector:
+    node-role: "platform"
+%{~ endif ~}
+
+  # Pod anti-affinity for HA
+  podAntiAffinity: soft
+
+# -----------------------------------------------------------------------------
+# Persistence Configuration
+# -----------------------------------------------------------------------------
+persistence:
+  enabled: ${persistence_enabled}
+  storageClass: "${storage_class}"
+  size: "${persistence_size}"
+  accessModes:
+    - ReadWriteOnce
+
+# -----------------------------------------------------------------------------
+# Service Configuration
+# -----------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  ports:
+    redis: 6379
+
+# -----------------------------------------------------------------------------
+# Metrics Configuration
+# -----------------------------------------------------------------------------
+metrics:
+  enabled: false
+  image:
+    registry: docker.io
+    repository: bitnami/redis-exporter
+    tag: latest
+    pullPolicy: Always
+
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 50m
+      memory: 64Mi
+
+  serviceMonitor:
+    enabled: false
+    labels:
+      release: monitoring
+
+# -----------------------------------------------------------------------------
+# Security Context
+# -----------------------------------------------------------------------------
+podSecurityContext:
+  enabled: true
+  fsGroup: 1001
+
+containerSecurityContext:
+  enabled: true
+  runAsUser: 1001
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+
+# -----------------------------------------------------------------------------
+# Network Policy
+# -----------------------------------------------------------------------------
+networkPolicy:
+  enabled: false
+
+# -----------------------------------------------------------------------------
+# Redis Additional Configuration
+# -----------------------------------------------------------------------------
+# These settings can be customized for your use case
+commonConfiguration: |-
+  # Enable AOF persistence
+  appendonly yes
+  appendfsync everysec
+
+  # Memory management
+  maxmemory-policy allkeys-lru
+
+  # Slow log
+  slowlog-log-slower-than 10000
+  slowlog-max-len 128
+
+  # Cluster settings
+  cluster-enabled yes
+  cluster-node-timeout 15000
+  cluster-require-full-coverage yes
+
+# -----------------------------------------------------------------------------
+# Init Containers (Volume Permissions)
+# -----------------------------------------------------------------------------
+volumePermissions:
+  enabled: ${volume_permissions_enabled}
+  image:
+    registry: docker.io
+    repository: bitnami/os-shell
+    tag: latest
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 50m
+      memory: 64Mi
+
+# -----------------------------------------------------------------------------
+# Update Strategy
+# -----------------------------------------------------------------------------
+updateStrategy:
+  type: RollingUpdate

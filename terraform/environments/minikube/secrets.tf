@@ -32,6 +32,14 @@ variable "kafka_sasl_password" {
   default     = "kafka-secret-password"
 }
 
+# Redis Authentication
+variable "redis_password" {
+  type        = string
+  description = "Redis cluster password"
+  sensitive   = true
+  default     = "redis-secret-password"
+}
+
 # Future secrets can be added here
 # Example:
 # variable "github_token" {

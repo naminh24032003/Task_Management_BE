@@ -34,6 +34,10 @@ mongodb_metrics_enabled     = false
 # Kafka Configuration
 kafka_persistence_enabled = false
 
+# Redis Configuration
+redis_enabled             = false
+redis_persistence_enabled = false
+
 # =========================
 # Notes
 # =========================
