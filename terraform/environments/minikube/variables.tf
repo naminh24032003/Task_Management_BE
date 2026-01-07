@@ -80,3 +80,18 @@ variable "jenkins_deployment_namespace" {
   description = "Namespace where Jenkins will deploy applications"
   default     = "default"
 }
+
+# =========================
+# Kafka Configuration
+# =========================
+variable "kafka_enabled" {
+  type        = bool
+  description = "Enable Kafka cluster"
+  default     = false
+}
+
+variable "kafka_persistence_enabled" {
+  type        = bool
+  description = "Enable persistence for Kafka"
+  default     = false
+}

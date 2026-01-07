@@ -210,3 +210,61 @@ module "mongodb_sharded" {
 
   depends_on = [module.monitoring]
 }
+
+# -----------------------------------------------------------------------------
+# Kafka Module
+# -----------------------------------------------------------------------------
+
+module "kafka" {
+  source = "../../modules/platform/kafka"
+  count  = var.kafka_enabled ? 1 : 0
+
+  environment      = var.environment
+  namespace        = "kafka"
+  create_namespace = true
+
+  # Helm configuration
+  release_name  = "kafka"
+  chart_version = "31.0.0"
+
+  # Authentication
+  sasl_user     = "kafka-user"
+  sasl_password = var.kafka_sasl_password
+
+  # Controller (KRaft mode - minimal for minikube)
+  controller_replica_count = 1
+  controller_resources = {
+    requests = { cpu = "100m", memory = "256Mi" }
+    limits   = { cpu = "500m", memory = "512Mi" }
+  }
+  controller_persistence_size     = "2Gi"
+  controller_log_persistence_size = "1Gi"
+
+  # Broker (0 for KRaft mode - controller acts as broker)
+  broker_replica_count = 0
+
+  # Storage
+  persistence_enabled = var.kafka_persistence_enabled
+  storage_class       = "" # Use minikube default
+
+  # Volume permissions (required for minikube)
+  volume_permissions_enabled = true
+  volume_permissions_resources = {
+    requests = { cpu = "10m", memory = "32Mi" }
+    limits   = { cpu = "50m", memory = "64Mi" }
+  }
+
+  # Kafka UI
+  kafka_ui_enabled = true
+  kafka_ui_image   = "provectuslabs/kafka-ui:latest"
+  kafka_ui_resources = {
+    requests = { cpu = "50m", memory = "128Mi" }
+    limits   = { cpu = "200m", memory = "256Mi" }
+  }
+
+  # Network
+  service_type = "ClusterIP"
+
+  # Platform
+  is_minikube = true
+}

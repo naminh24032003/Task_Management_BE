@@ -1,0 +1,196 @@
+# =============================================================================
+# Kafka Helm Chart Values Template
+# =============================================================================
+# Bitnami Kafka Chart Configuration
+# Optimized for both Minikube and EKS environments
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Global Settings
+# -----------------------------------------------------------------------------
+global:
+  storageClass: "${storage_class}"
+
+# -----------------------------------------------------------------------------
+# Image Configuration
+# -----------------------------------------------------------------------------
+image:
+  registry: docker.io
+  repository: bitnami/kafka
+  pullPolicy: IfNotPresent
+
+# -----------------------------------------------------------------------------
+# Kafka Mode - KRaft (No Zookeeper)
+# -----------------------------------------------------------------------------
+kraft:
+  enabled: true
+
+# -----------------------------------------------------------------------------
+# Controller Configuration (KRaft mode)
+# -----------------------------------------------------------------------------
+controller:
+  replicaCount: ${controller_replica_count}
+
+  resources:
+    requests:
+      cpu: "${controller_request_cpu}"
+      memory: "${controller_request_memory}"
+    limits:
+      cpu: "${controller_limit_cpu}"
+      memory: "${controller_limit_memory}"
+
+  persistence:
+    enabled: ${controller_persistence_enabled}
+    size: "${controller_persistence_size}"
+    storageClass: "${storage_class}"
+
+  logPersistence:
+    enabled: ${controller_persistence_enabled}
+    size: "${controller_log_persistence_size}"
+    storageClass: "${storage_class}"
+
+%{~ if !is_minikube ~}
+  nodeSelector:
+    node-role: "platform"
+%{~ endif ~}
+
+  podAntiAffinity: soft
+
+# -----------------------------------------------------------------------------
+# Broker Configuration
+# -----------------------------------------------------------------------------
+broker:
+  replicaCount: ${broker_replica_count}
+
+%{~ if broker_replica_count > 0 ~}
+  resources:
+    requests:
+      cpu: "${broker_request_cpu}"
+      memory: "${broker_request_memory}"
+    limits:
+      cpu: "${broker_limit_cpu}"
+      memory: "${broker_limit_memory}"
+
+%{~ if !is_minikube ~}
+  nodeSelector:
+    node-role: "platform"
+%{~ endif ~}
+
+  podAntiAffinity: soft
+%{~ endif ~}
+
+# -----------------------------------------------------------------------------
+# Authentication - SASL/SCRAM
+# -----------------------------------------------------------------------------
+listeners:
+  client:
+    protocol: SASL_PLAINTEXT
+  controller:
+    protocol: SASL_PLAINTEXT
+  interbroker:
+    protocol: SASL_PLAINTEXT
+
+sasl:
+  enabled: true
+  mechanism: scram-sha-256
+  client:
+    users:
+      - ${sasl_user}
+    passwords: ${sasl_password}
+  controller:
+    user: controller_user
+    password: ${sasl_password}
+  interbroker:
+    user: inter_broker_user
+    password: ${sasl_password}
+
+# -----------------------------------------------------------------------------
+# Service Configuration
+# -----------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  ports:
+    client: 9092
+    controller: 9093
+    interbroker: 9094
+
+# -----------------------------------------------------------------------------
+# Volume Permissions Init Container
+# -----------------------------------------------------------------------------
+volumePermissions:
+  enabled: ${volume_permissions_enabled}
+  resources:
+    requests:
+      cpu: "${volume_permissions_request_cpu}"
+      memory: "${volume_permissions_request_memory}"
+    limits:
+      cpu: "${volume_permissions_limit_cpu}"
+      memory: "${volume_permissions_limit_memory}"
+
+# -----------------------------------------------------------------------------
+# Kafka Configuration
+# -----------------------------------------------------------------------------
+# Number of network threads for handling requests
+numNetworkThreads: 3
+
+# Number of I/O threads for processing requests
+numIoThreads: 8
+
+# Buffer sizes
+socketSendBufferBytes: 102400
+socketReceiveBufferBytes: 102400
+socketRequestMaxBytes: 104857600
+
+# Log retention
+logRetentionHours: 168
+logRetentionBytes: 1073741824
+logSegmentBytes: 1073741824
+
+# Replication
+defaultReplicationFactor: 1
+minInsyncReplicas: 1
+offsetsTopicReplicationFactor: 1
+transactionStateLogReplicationFactor: 1
+transactionStateLogMinIsr: 1
+
+# Auto create topics
+autoCreateTopicsEnable: true
+
+# Delete topic
+deleteTopicEnable: true
+
+# Compression
+compressionType: producer
+
+# -----------------------------------------------------------------------------
+# JVM Configuration (Optimized for low resource environments)
+# -----------------------------------------------------------------------------
+heapOpts: "-Xmx512m -Xms512m"
+
+# -----------------------------------------------------------------------------
+# Metrics - Prometheus
+# -----------------------------------------------------------------------------
+metrics:
+  kafka:
+    enabled: true
+  jmx:
+    enabled: true
+
+# -----------------------------------------------------------------------------
+# Network Policy
+# -----------------------------------------------------------------------------
+networkPolicy:
+  enabled: false
+
+# -----------------------------------------------------------------------------
+# Pod Security
+# -----------------------------------------------------------------------------
+podSecurityContext:
+  enabled: true
+  fsGroup: 1001
+
+containerSecurityContext:
+  enabled: true
+  runAsUser: 1001
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false

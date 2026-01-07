@@ -17,6 +17,24 @@ enable_jenkins_init_scripts = false
 jenkins_deployment_namespace = "default"
 
 # =========================
+# Platform Components
+# =========================
+
+# Enable/disable platform components
+monitoring_enabled = true
+logging_enabled    = true
+istio_enabled      = true
+mongodb_enabled    = false
+kafka_enabled      = false
+
+# MongoDB Configuration
+mongodb_persistence_enabled = false
+mongodb_metrics_enabled     = false
+
+# Kafka Configuration
+kafka_persistence_enabled = false
+
+# =========================
 # Notes
 # =========================
 # DO NOT put passwords or sensitive data in this file!

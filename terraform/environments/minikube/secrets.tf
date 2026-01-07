@@ -24,6 +24,14 @@ variable "jenkins_password" {
   }
 }
 
+# Kafka Authentication
+variable "kafka_sasl_password" {
+  type        = string
+  description = "Kafka SASL password for authentication"
+  sensitive   = true
+  default     = "kafka-secret-password"
+}
+
 # Future secrets can be added here
 # Example:
 # variable "github_token" {
