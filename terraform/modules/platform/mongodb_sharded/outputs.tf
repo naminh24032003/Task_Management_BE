@@ -1,34 +1,20 @@
-# =============================================================================
-# Outputs
-# =============================================================================
-
 output "namespace" {
-  description = "Kubernetes namespace where MongoDB is deployed"
-  value       = var.namespace
+  description = "MongoDB Sharded namespace"
+  value       = kubernetes_namespace.mongodb_sharded.metadata[0].name
 }
 
-output "release_name" {
-  description = "Helm release name"
-  value       = helm_release.mongodb_sharded.name
+output "service_host" {
+  description = "MongoDB Sharded service host"
+  value       = local.mongodb_sharded_service.host
 }
 
-output "mongos_service_name" {
-  description = "Mongos service name for application connection"
-  value       = "${var.release_name}-mongodb-sharded"
+output "service_port" {
+  description = "MongoDB Sharded service port"
+  value       = local.mongodb_sharded_service.port
 }
 
 output "connection_string" {
   description = "MongoDB connection string"
-  value       = "mongodb://root:${var.root_password}@${var.release_name}-mongodb-sharded.${var.namespace}.svc.cluster.local:27017"
+  value       = "mongodb://${var.mongodb_root_username}:${var.mongodb_root_password}@${local.mongodb_sharded_service.host}:${local.mongodb_sharded_service.port}/?authSource=admin"
   sensitive   = true
-}
-
-output "mongos_host" {
-  description = "Mongos host for application connection"
-  value       = "${var.release_name}-mongodb-sharded.${var.namespace}.svc.cluster.local"
-}
-
-output "mongos_port" {
-  description = "Mongos port"
-  value       = 27017
 }

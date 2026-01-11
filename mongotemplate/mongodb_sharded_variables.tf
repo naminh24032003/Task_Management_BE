@@ -165,10 +165,12 @@ variable "mongodb_limit_memory" {
   default     = null
 }
 
-variable "kubernetes_primary_node_pool_name" {
-  type        = string
-  description = "Primary node pool name for MongoDB pod scheduling"
-  default     = "minikube"
+locals {
+  mongodb_presets = {
+    configsvr = "64"
+    shardsvr  = "192"
+    mongos    = "64"
+  }
 }
 
 locals {
@@ -176,57 +178,57 @@ locals {
     configsvr = {
       request_cpu = coalesce(
         var.mongodb_configsvr_request_cpu,
-        "96m"
+        try(var.resources_config[local.mongodb_presets.configsvr].requests.cpu, "96m")
       )
       request_memory = coalesce(
         var.mongodb_configsvr_request_memory,
-        "192Mi"
+        try(var.resources_config[local.mongodb_presets.configsvr].requests.memory, "192Mi")
       )
       limit_cpu = coalesce(
         var.mongodb_configsvr_limit_cpu,
-        "256m"
+        try(var.resources_config[local.mongodb_presets.configsvr].limits.cpu, "256m")
       )
       limit_memory = coalesce(
         var.mongodb_configsvr_limit_memory,
-        "512Mi"
+        try(var.resources_config[local.mongodb_presets.configsvr].limits.memory, "512Mi")
       )
     }
 
     shardsvr = {
       request_cpu = coalesce(
         var.mongodb_shardsvr_request_cpu,
-        "192m"
+        try(var.resources_config[local.mongodb_presets.shardsvr].requests.cpu, "192m")
       )
       request_memory = coalesce(
         var.mongodb_shardsvr_request_memory,
-        "384Mi"
+        try(var.resources_config[local.mongodb_presets.shardsvr].requests.memory, "384Mi")
       )
       limit_cpu = coalesce(
         var.mongodb_shardsvr_limit_cpu,
-        "768m"
+        try(var.resources_config[local.mongodb_presets.shardsvr].limits.cpu, "768m")
       )
       limit_memory = coalesce(
         var.mongodb_shardsvr_limit_memory,
-        "1536Mi"
+        try(var.resources_config[local.mongodb_presets.shardsvr].limits.memory, "1536Mi")
       )
     }
 
     mongos = {
       request_cpu = coalesce(
         var.mongodb_request_cpu,
-        "96m"
+        try(var.resources_config[local.mongodb_presets.mongos].requests.cpu, "96m")
       )
       request_memory = coalesce(
         var.mongodb_request_memory,
-        "192Mi"
+        try(var.resources_config[local.mongodb_presets.mongos].requests.memory, "192Mi")
       )
       limit_cpu = coalesce(
         var.mongodb_limit_cpu,
-        "384m"
+        try(var.resources_config[local.mongodb_presets.mongos].limits.cpu, "384m")
       )
       limit_memory = coalesce(
         var.mongodb_limit_memory,
-        "768Mi"
+        try(var.resources_config[local.mongodb_presets.mongos].limits.memory, "768Mi")
       )
     }
   }

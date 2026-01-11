@@ -13,6 +13,11 @@ istio_enabled      = true
 redis_enabled = true
 redis_persistence_enabled = false
 
+# MongoDB
+mongodb_enabled = true
+mongodb_persistence_enabled = true
+mongodb_metrics_enabled = false
+
 # Kafka
 kafka_enabled = true
 kafka_persistence_enabled = false

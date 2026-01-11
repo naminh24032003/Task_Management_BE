@@ -48,11 +48,9 @@ output "istio" {
 output "mongodb" {
   description = "MongoDB Sharded cluster information"
   value = var.mongodb_enabled ? {
-    namespace    = module.mongodb_sharded[0].namespace
-    release_name = module.mongodb_sharded[0].release_name
-    mongos_host  = module.mongodb_sharded[0].mongos_host
-    mongos_port  = module.mongodb_sharded[0].mongos_port
-    service_name = module.mongodb_sharded[0].mongos_service_name
+    namespace     = module.mongodb_sharded[0].namespace
+    service_host  = module.mongodb_sharded[0].service_host
+    service_port  = module.mongodb_sharded[0].service_port
   } : null
 }
 
