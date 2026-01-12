@@ -154,31 +154,67 @@ module "istio" {
 }
 
 # -----------------------------------------------------------------------------
-# MongoDB Sharded Module
+# MongoDB Sharded Module - User Service
 # -----------------------------------------------------------------------------
 
-module "mongodb_sharded" {
+module "mongodb_user_service" {
   source = "../../modules/platform/mongodb_sharded"
   count  = var.mongodb_enabled ? 1 : 0
 
+  # Deployment config
+  namespace    = "mongodb-user"
+  release_name = "user-mongodb"
+
   # Authentication
-  mongodb_root_username = "root"
-  mongodb_root_password = var.mongodb_root_password
+  mongodb_root_username   = "root"
+  mongodb_root_password   = var.mongodb_root_password
   mongodb_replica_set_key = var.mongodb_replica_set_key
 
   # Cluster Configuration (minimal for Minikube)
-  mongodb_shards = 1
+  mongodb_shards                  = 1
   mongodb_configsvr_replica_count = 1
-  mongodb_shardsvr_replica_count = 1
-  mongodb_mongos_replica_count = 1
+  mongodb_shardsvr_replica_count  = 1
+  mongodb_mongos_replica_count    = 1
 
   # Persistence
   mongodb_configsvr_persistence_size = "2Gi"
-  mongodb_shardsvr_persistence_size = "8Gi"
+  mongodb_shardsvr_persistence_size  = "8Gi"
 
   # Node scheduling
   kubernetes_primary_node_pool_name = "minikube"
 }
+
+# -----------------------------------------------------------------------------
+# MongoDB Sharded Module - Task Service
+# -----------------------------------------------------------------------------
+
+module "mongodb_task_service" {
+  source = "../../modules/platform/mongodb_sharded"
+  count  = var.mongodb_enabled ? 1 : 0
+
+  # Deployment config
+  namespace    = "mongodb-task"
+  release_name = "task-mongodb"
+
+  # Authentication
+  mongodb_root_username   = "root"
+  mongodb_root_password   = var.mongodb_root_password
+  mongodb_replica_set_key = var.mongodb_replica_set_key
+
+  # Cluster Configuration (minimal for Minikube)
+  mongodb_shards                  = 1
+  mongodb_configsvr_replica_count = 1
+  mongodb_shardsvr_replica_count  = 1
+  mongodb_mongos_replica_count    = 1
+
+  # Persistence
+  mongodb_configsvr_persistence_size = "2Gi"
+  mongodb_shardsvr_persistence_size  = "8Gi"
+
+  # Node scheduling
+  kubernetes_primary_node_pool_name = "minikube"
+}
+
 
 # -----------------------------------------------------------------------------
 # Kafka Module

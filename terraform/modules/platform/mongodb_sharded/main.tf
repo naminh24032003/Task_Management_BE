@@ -5,7 +5,7 @@
 // cluster components (Config Server, Shard Servers, Mongos routers).
 resource "kubernetes_namespace" "mongodb_sharded" {
   metadata {
-    name = "mongodb-sharded"
+    name = var.namespace
   }
 }
 
@@ -17,7 +17,7 @@ resource "kubernetes_namespace" "mongodb_sharded" {
 // including authentication, sharding topology, resource allocation,
 // persistence, and node scheduling.
 resource "helm_release" "mongodb_sharded" {
-  name             = "mongodb-sharded"
+  name             = var.release_name
   namespace        = kubernetes_namespace.mongodb_sharded.metadata[0].name
   create_namespace = true
 
@@ -172,9 +172,11 @@ resource "helm_release" "mongodb_sharded" {
 // Retrieves the MongoDB Sharded service name.
 data "kubernetes_service" "mongodb_sharded" {
   metadata {
-    name = "mongodb-sharded"
+    name = var.release_name
     namespace = kubernetes_namespace.mongodb_sharded.metadata[0].name
   }
+
+  depends_on = [helm_release.mongodb_sharded]
 }
 
 // =========================

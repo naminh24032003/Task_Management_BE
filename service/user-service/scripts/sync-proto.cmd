@@ -41,6 +41,11 @@ if exist "%PROTO_SRC%\common" (
     xcopy /E /I /Y "%PROTO_SRC%\common" "%PROTO_DEST%\common" >nul
 )
 
+:: Copy google proto files (required for annotations, http, etc.)
+if exist "%PROTO_SRC%\google" (
+    xcopy /E /I /Y "%PROTO_SRC%\google" "%PROTO_DEST%\google" >nul
+)
+
 echo Proto files synced successfully!
 echo.
 

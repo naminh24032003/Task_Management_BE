@@ -16,7 +16,9 @@ export interface DatabaseConfig {
   retryReads: boolean;
   compressors: string[];
   readPreference: string;
-  readConcern: string;
+  readConcern: {
+    level: string;
+  };
   writeConcern: {
     w: string | number;
     wtimeout: number;
@@ -55,7 +57,9 @@ export default registerAs(
     retryReads: process.env.MONGODB_RETRY_READS !== 'false',
     compressors: (process.env.MONGODB_COMPRESSORS || 'snappy,zlib').split(','),
     readPreference: process.env.MONGODB_READ_PREFERENCE || 'primaryPreferred',
-    readConcern: process.env.MONGODB_READ_CONCERN || 'majority',
+    readConcern: {
+      level: process.env.MONGODB_READ_CONCERN || 'majority',
+    },
     writeConcern: {
       w: process.env.MONGODB_WRITE_CONCERN_W || 'majority',
       wtimeout: parseInt(

@@ -39,6 +39,11 @@ if [ -d "$PROTO_SRC/common" ]; then
     cp -r "$PROTO_SRC/common" "$PROTO_DEST/"
 fi
 
+# Copy google proto files (required for annotations, http, etc.)
+if [ -d "$PROTO_SRC/google" ]; then
+    cp -r "$PROTO_SRC/google" "$PROTO_DEST/"
+fi
+
 echo -e "${GREEN}✅ Proto files synced successfully!${NC}"
 echo ""
 

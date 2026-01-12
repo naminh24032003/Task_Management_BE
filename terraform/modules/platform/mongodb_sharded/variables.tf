@@ -1,4 +1,20 @@
 // =========================
+// Deployment configuration
+// =========================
+
+variable "namespace" {
+  type        = string
+  description = "Kubernetes namespace for MongoDB deployment"
+  default     = "mongodb-sharded"
+}
+
+variable "release_name" {
+  type        = string
+  description = "Helm release name for MongoDB"
+  default     = "mongodb-sharded"
+}
+
+// =========================
 // MongoDB authentication variables
 // =========================
 // Defines root (admin) credentials used to initialize

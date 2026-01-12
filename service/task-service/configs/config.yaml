@@ -7,8 +7,23 @@ server:
     timeout: 1s
 data:
   database:
-    driver: mysql
-    source: root:root@tcp(127.0.0.1:3306)/test?parseTime=True&loc=Local
+    driver: mongodb
+    # MongoDB Connection String (Task MongoDB Cluster)
+    # Local: mongodb://root:MongoDB%40Root2024Secure%21@localhost:27018/task-service?authSource=admin
+    # K8s: mongodb://root:MongoDB%40Root2024Secure%21@task-mongodb.mongodb-task.svc.cluster.local:27017/task-service?authSource=admin
+    source: mongodb://root:MongoDB%40Root2024Secure%21@localhost:27018/task-service?authSource=admin
+    name: task-service
+    # Connection Pool
+    min_pool_size: 10
+    max_pool_size: 100
+    # Timeouts (in seconds)
+    connect_timeout: 10
+    server_selection_timeout: 30
+    socket_timeout: 45
+    # Read/Write Concerns
+    read_preference: primaryPreferred
+    read_concern: majority
+    write_concern: majority
   redis:
     addr: 127.0.0.1:6379
     read_timeout: 0.2s

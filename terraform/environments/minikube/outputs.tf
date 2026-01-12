@@ -45,21 +45,35 @@ output "istio" {
 # MongoDB Sharded
 # -----------------------------------------------------------------------------
 
-output "mongodb" {
-  description = "MongoDB Sharded cluster information"
+output "mongodb_user_service" {
+  description = "MongoDB cluster for User Service"
   value = var.mongodb_enabled ? {
-    namespace     = module.mongodb_sharded[0].namespace
-    service_host  = module.mongodb_sharded[0].service_host
-    service_port  = module.mongodb_sharded[0].service_port
+    namespace     = module.mongodb_user_service[0].namespace
+    service_host  = module.mongodb_user_service[0].service_host
+    service_port  = module.mongodb_user_service[0].service_port
   } : null
 }
 
-output "mongodb_connection_string" {
-  description = "MongoDB connection string (sensitive)"
-  value       = var.mongodb_enabled ? module.mongodb_sharded[0].connection_string : null
+output "mongodb_user_service_connection_string" {
+  description = "MongoDB User Service connection string (sensitive)"
+  value       = var.mongodb_enabled ? module.mongodb_user_service[0].connection_string : null
   sensitive   = true
 }
 
+output "mongodb_task_service" {
+  description = "MongoDB cluster for Task Service"
+  value = var.mongodb_enabled ? {
+    namespace     = module.mongodb_task_service[0].namespace
+    service_host  = module.mongodb_task_service[0].service_host
+    service_port  = module.mongodb_task_service[0].service_port
+  } : null
+}
+
+output "mongodb_task_service_connection_string" {
+  description = "MongoDB Task Service connection string (sensitive)"
+  value       = var.mongodb_enabled ? module.mongodb_task_service[0].connection_string : null
+  sensitive   = true
+}
 # -----------------------------------------------------------------------------
 # Kafka
 # -----------------------------------------------------------------------------
