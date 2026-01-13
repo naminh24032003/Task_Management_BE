@@ -1,0 +1,79 @@
+version: '3.9'
+
+# =========================================================
+# Docker Compose for Building Services Only
+# Usage:
+#   Build all:        docker-compose build
+#   Build specific:   docker-compose build task-service
+#   Rebuild no-cache: docker-compose build --no-cache task-service
+#   Build parallel:   docker-compose build --parallel
+# =========================================================
+
+services:
+  # =========================================================
+  # TASK SERVICE (Go)
+  # =========================================================
+  task-service:
+    container_name: task-service-build
+    build:
+      context: ./service/task-service
+      dockerfile: Dockerfile
+      args:
+        - GO_VERSION=1.23
+    image: task-service:latest
+    ports:
+      - "50052:50052"  # gRPC
+      - "9091:9091"    # HTTP Metrics
+    environment:
+      - GO_ENV=development
+    volumes:
+      # Mount config directory for easy config changes without rebuild
+      - ./service/task-service/configs:/app/configs:ro
+    networks:
+      - services-network
+    restart: unless-stopped
+    labels:
+      - "service.name=task-service"
+      - "service.language=go"
+      - "service.version=latest"
+    # Comment out if you don't want it to auto-start
+    profiles:
+      - services
+
+  # =========================================================
+  # USER SERVICE (Node.js/NestJS)
+  # =========================================================
+  user-service:
+    container_name: user-service-build
+    build:
+      context: ./service/user-service
+      dockerfile: Dockerfile
+      target: production  # Use 'development' for dev mode with hot-reload
+      args:
+        - NODE_VERSION=20
+    image: user-service:latest
+    ports:
+      - "50051:50051"  # gRPC
+      - "9090:9090"    # HTTP Metrics
+    environment:
+      - NODE_ENV=development
+    volumes:
+      # Mount source for hot-reload in development
+      # - ./service/user-service/src:/app/src:ro
+      # - ./service/user-service/proto:/app/proto:ro
+      # For production, only mount configs
+      - ./service/user-service/configs:/app/configs:ro
+    networks:
+      - services-network
+    restart: unless-stopped
+    labels:
+      - "service.name=user-service"
+      - "service.language=nodejs"
+      - "service.version=latest"
+    profiles:
+      - services
+
+networks:
+  services-network:
+    driver: bridge
+    name: task-management-network

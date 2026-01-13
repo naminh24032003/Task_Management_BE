@@ -9,28 +9,29 @@ server:
 data:
   database:
     driver: mongodb
-    # MongoDB Connection String for Local Development
-    # Port-forward: kubectl port-forward -n mongodb-task svc/task-mongodb-mongodb-sharded 27018:27017
-    source: mongodb://root:MongoDB%40Root2024Secure%21@localhost:27018/task-service?authSource=admin
-    name: task-service
+    # MongoDB Connection String for Task MongoDB Cluster in EKS
+    # This will be overridden by environment variables in production
+    # Format: mongodb://username:password@host:port/database?authSource=admin
+    source: ${MONGODB_URI}
+    name: ${MONGODB_DATABASE:-task-service}
     # Connection Pool
-    min_pool_size: 5
-    max_pool_size: 50
+    min_pool_size: 20
+    max_pool_size: 200
     # Timeouts (in seconds)
     connect_timeout: 10
     server_selection_timeout: 30
-    socket_timeout: 45
+    socket_timeout: 60
     # Read/Write Concerns
     read_preference: primaryPreferred
     read_concern: majority
     write_concern: majority
 
   redis:
-    addr: 127.0.0.1:6379
+    addr: ${REDIS_ADDR}
     read_timeout: 0.2s
     write_timeout: 0.2s
 
 logging:
-  level: debug
-  format: console
+  level: info
+  format: json
   output: stdout

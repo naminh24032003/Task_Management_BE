@@ -10,6 +10,7 @@ import (
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/config"
 	"github.com/go-kratos/kratos/v2/log"
+	"task-service/internal/data"
 	"task-service/internal/server"
 	"task-service/internal/transport/grpc"
 )
@@ -18,10 +19,16 @@ import (
 
 // wireApp init kratos application.
 func wireApp(c config.Config, logger log.Logger) (*kratos.App, func(), error) {
-	taskService := grpc.NewTaskService()
+	database, cleanup, err := data.NewMongoDatabase(c, logger)
+	if err != nil {
+		return nil, nil, err
+	}
+	taskRepository := data.NewTaskRepository(database, logger)
+	taskService := grpc.NewTaskService(taskRepository, logger)
 	grpcServer := server.NewGRPCServer(logger, taskService)
 	httpServer := server.NewHTTPServer(logger)
 	app := newApp(logger, grpcServer, httpServer)
 	return app, func() {
+		cleanup()
 	}, nil
 }

@@ -3,28 +3,26 @@
 # =========================================================
 microservice:
   nameOverride: task-service
-  replicaCount: 3
+  replicaCount: 1
 
   # =========================================================
   # CONTAINER IMAGE SETTINGS
   # =========================================================
   image:
-    repository: <AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/task-service
-    tag: latest
-    pullPolicy: Always
+    repository: task-service
+    tag: v3
+    pullPolicy: IfNotPresent
 
   # =========================================================
   # ENVIRONMENT VARIABLES (ConfigMap)
   # =========================================================
   envVarsCM:
-    GO_ENV: production
+    GO_ENV: development
 
   # =========================================================
   # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
   # =========================================================
-  envVarsSecret:
-    MONGODB_URI: mongodb://root:MongoDB@Root2024Secure!@task-mongodb.mongodb-task.svc.cluster.local:27017/task-service?authSource=admin
-    REDIS_ADDR: redis-master.redis.svc.cluster.local:6379
+  envVarsSecret: {}
 
   # =========================================================
   # CONTAINER PORTS
@@ -53,53 +51,26 @@ microservice:
   # =========================================================
   resources:
     requests:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 100m
+      memory: 128Mi
     limits:
-      cpu: 1000m
-      memory: 1Gi
+      cpu: 300m
+      memory: 256Mi
 
   # =========================================================
   # HEALTH PROBES
   # =========================================================
-  livenessProbe:
-    enabled: true
-    httpGet:
-      path: /healthz
-      port: http-metrics
-    initialDelaySeconds: 30
-    periodSeconds: 10
-    timeoutSeconds: 5
-    failureThreshold: 3
-
-  readinessProbe:
-    enabled: true
-    httpGet:
-      path: /ready
-      port: http-metrics
-    initialDelaySeconds: 10
-    periodSeconds: 5
-    timeoutSeconds: 3
-    failureThreshold: 3
-
-  # =========================================================
-  # AUTOSCALING
-  # =========================================================
-  autoscaling:
-    enabled: true
-    minReplicas: 3
-    maxReplicas: 10
-    targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 80
+  livenessProbe: null
+  readinessProbe: null
 
   # =========================================================
   # MONITORING & ERROR TRACKING
   # =========================================================
   sentry:
-    enabled: true
+    enabled: false
     dsn: "https://your-dsn@sentry.io/project"
-    environment: production
-    tracesSampleRate: 0.1
+    environment: development
+    tracesSampleRate: 1.0
 
   metrics:
     enabled: true
@@ -111,17 +82,17 @@ microservice:
         release: monitoring
 
   # =========================================================
-  # VOLUMES - Mount config file for EKS environment
+  # VOLUMES - Mount config file for minikube environment
   # =========================================================
   extraVolumes:
-    - name: config
+    - name: app-config
       configMap:
         name: task-service-app-config
         items:
-          - key: config-eks.yaml
+          - key: config-minikube.yaml
             path: config.yaml
 
   extraVolumeMounts:
-    - name: config
+    - name: app-config
       mountPath: /app/configs
       readOnly: true

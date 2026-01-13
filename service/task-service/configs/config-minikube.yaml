@@ -9,13 +9,13 @@ server:
 data:
   database:
     driver: mongodb
-    # MongoDB Connection String for Local Development
-    # Port-forward: kubectl port-forward -n mongodb-task svc/task-mongodb-mongodb-sharded 27018:27017
-    source: mongodb://root:MongoDB%40Root2024Secure%21@localhost:27018/task-service?authSource=admin
+    # MongoDB Connection String for Task MongoDB Cluster in Minikube
+    # Format: mongodb://username:password@host:port/database?authSource=admin
+    source: mongodb://root:MongoDB%40Root2024Secure%21@task-mongodb-mongodb-sharded.mongodb-task.svc.cluster.local:27017/task-service?authSource=admin
     name: task-service
     # Connection Pool
-    min_pool_size: 5
-    max_pool_size: 50
+    min_pool_size: 10
+    max_pool_size: 100
     # Timeouts (in seconds)
     connect_timeout: 10
     server_selection_timeout: 30
@@ -26,11 +26,11 @@ data:
     write_concern: majority
 
   redis:
-    addr: 127.0.0.1:6379
+    addr: redis-master.redis.svc.cluster.local:6379
     read_timeout: 0.2s
     write_timeout: 0.2s
 
 logging:
   level: debug
-  format: console
+  format: json
   output: stdout
