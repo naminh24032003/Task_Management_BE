@@ -1,0 +1,27 @@
+{
+  "name": "@task-management/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities for NestJS microservices",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/core": "^10.0.0",
+    "@nestjs/microservices": "^10.0.0",
+    "rxjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/core": "^10.0.0",
+    "@nestjs/microservices": "^10.0.0",
+    "@types/node": "^20.0.0",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.0.0",
+    "typescript": "^5.0.0"
+  }
+}

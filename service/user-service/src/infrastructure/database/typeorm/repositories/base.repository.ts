@@ -84,7 +84,8 @@ export abstract class BaseTenantRepository<T extends BaseEntity> {
       tenantId,
     } as any);
 
-    return this.repository.save(entity);
+    const saved = await this.repository.save(entity);
+    return saved as unknown as T;
   }
 
   /**

@@ -5,7 +5,7 @@ import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 import { Tenant } from './entities/tenant.entity';
 
-export interface TypeOrmConfig extends TypeOrmModuleOptions {}
+export type TypeOrmConfig = TypeOrmModuleOptions;
 
 export default registerAs(
   'typeorm',
@@ -17,7 +17,6 @@ export default registerAs(
     database: process.env.MONGODB_DATABASE || 'user-service',
     entities: [User, Role, Permission, Tenant],
     synchronize: process.env.NODE_ENV !== 'production', // Auto-create collections in dev
-    useUnifiedTopology: true,
     logging: process.env.NODE_ENV === 'development',
 
     // Connection pool settings

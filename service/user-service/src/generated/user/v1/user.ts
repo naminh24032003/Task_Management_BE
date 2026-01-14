@@ -8,32 +8,236 @@
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 import type { handleUnaryCall, Metadata, UntypedServiceImplementation } from "@grpc/grpc-js";
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
+import { wrappers } from "protobufjs";
 import { Observable } from "rxjs";
+import { Timestamp } from "../../google/protobuf/timestamp";
 
-export interface HelloRequest {
-  name: string;
+/**
+ * =============================================================================
+ * Common Types
+ * =============================================================================
+ */
+export enum UserStatus {
+  USER_STATUS_UNSPECIFIED = 0,
+  USER_STATUS_ACTIVE = 1,
+  USER_STATUS_INACTIVE = 2,
+  USER_STATUS_SUSPENDED = 3,
+  USER_STATUS_DELETED = 4,
+  UNRECOGNIZED = -1,
 }
 
-export interface HelloResponse {
-  message: string;
+export interface User {
+  id: string;
+  tenantId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  status: UserStatus;
+  roleIds: string[];
+  createdAt: Date | undefined;
+  updatedAt: Date | undefined;
+  lastLoginAt?: Date | undefined;
 }
 
-function createBaseHelloRequest(): HelloRequest {
-  return { name: "" };
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+  /** seconds until access token expires */
+  expiresIn: number;
 }
 
-export const HelloRequest: MessageFns<HelloRequest> = {
-  encode(message: HelloRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.name !== "") {
-      writer.uint32(10).string(message.name);
+/**
+ * =============================================================================
+ * Auth Service Messages
+ * =============================================================================
+ */
+export interface RegisterRequest {
+  tenantId: string;
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  displayName?: string | undefined;
+}
+
+export interface RegisterResponse {
+  user: User | undefined;
+  tokens: TokenPair | undefined;
+}
+
+export interface LoginRequest {
+  tenantId: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  user: User | undefined;
+  tokens: TokenPair | undefined;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface RefreshTokenResponse {
+  tokens: TokenPair | undefined;
+}
+
+export interface ValidateTokenRequest {
+  accessToken: string;
+}
+
+export interface ValidateTokenResponse {
+  valid: boolean;
+  userId?: string | undefined;
+  tenantId?: string | undefined;
+  permissions: string[];
+}
+
+export interface LogoutRequest {
+  refreshToken: string;
+}
+
+export interface LogoutResponse {
+  success: boolean;
+}
+
+/**
+ * =============================================================================
+ * User Service Messages
+ * =============================================================================
+ */
+export interface GetUserRequest {
+  userId: string;
+}
+
+export interface GetUserResponse {
+  user: User | undefined;
+}
+
+/** User ID comes from auth context */
+export interface GetMeRequest {
+}
+
+export interface GetMeResponse {
+  user: User | undefined;
+}
+
+export interface UpdateUserRequest {
+  userId: string;
+  firstName?: string | undefined;
+  lastName?: string | undefined;
+  displayName?: string | undefined;
+  status?: UserStatus | undefined;
+}
+
+export interface UpdateUserResponse {
+  user: User | undefined;
+}
+
+export interface ListUsersRequest {
+  page: number;
+  pageSize: number;
+  statusFilter?:
+    | UserStatus
+    | undefined;
+  /** search by email, name */
+  search?: string | undefined;
+}
+
+export interface ListUsersResponse {
+  users: User[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface DeleteUserRequest {
+  userId: string;
+}
+
+export interface DeleteUserResponse {
+  success: boolean;
+}
+
+export interface ChangePasswordRequest {
+  userId: string;
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+}
+
+wrappers[".google.protobuf.Timestamp"] = {
+  fromObject(value: Date) {
+    return { seconds: value.getTime() / 1000, nanos: (value.getTime() % 1000) * 1e6 };
+  },
+  toObject(message: { seconds: number; nanos: number }) {
+    return new Date(message.seconds * 1000 + message.nanos / 1e6);
+  },
+} as any;
+
+function createBaseUser(): User {
+  return {
+    id: "",
+    tenantId: "",
+    email: "",
+    firstName: "",
+    lastName: "",
+    displayName: "",
+    status: 0,
+    roleIds: [],
+    createdAt: undefined,
+    updatedAt: undefined,
+  };
+}
+
+export const User: MessageFns<User> = {
+  encode(message: User, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.tenantId !== "") {
+      writer.uint32(18).string(message.tenantId);
+    }
+    if (message.email !== "") {
+      writer.uint32(26).string(message.email);
+    }
+    if (message.firstName !== "") {
+      writer.uint32(34).string(message.firstName);
+    }
+    if (message.lastName !== "") {
+      writer.uint32(42).string(message.lastName);
+    }
+    if (message.displayName !== "") {
+      writer.uint32(50).string(message.displayName);
+    }
+    if (message.status !== 0) {
+      writer.uint32(56).int32(message.status);
+    }
+    for (const v of message.roleIds) {
+      writer.uint32(66).string(v!);
+    }
+    if (message.createdAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.createdAt), writer.uint32(74).fork()).join();
+    }
+    if (message.updatedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(82).fork()).join();
+    }
+    if (message.lastLoginAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.lastLoginAt), writer.uint32(90).fork()).join();
     }
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): HelloRequest {
+  decode(input: BinaryReader | Uint8Array, length?: number): User {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseHelloRequest();
+    const message = createBaseUser();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -42,7 +246,87 @@ export const HelloRequest: MessageFns<HelloRequest> = {
             break;
           }
 
-          message.name = reader.string();
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.tenantId = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.email = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.firstName = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.lastName = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.displayName = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
+
+          message.status = reader.int32() as any;
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.roleIds.push(reader.string());
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.createdAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.lastLoginAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
           continue;
         }
       }
@@ -55,22 +339,28 @@ export const HelloRequest: MessageFns<HelloRequest> = {
   },
 };
 
-function createBaseHelloResponse(): HelloResponse {
-  return { message: "" };
+function createBaseTokenPair(): TokenPair {
+  return { accessToken: "", refreshToken: "", expiresIn: 0 };
 }
 
-export const HelloResponse: MessageFns<HelloResponse> = {
-  encode(message: HelloResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.message !== "") {
-      writer.uint32(10).string(message.message);
+export const TokenPair: MessageFns<TokenPair> = {
+  encode(message: TokenPair, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.accessToken !== "") {
+      writer.uint32(10).string(message.accessToken);
+    }
+    if (message.refreshToken !== "") {
+      writer.uint32(18).string(message.refreshToken);
+    }
+    if (message.expiresIn !== 0) {
+      writer.uint32(24).int64(message.expiresIn);
     }
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): HelloResponse {
+  decode(input: BinaryReader | Uint8Array, length?: number): TokenPair {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseHelloResponse();
+    const message = createBaseTokenPair();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -79,7 +369,23 @@ export const HelloResponse: MessageFns<HelloResponse> = {
             break;
           }
 
-          message.message = reader.string();
+          message.accessToken = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.refreshToken = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.expiresIn = longToNumber(reader.int64());
           continue;
         }
       }
@@ -91,21 +397,1315 @@ export const HelloResponse: MessageFns<HelloResponse> = {
     return message;
   },
 };
+
+function createBaseRegisterRequest(): RegisterRequest {
+  return { tenantId: "", email: "", password: "", firstName: "", lastName: "" };
+}
+
+export const RegisterRequest: MessageFns<RegisterRequest> = {
+  encode(message: RegisterRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.tenantId !== "") {
+      writer.uint32(10).string(message.tenantId);
+    }
+    if (message.email !== "") {
+      writer.uint32(18).string(message.email);
+    }
+    if (message.password !== "") {
+      writer.uint32(26).string(message.password);
+    }
+    if (message.firstName !== "") {
+      writer.uint32(34).string(message.firstName);
+    }
+    if (message.lastName !== "") {
+      writer.uint32(42).string(message.lastName);
+    }
+    if (message.displayName !== undefined) {
+      writer.uint32(50).string(message.displayName);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RegisterRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRegisterRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.tenantId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.email = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.password = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.firstName = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.lastName = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.displayName = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseRegisterResponse(): RegisterResponse {
+  return { user: undefined, tokens: undefined };
+}
+
+export const RegisterResponse: MessageFns<RegisterResponse> = {
+  encode(message: RegisterResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    if (message.tokens !== undefined) {
+      TokenPair.encode(message.tokens, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RegisterResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRegisterResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.tokens = TokenPair.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseLoginRequest(): LoginRequest {
+  return { tenantId: "", email: "", password: "" };
+}
+
+export const LoginRequest: MessageFns<LoginRequest> = {
+  encode(message: LoginRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.tenantId !== "") {
+      writer.uint32(10).string(message.tenantId);
+    }
+    if (message.email !== "") {
+      writer.uint32(18).string(message.email);
+    }
+    if (message.password !== "") {
+      writer.uint32(26).string(message.password);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): LoginRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseLoginRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.tenantId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.email = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.password = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseLoginResponse(): LoginResponse {
+  return { user: undefined, tokens: undefined };
+}
+
+export const LoginResponse: MessageFns<LoginResponse> = {
+  encode(message: LoginResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    if (message.tokens !== undefined) {
+      TokenPair.encode(message.tokens, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): LoginResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseLoginResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.tokens = TokenPair.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseRefreshTokenRequest(): RefreshTokenRequest {
+  return { refreshToken: "" };
+}
+
+export const RefreshTokenRequest: MessageFns<RefreshTokenRequest> = {
+  encode(message: RefreshTokenRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.refreshToken !== "") {
+      writer.uint32(10).string(message.refreshToken);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RefreshTokenRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRefreshTokenRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.refreshToken = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseRefreshTokenResponse(): RefreshTokenResponse {
+  return { tokens: undefined };
+}
+
+export const RefreshTokenResponse: MessageFns<RefreshTokenResponse> = {
+  encode(message: RefreshTokenResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.tokens !== undefined) {
+      TokenPair.encode(message.tokens, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RefreshTokenResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRefreshTokenResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.tokens = TokenPair.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseValidateTokenRequest(): ValidateTokenRequest {
+  return { accessToken: "" };
+}
+
+export const ValidateTokenRequest: MessageFns<ValidateTokenRequest> = {
+  encode(message: ValidateTokenRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.accessToken !== "") {
+      writer.uint32(10).string(message.accessToken);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ValidateTokenRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseValidateTokenRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.accessToken = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseValidateTokenResponse(): ValidateTokenResponse {
+  return { valid: false, permissions: [] };
+}
+
+export const ValidateTokenResponse: MessageFns<ValidateTokenResponse> = {
+  encode(message: ValidateTokenResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.valid !== false) {
+      writer.uint32(8).bool(message.valid);
+    }
+    if (message.userId !== undefined) {
+      writer.uint32(18).string(message.userId);
+    }
+    if (message.tenantId !== undefined) {
+      writer.uint32(26).string(message.tenantId);
+    }
+    for (const v of message.permissions) {
+      writer.uint32(34).string(v!);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ValidateTokenResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseValidateTokenResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.valid = reader.bool();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.tenantId = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.permissions.push(reader.string());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseLogoutRequest(): LogoutRequest {
+  return { refreshToken: "" };
+}
+
+export const LogoutRequest: MessageFns<LogoutRequest> = {
+  encode(message: LogoutRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.refreshToken !== "") {
+      writer.uint32(10).string(message.refreshToken);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): LogoutRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseLogoutRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.refreshToken = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseLogoutResponse(): LogoutResponse {
+  return { success: false };
+}
+
+export const LogoutResponse: MessageFns<LogoutResponse> = {
+  encode(message: LogoutResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.success !== false) {
+      writer.uint32(8).bool(message.success);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): LogoutResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseLogoutResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.success = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetUserRequest(): GetUserRequest {
+  return { userId: "" };
+}
+
+export const GetUserRequest: MessageFns<GetUserRequest> = {
+  encode(message: GetUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetUserRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetUserRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetUserResponse(): GetUserResponse {
+  return { user: undefined };
+}
+
+export const GetUserResponse: MessageFns<GetUserResponse> = {
+  encode(message: GetUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetUserResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetUserResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetMeRequest(): GetMeRequest {
+  return {};
+}
+
+export const GetMeRequest: MessageFns<GetMeRequest> = {
+  encode(_: GetMeRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetMeRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetMeRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetMeResponse(): GetMeResponse {
+  return { user: undefined };
+}
+
+export const GetMeResponse: MessageFns<GetMeResponse> = {
+  encode(message: GetMeResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetMeResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetMeResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseUpdateUserRequest(): UpdateUserRequest {
+  return { userId: "" };
+}
+
+export const UpdateUserRequest: MessageFns<UpdateUserRequest> = {
+  encode(message: UpdateUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.firstName !== undefined) {
+      writer.uint32(18).string(message.firstName);
+    }
+    if (message.lastName !== undefined) {
+      writer.uint32(26).string(message.lastName);
+    }
+    if (message.displayName !== undefined) {
+      writer.uint32(34).string(message.displayName);
+    }
+    if (message.status !== undefined) {
+      writer.uint32(40).int32(message.status);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateUserRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUpdateUserRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.firstName = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.lastName = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.displayName = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
+
+          message.status = reader.int32() as any;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseUpdateUserResponse(): UpdateUserResponse {
+  return { user: undefined };
+}
+
+export const UpdateUserResponse: MessageFns<UpdateUserResponse> = {
+  encode(message: UpdateUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateUserResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUpdateUserResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseListUsersRequest(): ListUsersRequest {
+  return { page: 0, pageSize: 0 };
+}
+
+export const ListUsersRequest: MessageFns<ListUsersRequest> = {
+  encode(message: ListUsersRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.page !== 0) {
+      writer.uint32(8).int32(message.page);
+    }
+    if (message.pageSize !== 0) {
+      writer.uint32(16).int32(message.pageSize);
+    }
+    if (message.statusFilter !== undefined) {
+      writer.uint32(24).int32(message.statusFilter);
+    }
+    if (message.search !== undefined) {
+      writer.uint32(34).string(message.search);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListUsersRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListUsersRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.page = reader.int32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.pageSize = reader.int32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.statusFilter = reader.int32() as any;
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.search = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseListUsersResponse(): ListUsersResponse {
+  return { users: [], total: 0, page: 0, pageSize: 0 };
+}
+
+export const ListUsersResponse: MessageFns<ListUsersResponse> = {
+  encode(message: ListUsersResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.users) {
+      User.encode(v!, writer.uint32(10).fork()).join();
+    }
+    if (message.total !== 0) {
+      writer.uint32(16).int32(message.total);
+    }
+    if (message.page !== 0) {
+      writer.uint32(24).int32(message.page);
+    }
+    if (message.pageSize !== 0) {
+      writer.uint32(32).int32(message.pageSize);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListUsersResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListUsersResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.users.push(User.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.total = reader.int32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.page = reader.int32();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.pageSize = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseDeleteUserRequest(): DeleteUserRequest {
+  return { userId: "" };
+}
+
+export const DeleteUserRequest: MessageFns<DeleteUserRequest> = {
+  encode(message: DeleteUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteUserRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeleteUserRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseDeleteUserResponse(): DeleteUserResponse {
+  return { success: false };
+}
+
+export const DeleteUserResponse: MessageFns<DeleteUserResponse> = {
+  encode(message: DeleteUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.success !== false) {
+      writer.uint32(8).bool(message.success);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteUserResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeleteUserResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.success = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseChangePasswordRequest(): ChangePasswordRequest {
+  return { userId: "", currentPassword: "", newPassword: "" };
+}
+
+export const ChangePasswordRequest: MessageFns<ChangePasswordRequest> = {
+  encode(message: ChangePasswordRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.currentPassword !== "") {
+      writer.uint32(18).string(message.currentPassword);
+    }
+    if (message.newPassword !== "") {
+      writer.uint32(26).string(message.newPassword);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ChangePasswordRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseChangePasswordRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.currentPassword = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.newPassword = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseChangePasswordResponse(): ChangePasswordResponse {
+  return { success: false };
+}
+
+export const ChangePasswordResponse: MessageFns<ChangePasswordResponse> = {
+  encode(message: ChangePasswordResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.success !== false) {
+      writer.uint32(8).bool(message.success);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ChangePasswordResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseChangePasswordResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.success = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+/**
+ * =============================================================================
+ * Auth Service - Authentication & Authorization
+ * =============================================================================
+ */
+
+export interface AuthServiceClient {
+  /** Register a new user */
+
+  register(request: RegisterRequest, metadata?: Metadata): Observable<RegisterResponse>;
+
+  /** Login with email and password */
+
+  login(request: LoginRequest, metadata?: Metadata): Observable<LoginResponse>;
+
+  /** Refresh access token */
+
+  refreshToken(request: RefreshTokenRequest, metadata?: Metadata): Observable<RefreshTokenResponse>;
+
+  /** Validate access token */
+
+  validateToken(request: ValidateTokenRequest, metadata?: Metadata): Observable<ValidateTokenResponse>;
+
+  /** Logout (invalidate refresh token) */
+
+  logout(request: LogoutRequest, metadata?: Metadata): Observable<LogoutResponse>;
+}
+
+/**
+ * =============================================================================
+ * Auth Service - Authentication & Authorization
+ * =============================================================================
+ */
+
+export interface AuthServiceController {
+  /** Register a new user */
+
+  register(
+    request: RegisterRequest,
+    metadata?: Metadata,
+  ): Promise<RegisterResponse> | Observable<RegisterResponse> | RegisterResponse;
+
+  /** Login with email and password */
+
+  login(request: LoginRequest, metadata?: Metadata): Promise<LoginResponse> | Observable<LoginResponse> | LoginResponse;
+
+  /** Refresh access token */
+
+  refreshToken(
+    request: RefreshTokenRequest,
+    metadata?: Metadata,
+  ): Promise<RefreshTokenResponse> | Observable<RefreshTokenResponse> | RefreshTokenResponse;
+
+  /** Validate access token */
+
+  validateToken(
+    request: ValidateTokenRequest,
+    metadata?: Metadata,
+  ): Promise<ValidateTokenResponse> | Observable<ValidateTokenResponse> | ValidateTokenResponse;
+
+  /** Logout (invalidate refresh token) */
+
+  logout(
+    request: LogoutRequest,
+    metadata?: Metadata,
+  ): Promise<LogoutResponse> | Observable<LogoutResponse> | LogoutResponse;
+}
+
+export function AuthServiceControllerMethods() {
+  return function (constructor: Function) {
+    const grpcMethods: string[] = ["register", "login", "refreshToken", "validateToken", "logout"];
+    for (const method of grpcMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcMethod("AuthService", method)(constructor.prototype[method], method, descriptor);
+    }
+    const grpcStreamMethods: string[] = [];
+    for (const method of grpcStreamMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcStreamMethod("AuthService", method)(constructor.prototype[method], method, descriptor);
+    }
+  };
+}
+
+export const AUTH_SERVICE_NAME = "AuthService";
+
+/**
+ * =============================================================================
+ * Auth Service - Authentication & Authorization
+ * =============================================================================
+ */
+export type AuthServiceService = typeof AuthServiceService;
+export const AuthServiceService = {
+  /** Register a new user */
+  register: {
+    path: "/user.AuthService/Register",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: RegisterRequest): Buffer => Buffer.from(RegisterRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): RegisterRequest => RegisterRequest.decode(value),
+    responseSerialize: (value: RegisterResponse): Buffer => Buffer.from(RegisterResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): RegisterResponse => RegisterResponse.decode(value),
+  },
+  /** Login with email and password */
+  login: {
+    path: "/user.AuthService/Login",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: LoginRequest): Buffer => Buffer.from(LoginRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): LoginRequest => LoginRequest.decode(value),
+    responseSerialize: (value: LoginResponse): Buffer => Buffer.from(LoginResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): LoginResponse => LoginResponse.decode(value),
+  },
+  /** Refresh access token */
+  refreshToken: {
+    path: "/user.AuthService/RefreshToken",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: RefreshTokenRequest): Buffer => Buffer.from(RefreshTokenRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): RefreshTokenRequest => RefreshTokenRequest.decode(value),
+    responseSerialize: (value: RefreshTokenResponse): Buffer =>
+      Buffer.from(RefreshTokenResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): RefreshTokenResponse => RefreshTokenResponse.decode(value),
+  },
+  /** Validate access token */
+  validateToken: {
+    path: "/user.AuthService/ValidateToken",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: ValidateTokenRequest): Buffer => Buffer.from(ValidateTokenRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ValidateTokenRequest => ValidateTokenRequest.decode(value),
+    responseSerialize: (value: ValidateTokenResponse): Buffer =>
+      Buffer.from(ValidateTokenResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ValidateTokenResponse => ValidateTokenResponse.decode(value),
+  },
+  /** Logout (invalidate refresh token) */
+  logout: {
+    path: "/user.AuthService/Logout",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: LogoutRequest): Buffer => Buffer.from(LogoutRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): LogoutRequest => LogoutRequest.decode(value),
+    responseSerialize: (value: LogoutResponse): Buffer => Buffer.from(LogoutResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): LogoutResponse => LogoutResponse.decode(value),
+  },
+} as const;
+
+export interface AuthServiceServer extends UntypedServiceImplementation {
+  /** Register a new user */
+  register: handleUnaryCall<RegisterRequest, RegisterResponse>;
+  /** Login with email and password */
+  login: handleUnaryCall<LoginRequest, LoginResponse>;
+  /** Refresh access token */
+  refreshToken: handleUnaryCall<RefreshTokenRequest, RefreshTokenResponse>;
+  /** Validate access token */
+  validateToken: handleUnaryCall<ValidateTokenRequest, ValidateTokenResponse>;
+  /** Logout (invalidate refresh token) */
+  logout: handleUnaryCall<LogoutRequest, LogoutResponse>;
+}
+
+/**
+ * =============================================================================
+ * User Service - User Management
+ * =============================================================================
+ */
 
 export interface UserServiceClient {
-  helloWorld(request: HelloRequest, metadata?: Metadata): Observable<HelloResponse>;
+  /** Get user by ID */
+
+  getUser(request: GetUserRequest, metadata?: Metadata): Observable<GetUserResponse>;
+
+  /** Get current user profile */
+
+  getMe(request: GetMeRequest, metadata?: Metadata): Observable<GetMeResponse>;
+
+  /** Update user profile */
+
+  updateUser(request: UpdateUserRequest, metadata?: Metadata): Observable<UpdateUserResponse>;
+
+  /** List users (with pagination) */
+
+  listUsers(request: ListUsersRequest, metadata?: Metadata): Observable<ListUsersResponse>;
+
+  /** Delete user (soft delete) */
+
+  deleteUser(request: DeleteUserRequest, metadata?: Metadata): Observable<DeleteUserResponse>;
+
+  /** Change password */
+
+  changePassword(request: ChangePasswordRequest, metadata?: Metadata): Observable<ChangePasswordResponse>;
 }
 
+/**
+ * =============================================================================
+ * User Service - User Management
+ * =============================================================================
+ */
+
 export interface UserServiceController {
-  helloWorld(
-    request: HelloRequest,
+  /** Get user by ID */
+
+  getUser(
+    request: GetUserRequest,
     metadata?: Metadata,
-  ): Promise<HelloResponse> | Observable<HelloResponse> | HelloResponse;
+  ): Promise<GetUserResponse> | Observable<GetUserResponse> | GetUserResponse;
+
+  /** Get current user profile */
+
+  getMe(request: GetMeRequest, metadata?: Metadata): Promise<GetMeResponse> | Observable<GetMeResponse> | GetMeResponse;
+
+  /** Update user profile */
+
+  updateUser(
+    request: UpdateUserRequest,
+    metadata?: Metadata,
+  ): Promise<UpdateUserResponse> | Observable<UpdateUserResponse> | UpdateUserResponse;
+
+  /** List users (with pagination) */
+
+  listUsers(
+    request: ListUsersRequest,
+    metadata?: Metadata,
+  ): Promise<ListUsersResponse> | Observable<ListUsersResponse> | ListUsersResponse;
+
+  /** Delete user (soft delete) */
+
+  deleteUser(
+    request: DeleteUserRequest,
+    metadata?: Metadata,
+  ): Promise<DeleteUserResponse> | Observable<DeleteUserResponse> | DeleteUserResponse;
+
+  /** Change password */
+
+  changePassword(
+    request: ChangePasswordRequest,
+    metadata?: Metadata,
+  ): Promise<ChangePasswordResponse> | Observable<ChangePasswordResponse> | ChangePasswordResponse;
 }
 
 export function UserServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["helloWorld"];
+    const grpcMethods: string[] = ["getUser", "getMe", "updateUser", "listUsers", "deleteUser", "changePassword"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("UserService", method)(constructor.prototype[method], method, descriptor);
@@ -120,21 +1720,113 @@ export function UserServiceControllerMethods() {
 
 export const USER_SERVICE_NAME = "UserService";
 
+/**
+ * =============================================================================
+ * User Service - User Management
+ * =============================================================================
+ */
 export type UserServiceService = typeof UserServiceService;
 export const UserServiceService = {
-  helloWorld: {
-    path: "/user.UserService/HelloWorld",
+  /** Get user by ID */
+  getUser: {
+    path: "/user.UserService/GetUser",
     requestStream: false,
     responseStream: false,
-    requestSerialize: (value: HelloRequest): Buffer => Buffer.from(HelloRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): HelloRequest => HelloRequest.decode(value),
-    responseSerialize: (value: HelloResponse): Buffer => Buffer.from(HelloResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): HelloResponse => HelloResponse.decode(value),
+    requestSerialize: (value: GetUserRequest): Buffer => Buffer.from(GetUserRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetUserRequest => GetUserRequest.decode(value),
+    responseSerialize: (value: GetUserResponse): Buffer => Buffer.from(GetUserResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetUserResponse => GetUserResponse.decode(value),
+  },
+  /** Get current user profile */
+  getMe: {
+    path: "/user.UserService/GetMe",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: GetMeRequest): Buffer => Buffer.from(GetMeRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetMeRequest => GetMeRequest.decode(value),
+    responseSerialize: (value: GetMeResponse): Buffer => Buffer.from(GetMeResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetMeResponse => GetMeResponse.decode(value),
+  },
+  /** Update user profile */
+  updateUser: {
+    path: "/user.UserService/UpdateUser",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: UpdateUserRequest): Buffer => Buffer.from(UpdateUserRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateUserRequest => UpdateUserRequest.decode(value),
+    responseSerialize: (value: UpdateUserResponse): Buffer => Buffer.from(UpdateUserResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): UpdateUserResponse => UpdateUserResponse.decode(value),
+  },
+  /** List users (with pagination) */
+  listUsers: {
+    path: "/user.UserService/ListUsers",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: ListUsersRequest): Buffer => Buffer.from(ListUsersRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListUsersRequest => ListUsersRequest.decode(value),
+    responseSerialize: (value: ListUsersResponse): Buffer => Buffer.from(ListUsersResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListUsersResponse => ListUsersResponse.decode(value),
+  },
+  /** Delete user (soft delete) */
+  deleteUser: {
+    path: "/user.UserService/DeleteUser",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: DeleteUserRequest): Buffer => Buffer.from(DeleteUserRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteUserRequest => DeleteUserRequest.decode(value),
+    responseSerialize: (value: DeleteUserResponse): Buffer => Buffer.from(DeleteUserResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): DeleteUserResponse => DeleteUserResponse.decode(value),
+  },
+  /** Change password */
+  changePassword: {
+    path: "/user.UserService/ChangePassword",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: ChangePasswordRequest): Buffer =>
+      Buffer.from(ChangePasswordRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ChangePasswordRequest => ChangePasswordRequest.decode(value),
+    responseSerialize: (value: ChangePasswordResponse): Buffer =>
+      Buffer.from(ChangePasswordResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ChangePasswordResponse => ChangePasswordResponse.decode(value),
   },
 } as const;
 
 export interface UserServiceServer extends UntypedServiceImplementation {
-  helloWorld: handleUnaryCall<HelloRequest, HelloResponse>;
+  /** Get user by ID */
+  getUser: handleUnaryCall<GetUserRequest, GetUserResponse>;
+  /** Get current user profile */
+  getMe: handleUnaryCall<GetMeRequest, GetMeResponse>;
+  /** Update user profile */
+  updateUser: handleUnaryCall<UpdateUserRequest, UpdateUserResponse>;
+  /** List users (with pagination) */
+  listUsers: handleUnaryCall<ListUsersRequest, ListUsersResponse>;
+  /** Delete user (soft delete) */
+  deleteUser: handleUnaryCall<DeleteUserRequest, DeleteUserResponse>;
+  /** Change password */
+  changePassword: handleUnaryCall<ChangePasswordRequest, ChangePasswordResponse>;
+}
+
+function toTimestamp(date: Date): Timestamp {
+  const seconds = Math.trunc(date.getTime() / 1_000);
+  const nanos = (date.getTime() % 1_000) * 1_000_000;
+  return { seconds, nanos };
+}
+
+function fromTimestamp(t: Timestamp): Date {
+  let millis = (t.seconds || 0) * 1_000;
+  millis += (t.nanos || 0) / 1_000_000;
+  return new globalThis.Date(millis);
+}
+
+function longToNumber(int64: { toString(): string }): number {
+  const num = globalThis.Number(int64.toString());
+  if (num > globalThis.Number.MAX_SAFE_INTEGER) {
+    throw new globalThis.Error("Value is larger than Number.MAX_SAFE_INTEGER");
+  }
+  if (num < globalThis.Number.MIN_SAFE_INTEGER) {
+    throw new globalThis.Error("Value is smaller than Number.MIN_SAFE_INTEGER");
+  }
+  return num;
 }
 
 interface MessageFns<T> {

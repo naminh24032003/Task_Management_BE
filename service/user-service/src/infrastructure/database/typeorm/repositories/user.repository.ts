@@ -31,7 +31,7 @@ export class UserRepository extends BaseTenantRepository<User> {
         ...this.getTenantFilter(tenantId),
         email,
       } as any,
-      select: ['_id', 'email', 'password', 'status', 'tenantId', 'roleIds'],
+      select: ['_id', 'email', 'passwordHash', 'passwordSalt', 'status', 'tenantId', 'roleIds'],
     });
   }
 

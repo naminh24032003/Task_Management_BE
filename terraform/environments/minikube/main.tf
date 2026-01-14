@@ -170,8 +170,8 @@ module "mongodb_user_service" {
   mongodb_root_password   = var.mongodb_root_password
   mongodb_replica_set_key = var.mongodb_replica_set_key
 
-  # Cluster Configuration (3 shards for 3 tenants: HCM, DN, HN)
-  mongodb_shards                  = 3
+  # Cluster Configuration (minimal for Minikube)
+  mongodb_shards                  = 1
   mongodb_configsvr_replica_count = 1
   mongodb_shardsvr_replica_count  = 1
   mongodb_mongos_replica_count    = 1

@@ -5,20 +5,247 @@ package user;
 option go_package = "user/v1;userv1";
 
 import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
 
-service UserService {
-  rpc HelloWorld (HelloRequest) returns (HelloResponse) {
+// =============================================================================
+// Auth Service - Authentication & Authorization
+// =============================================================================
+service AuthService {
+  // Register a new user
+  rpc Register (RegisterRequest) returns (RegisterResponse) {
     option (google.api.http) = {
-      post: "/v1/users/hello"
+      post: "/v1/auth/register"
+      body: "*"
+    };
+  }
+
+  // Login with email and password
+  rpc Login (LoginRequest) returns (LoginResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/login"
+      body: "*"
+    };
+  }
+
+  // Refresh access token
+  rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/refresh"
+      body: "*"
+    };
+  }
+
+  // Validate access token
+  rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/validate"
+      body: "*"
+    };
+  }
+
+  // Logout (invalidate refresh token)
+  rpc Logout (LogoutRequest) returns (LogoutResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/logout"
       body: "*"
     };
   }
 }
 
-message HelloRequest {
-  string name = 1;
+// =============================================================================
+// User Service - User Management
+// =============================================================================
+service UserService {
+  // Get user by ID
+  rpc GetUser (GetUserRequest) returns (GetUserResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/{user_id}"
+    };
+  }
+
+  // Get current user profile
+  rpc GetMe (GetMeRequest) returns (GetMeResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/me"
+    };
+  }
+
+  // Update user profile
+  rpc UpdateUser (UpdateUserRequest) returns (UpdateUserResponse) {
+    option (google.api.http) = {
+      patch: "/v1/users/{user_id}"
+      body: "*"
+    };
+  }
+
+  // List users (with pagination)
+  rpc ListUsers (ListUsersRequest) returns (ListUsersResponse) {
+    option (google.api.http) = {
+      get: "/v1/users"
+    };
+  }
+
+  // Delete user (soft delete)
+  rpc DeleteUser (DeleteUserRequest) returns (DeleteUserResponse) {
+    option (google.api.http) = {
+      delete: "/v1/users/{user_id}"
+    };
+  }
+
+  // Change password
+  rpc ChangePassword (ChangePasswordRequest) returns (ChangePasswordResponse) {
+    option (google.api.http) = {
+      post: "/v1/users/{user_id}/change-password"
+      body: "*"
+    };
+  }
 }
 
-message HelloResponse {
-  string message = 1;
+// =============================================================================
+// Common Types
+// =============================================================================
+enum UserStatus {
+  USER_STATUS_UNSPECIFIED = 0;
+  USER_STATUS_ACTIVE = 1;
+  USER_STATUS_INACTIVE = 2;
+  USER_STATUS_SUSPENDED = 3;
+  USER_STATUS_DELETED = 4;
+}
+
+message User {
+  string id = 1;
+  string tenant_id = 2;
+  string email = 3;
+  string first_name = 4;
+  string last_name = 5;
+  string display_name = 6;
+  UserStatus status = 7;
+  repeated string role_ids = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  optional google.protobuf.Timestamp last_login_at = 11;
+}
+
+message TokenPair {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 expires_in = 3; // seconds until access token expires
+}
+
+// =============================================================================
+// Auth Service Messages
+// =============================================================================
+message RegisterRequest {
+  string tenant_id = 1;
+  string email = 2;
+  string password = 3;
+  string first_name = 4;
+  string last_name = 5;
+  optional string display_name = 6;
+}
+
+message RegisterResponse {
+  User user = 1;
+  TokenPair tokens = 2;
+}
+
+message LoginRequest {
+  string tenant_id = 1;
+  string email = 2;
+  string password = 3;
+}
+
+message LoginResponse {
+  User user = 1;
+  TokenPair tokens = 2;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+  TokenPair tokens = 1;
+}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  optional string user_id = 2;
+  optional string tenant_id = 3;
+  repeated string permissions = 4;
+}
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message LogoutResponse {
+  bool success = 1;
+}
+
+// =============================================================================
+// User Service Messages
+// =============================================================================
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message GetMeRequest {
+  // User ID comes from auth context
+}
+
+message GetMeResponse {
+  User user = 1;
+}
+
+message UpdateUserRequest {
+  string user_id = 1;
+  optional string first_name = 2;
+  optional string last_name = 3;
+  optional string display_name = 4;
+  optional UserStatus status = 5;
+}
+
+message UpdateUserResponse {
+  User user = 1;
+}
+
+message ListUsersRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  optional UserStatus status_filter = 3;
+  optional string search = 4; // search by email, name
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message DeleteUserRequest {
+  string user_id = 1;
+}
+
+message DeleteUserResponse {
+  bool success = 1;
+}
+
+message ChangePasswordRequest {
+  string user_id = 1;
+  string current_password = 2;
+  string new_password = 3;
+}
+
+message ChangePasswordResponse {
+  bool success = 1;
 }
