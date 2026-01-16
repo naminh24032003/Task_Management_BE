@@ -32,7 +32,7 @@ spec:
               containerPort: {{ $config.port }}
               protocol: {{ $config.protocol | default "TCP" }}
             {{- end }}
-          {{- if or .Values.envVarsCM .Values.envVarsSecret }}
+          {{- if or .Values.envVarsCM .Values.envVarsSecret .Values.envFromSecretRefs }}
           envFrom:
             {{- if .Values.envVarsCM }}
             - configMapRef:
@@ -42,15 +42,28 @@ spec:
             - secretRef:
                 name: {{ include "microservice.fullname" . }}-secret
             {{- end }}
+            {{- range .Values.envFromSecretRefs }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
           {{- end }}
-          {{- if .Values.sentry.enabled }}
-        env:
-          - name: SENTRY_DSN
-            value: {{ .Values.sentry.dsn | quote }}
-          - name: SENTRY_ENVIRONMENT
-            value: {{ .Values.sentry.environment | default "development" | quote }}
-          - name: SENTRY_TRACES_SAMPLE_RATE
-            value: {{ .Values.sentry.tracesSampleRate | quote }}
+          {{- if or .Values.envVarsFromSecret .Values.sentry.enabled }}
+          env:
+            {{- range .Values.envVarsFromSecret }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName }}
+                  key: {{ .secretKey }}
+            {{- end }}
+            {{- if .Values.sentry.enabled }}
+            - name: SENTRY_DSN
+              value: {{ .Values.sentry.dsn | quote }}
+            - name: SENTRY_ENVIRONMENT
+              value: {{ .Values.sentry.environment | default "development" | quote }}
+            - name: SENTRY_TRACES_SAMPLE_RATE
+              value: {{ .Values.sentry.tracesSampleRate | quote }}
+            {{- end }}
           {{- end }}
           {{- with .Values.livenessProbe }}
           livenessProbe:

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ObjectId } from 'mongodb';
 import { User as UserEntity, UserStatus as EntityUserStatus } from '../entities/user.entity';
 import { User, UserStatus as DomainUserStatus, UserProps } from '../../../../domain/aggregates/user.aggregate';
 import { IUserRepository } from '../../../../application/ports/user-repository.port';
@@ -17,8 +18,10 @@ export class UserDomainRepository implements IUserRepository {
   ) {}
 
   async findById(tenantId: string, userId: string): Promise<User | null> {
+    // Convert string ID to ObjectId for MongoDB query
+    const objectId = new ObjectId(userId);
     const entity = await this.repository.findOne({
-      where: { tenantId, _id: userId as any, isDeleted: false } as any,
+      where: { tenantId, _id: objectId, isDeleted: false } as any,
     });
 
     return entity ? this.toDomain(entity) : null;

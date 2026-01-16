@@ -7,7 +7,7 @@ metadata:
     app: grpc-gateway
     component: api-gateway
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: grpc-gateway
@@ -22,14 +22,14 @@ spec:
     spec:
       containers:
       - name: grpc-gateway
-        image: grpc-gateway:v5
+        image: grpc-gateway:v7
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
           name: http
           protocol: TCP
         env:
-        # User Service
+        # User Service - deployed in dev namespace with Istio
         - name: USER_SERVICE_ENDPOINT
           value: "user-service.dev.svc.cluster.local:50051"
         - name: TASK_SERVICE_ENDPOINT

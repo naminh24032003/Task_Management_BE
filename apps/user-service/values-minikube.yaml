@@ -10,19 +10,39 @@ microservice:
   # =========================================================
   image:
     repository: user-service
-    tag: v2
+    tag: v9
     pullPolicy: IfNotPresent
 
   # =========================================================
-  # ENVIRONMENT VARIABLES (ConfigMap)
+  # ENVIRONMENT VARIABLES (ConfigMap) - Non-sensitive only
   # =========================================================
   envVarsCM:
     NODE_ENV: development
+    GRPC_URL: "0.0.0.0:50051"
+    METRICS_PORT: "9090"
+    # MongoDB Configuration - non-sensitive settings
+    # Using 'userservice' (no dash) to avoid existing sharding rules
+    MONGODB_DATABASE: "userservice"
+    MONGODB_POOL_MIN: "5"
+    MONGODB_POOL_MAX: "50"
+    MONGODB_SOCKET_TIMEOUT: "45000"
+    MONGODB_SERVER_SELECTION_TIMEOUT: "30000"
+    # JWT Configuration - non-sensitive
+    JWT_EXPIRES_IN: "3600"
 
   # =========================================================
   # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
   # =========================================================
+  # This section is kept empty - secrets are managed via
+  # external-secrets.yaml template and referenced below
   envVarsSecret: {}
+
+  # =========================================================
+  # REFERENCE TO EXTERNAL SECRETS
+  # =========================================================
+  # Reference the user-service-secrets created by templates/external-secrets.yaml
+  envFromSecretRefs:
+    - user-service-secrets
 
   # =========================================================
   # CONTAINER PORTS
@@ -64,16 +84,10 @@ microservice:
   readinessProbe: null
 
   # =========================================================
-  # VOLUMES
-  # =========================================================
-  # =========================================================
-  # METRICS CONFIGURATION
-  # =========================================================
-  # =========================================================
   # MONITORING & ERROR TRACKING
   # =========================================================
   sentry:
-    enabled: false # Set to true and provide DSN to enable
+    enabled: false
     dsn: "https://your-dsn@sentry.io/project"
     environment: development
     tracesSampleRate: 1.0
@@ -85,7 +99,29 @@ microservice:
     interval: 30s
     serviceMonitor:
       labels:
-        release: monitoring # Matches the Prometheus release name
+        release: monitoring
 
   extraVolumes: []
   extraVolumeMounts: []
+
+# =========================================================
+# SECRETS CONFIGURATION
+# =========================================================
+# These values will be stored in Kubernetes Secrets
+# In production, use sealed-secrets or external-secrets-operator
+# and store actual values in a secure location (Vault, AWS SM, etc.)
+#
+# For local development, you can override these in a local
+# values-minikube-secrets.yaml file (gitignored)
+# =========================================================
+secrets:
+  # MongoDB URI - points to mongos router
+  # Format: mongodb://user:password@host:port/database?authSource=admin
+  # Using 'userservice' (no dash) to avoid existing sharding rules
+  mongodbUri: "mongodb://root:MongoDB%40Root2024Secure%21@user-mongodb-mongodb-sharded.mongodb-user.svc.cluster.local:27017/userservice?authSource=admin"
+
+  # JWT Secret for token signing
+  jwtSecret: "your-super-secret-jwt-key-change-in-production"
+
+  # Additional secrets can be added here
+  extra: {}

@@ -58,12 +58,29 @@ var (
     useMTLS = flag.Bool("use-mtls", true, "Enable mTLS for gRPC connections")
 )
 
+// headerMatcher allows forwarding custom HTTP headers as gRPC metadata
+func headerMatcher(key string) (string, bool) {
+    switch key {
+    case "X-Tenant-Id", "x-tenant-id":
+        return "x-tenant-id", true
+    case "Authorization", "authorization":
+        return "authorization", true
+    case "X-Request-Id", "x-request-id":
+        return "x-request-id", true
+    default:
+        return runtime.DefaultHeaderMatcher(key)
+    }
+}
+
 func run() error {
     ctx := context.Background()
     ctx, cancel := context.WithCancel(ctx)
     defer cancel()
 
-    mux := runtime.NewServeMux()
+    // Configure ServeMux with header forwarding
+    mux := runtime.NewServeMux(
+        runtime.WithIncomingHeaderMatcher(headerMatcher),
+    )
 
     var opts []grpc.DialOption
 
@@ -81,6 +98,13 @@ func run() error {
     // Always use insecure connection - Istio sidecar handles encryption
     opts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
+    // Register AuthService handlers (Register, Login, RefreshToken, ValidateToken, Logout)
+    log.Printf("📡 Connecting to Auth Service: %s", *userServiceEndpoint)
+    if err := userpb.RegisterAuthServiceHandlerFromEndpoint(ctx, mux, *userServiceEndpoint, opts); err != nil {
+        return err
+    }
+
+    // Register UserService handlers (GetUser, GetMe, UpdateUser, ListUsers, DeleteUser, ChangePassword)
     log.Printf("📡 Connecting to User Service: %s", *userServiceEndpoint)
     if err := userpb.RegisterUserServiceHandlerFromEndpoint(ctx, mux, *userServiceEndpoint, opts); err != nil {
         return err

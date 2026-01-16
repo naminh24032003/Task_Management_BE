@@ -279,7 +279,7 @@ module "kafka" {
 # -----------------------------------------------------------------------------
 
 module "redis" {
-  source = "../../modules/platform/redis"
+    source = "../../modules/platform/redis"
   count  = var.redis_enabled ? 1 : 0
 
   environment      = var.environment
