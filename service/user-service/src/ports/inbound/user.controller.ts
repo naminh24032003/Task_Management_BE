@@ -1,5 +1,5 @@
 import { Controller } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
+import { GrpcMethod, RpcException } from '@nestjs/microservices';
 import {
   UserServiceController,
   UserServiceControllerMethods,
@@ -16,6 +16,22 @@ import {
   ChangePasswordRequest,
   ChangePasswordResponse,
   UserStatus,
+  CreateUserRequest,
+  CreateUserResponse,
+  GetUserByEmailRequest,
+  GetUserByEmailResponse,
+  ChangeEmailRequest,
+  ChangeEmailResponse,
+  ActivateUserRequest,
+  ActivateUserResponse,
+  DeactivateUserRequest,
+  DeactivateUserResponse,
+  SuspendUserRequest,
+  SuspendUserResponse,
+  AssignRolesRequest,
+  AssignRolesResponse,
+  RemoveRolesRequest,
+  RemoveRolesResponse,
 } from '../../generated/user/v1/user';
 import { UserManagementService } from '../../application/services/user-management.service';
 import { User, UserStatus as DomainUserStatus } from '../../domain/aggregates/user.aggregate';
@@ -123,6 +139,158 @@ export class UserController implements UserServiceController {
       );
 
       return { success: true };
+    } catch (error: any) {
+      throw new RpcException({
+        code: error.code || 'INTERNAL_ERROR',
+        message: error.message,
+      });
+    }
+  }
+
+  // ============================================
+  // New CRUD Methods
+  // ============================================
+
+  @GrpcMethod('UserService', 'CreateUser')
+  async createUser(request: CreateUserRequest, metadata?: Metadata): Promise<CreateUserResponse> {
+    try {
+      const tenantId = this.extractTenantId(metadata);
+      const user = await this.userManagementService.createUser({
+        tenantId,
+        email: request.email,
+        password: request.password,
+        firstName: request.firstName,
+        lastName: request.lastName,
+        displayName: request.displayName,
+        roleIds: request.roleIds,
+        status: request.status ? this.toDomainStatus(request.status) : undefined,
+      });
+
+      return { user: this.toProtoUser(user) };
+    } catch (error: any) {
+      throw new RpcException({
+        code: error.code || 'INTERNAL_ERROR',
+        message: error.message,
+      });
+    }
+  }
+
+  @GrpcMethod('UserService', 'GetUserByEmail')
+  async getUserByEmail(request: GetUserByEmailRequest, metadata?: Metadata): Promise<GetUserByEmailResponse> {
+    try {
+      const tenantId = this.extractTenantId(metadata);
+      const user = await this.userManagementService.getUserByEmail(tenantId, request.email);
+
+      if (!user) {
+        throw new RpcException({
+          code: 'NOT_FOUND',
+          message: `User with email ${request.email} not found`,
+        });
+      }
+
+      return { user: this.toProtoUser(user) };
+    } catch (error: any) {
+      throw new RpcException({
+        code: error.code || 'NOT_FOUND',
+        message: error.message,
+      });
+    }
+  }
+
+  @GrpcMethod('UserService', 'ChangeEmail')
+  async changeEmail(request: ChangeEmailRequest, metadata?: Metadata): Promise<ChangeEmailResponse> {
+    try {
+      const tenantId = this.extractTenantId(metadata);
+      const user = await this.userManagementService.changeEmail(
+        tenantId,
+        request.userId,
+        request.newEmail,
+      );
+
+      return { user: this.toProtoUser(user) };
+    } catch (error: any) {
+      throw new RpcException({
+        code: error.code || 'INTERNAL_ERROR',
+        message: error.message,
+      });
+    }
+  }
+
+  @GrpcMethod('UserService', 'ActivateUser')
+  async activateUser(request: ActivateUserRequest, metadata?: Metadata): Promise<ActivateUserResponse> {
+    try {
+      const tenantId = this.extractTenantId(metadata);
+      const user = await this.userManagementService.activateUser(tenantId, request.userId);
+
+      return { user: this.toProtoUser(user) };
+    } catch (error: any) {
+      throw new RpcException({
+        code: error.code || 'INTERNAL_ERROR',
+        message: error.message,
+      });
+    }
+  }
+
+  @GrpcMethod('UserService', 'DeactivateUser')
+  async deactivateUser(request: DeactivateUserRequest, metadata?: Metadata): Promise<DeactivateUserResponse> {
+    try {
+      const tenantId = this.extractTenantId(metadata);
+      const user = await this.userManagementService.deactivateUser(tenantId, request.userId);
+
+      return { user: this.toProtoUser(user) };
+    } catch (error: any) {
+      throw new RpcException({
+        code: error.code || 'INTERNAL_ERROR',
+        message: error.message,
+      });
+    }
+  }
+
+  @GrpcMethod('UserService', 'SuspendUser')
+  async suspendUser(request: SuspendUserRequest, metadata?: Metadata): Promise<SuspendUserResponse> {
+    try {
+      const tenantId = this.extractTenantId(metadata);
+      const user = await this.userManagementService.suspendUser(tenantId, request.userId);
+
+      return { user: this.toProtoUser(user) };
+    } catch (error: any) {
+      throw new RpcException({
+        code: error.code || 'INTERNAL_ERROR',
+        message: error.message,
+      });
+    }
+  }
+
+  @GrpcMethod('UserService', 'AssignRoles')
+  async assignRoles(request: AssignRolesRequest, metadata?: Metadata): Promise<AssignRolesResponse> {
+    try {
+      const tenantId = this.extractTenantId(metadata);
+      const user = await this.userManagementService.assignRoles(
+        tenantId,
+        request.userId,
+        request.roleIds,
+      );
+
+      return { user: this.toProtoUser(user) };
+    } catch (error: any) {
+      throw new RpcException({
+        code: error.code || 'INTERNAL_ERROR',
+        message: error.message,
+      });
+    }
+  }
+
+  @GrpcMethod('UserService', 'RemoveRoles')
+  async removeRoles(request: RemoveRolesRequest, metadata?: Metadata): Promise<RemoveRolesResponse> {
+    try {
+      const tenantId = this.extractTenantId(metadata);
+      const user = await this.userManagementService.removeRoles(
+        tenantId,
+        request.userId,
+        request.roleIds,
+      );
+
+      return { user: this.toProtoUser(user) };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'INTERNAL_ERROR',

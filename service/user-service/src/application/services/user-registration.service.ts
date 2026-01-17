@@ -1,16 +1,8 @@
-import { Injectable, Inject, ConflictException } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { User } from '../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../ports/user-repository.port';
 import { DuplicateEmailError } from '../errors/duplicate-email.error';
-
-export interface RegisterUserInput {
-  tenantId: string;
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  displayName?: string;
-}
+import { RegisterUserDto } from '../dtos';
 
 /**
  * User Registration Service
@@ -26,7 +18,7 @@ export class UserRegistrationService {
   /**
    * Register a new user
    */
-  async register(input: RegisterUserInput): Promise<User> {
+  async register(input: RegisterUserDto): Promise<User> {
     // Check if email already exists
     const emailExists = await this.userRepository.emailExists(
       input.tenantId,

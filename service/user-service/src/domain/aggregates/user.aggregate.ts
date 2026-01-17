@@ -4,6 +4,16 @@ import { Password } from '../value-objects/password.vo';
 import { UserCreatedEvent } from '../events/user-created.event';
 import { UserEmailChangedEvent } from '../events/user-email-changed.event';
 import { UserPasswordChangedEvent } from '../events/user-password-changed.event';
+import { UserActivatedEvent } from '../events/user-activated.event';
+import { UserDeactivatedEvent } from '../events/user-deactivated.event';
+import { UserSuspendedEvent } from '../events/user-suspended.event';
+import { UserDeletedEvent } from '../events/user-deleted.event';
+import { UserRoleAddedEvent } from '../events/user-role-added.event';
+import { UserRoleRemovedEvent } from '../events/user-role-removed.event';
+import { UserProfileUpdatedEvent } from '../events/user-profile-updated.event';
+import { UserLoggedInEvent } from '../events/user-logged-in.event';
+import { PasswordMismatchError } from '../errors/password-mismatch.error';
+import { InvalidStatusTransitionError } from '../errors/invalid-status-transition.error';
 
 /**
  * User status enum
@@ -21,7 +31,15 @@ export enum UserStatus {
 export type UserDomainEvent =
   | UserCreatedEvent
   | UserEmailChangedEvent
-  | UserPasswordChangedEvent;
+  | UserPasswordChangedEvent
+  | UserActivatedEvent
+  | UserDeactivatedEvent
+  | UserSuspendedEvent
+  | UserDeletedEvent
+  | UserRoleAddedEvent
+  | UserRoleRemovedEvent
+  | UserProfileUpdatedEvent
+  | UserLoggedInEvent;
 
 /**
  * Props for creating a new User
@@ -198,7 +216,7 @@ export class User {
    */
   changePassword(currentPassword: string, newPassword: string): void {
     if (!this._password.verify(currentPassword)) {
-      throw new Error('Current password is incorrect');
+      throw new PasswordMismatchError();
     }
 
     this._password = Password.create(newPassword);
@@ -241,24 +259,48 @@ export class User {
     lastName?: string;
     displayName?: string;
   }): void {
+    const updatedFields: string[] = [];
+
     if (props.firstName) {
       this._firstName = props.firstName.trim();
+      updatedFields.push('firstName');
     }
     if (props.lastName) {
       this._lastName = props.lastName.trim();
+      updatedFields.push('lastName');
     }
     if (props.displayName) {
       this._displayName = props.displayName.trim();
+      updatedFields.push('displayName');
     }
-    this._updatedAt = new Date();
+
+    if (updatedFields.length > 0) {
+      this._updatedAt = new Date();
+      this._domainEvents.push(
+        new UserProfileUpdatedEvent(
+          this._id.toString(),
+          this._tenantId,
+          updatedFields,
+        ),
+      );
+    }
   }
 
   /**
    * Record login
    */
-  recordLogin(): void {
+  recordLogin(ipAddress?: string, userAgent?: string): void {
     this._lastLoginAt = new Date();
     this._updatedAt = new Date();
+
+    this._domainEvents.push(
+      new UserLoggedInEvent(
+        this._id.toString(),
+        this._tenantId,
+        ipAddress,
+        userAgent,
+      ),
+    );
   }
 
   /**
@@ -266,26 +308,55 @@ export class User {
    */
   activate(): void {
     if (this._status === UserStatus.DELETED) {
-      throw new Error('Cannot activate a deleted user');
+      throw new InvalidStatusTransitionError(this._status, UserStatus.ACTIVE);
     }
+
+    const previousStatus = this._status;
     this._status = UserStatus.ACTIVE;
     this._updatedAt = new Date();
+
+    this._domainEvents.push(
+      new UserActivatedEvent(
+        this._id.toString(),
+        this._tenantId,
+        previousStatus,
+      ),
+    );
   }
 
   /**
    * Deactivate user
    */
   deactivate(): void {
+    const previousStatus = this._status;
     this._status = UserStatus.INACTIVE;
     this._updatedAt = new Date();
+
+    this._domainEvents.push(
+      new UserDeactivatedEvent(
+        this._id.toString(),
+        this._tenantId,
+        previousStatus,
+      ),
+    );
   }
 
   /**
    * Suspend user
    */
-  suspend(): void {
+  suspend(reason?: string): void {
+    const previousStatus = this._status;
     this._status = UserStatus.SUSPENDED;
     this._updatedAt = new Date();
+
+    this._domainEvents.push(
+      new UserSuspendedEvent(
+        this._id.toString(),
+        this._tenantId,
+        previousStatus,
+        reason,
+      ),
+    );
   }
 
   /**
@@ -294,6 +365,14 @@ export class User {
   delete(): void {
     this._status = UserStatus.DELETED;
     this._updatedAt = new Date();
+
+    this._domainEvents.push(
+      new UserDeletedEvent(
+        this._id.toString(),
+        this._tenantId,
+        this._email.toString(),
+      ),
+    );
   }
 
   /**
@@ -303,6 +382,14 @@ export class User {
     if (!this._roleIds.includes(roleId)) {
       this._roleIds.push(roleId);
       this._updatedAt = new Date();
+
+      this._domainEvents.push(
+        new UserRoleAddedEvent(
+          this._id.toString(),
+          this._tenantId,
+          roleId,
+        ),
+      );
     }
   }
 
@@ -314,6 +401,14 @@ export class User {
     if (index > -1) {
       this._roleIds.splice(index, 1);
       this._updatedAt = new Date();
+
+      this._domainEvents.push(
+        new UserRoleRemovedEvent(
+          this._id.toString(),
+          this._tenantId,
+          roleId,
+        ),
+      );
     }
   }
 

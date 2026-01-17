@@ -172,6 +172,87 @@ export interface ChangePasswordResponse {
   success: boolean;
 }
 
+/** Create User (Admin) */
+export interface CreateUserRequest {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  displayName?: string | undefined;
+  roleIds: string[];
+  status?: UserStatus | undefined;
+}
+
+export interface CreateUserResponse {
+  user: User | undefined;
+}
+
+/** Get User By Email */
+export interface GetUserByEmailRequest {
+  email: string;
+}
+
+export interface GetUserByEmailResponse {
+  user: User | undefined;
+}
+
+/** Change Email */
+export interface ChangeEmailRequest {
+  userId: string;
+  newEmail: string;
+}
+
+export interface ChangeEmailResponse {
+  user: User | undefined;
+}
+
+/** Activate User */
+export interface ActivateUserRequest {
+  userId: string;
+}
+
+export interface ActivateUserResponse {
+  user: User | undefined;
+}
+
+/** Deactivate User */
+export interface DeactivateUserRequest {
+  userId: string;
+}
+
+export interface DeactivateUserResponse {
+  user: User | undefined;
+}
+
+/** Suspend User */
+export interface SuspendUserRequest {
+  userId: string;
+}
+
+export interface SuspendUserResponse {
+  user: User | undefined;
+}
+
+/** Assign Roles */
+export interface AssignRolesRequest {
+  userId: string;
+  roleIds: string[];
+}
+
+export interface AssignRolesResponse {
+  user: User | undefined;
+}
+
+/** Remove Roles */
+export interface RemoveRolesRequest {
+  userId: string;
+  roleIds: string[];
+}
+
+export interface RemoveRolesResponse {
+  user: User | undefined;
+}
+
 wrappers[".google.protobuf.Timestamp"] = {
   fromObject(value: Date) {
     return { seconds: value.getTime() / 1000, nanos: (value.getTime() % 1000) * 1e6 };
@@ -1465,6 +1546,697 @@ export const ChangePasswordResponse: MessageFns<ChangePasswordResponse> = {
   },
 };
 
+function createBaseCreateUserRequest(): CreateUserRequest {
+  return { email: "", password: "", firstName: "", lastName: "", roleIds: [] };
+}
+
+export const CreateUserRequest: MessageFns<CreateUserRequest> = {
+  encode(message: CreateUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.email !== "") {
+      writer.uint32(10).string(message.email);
+    }
+    if (message.password !== "") {
+      writer.uint32(18).string(message.password);
+    }
+    if (message.firstName !== "") {
+      writer.uint32(26).string(message.firstName);
+    }
+    if (message.lastName !== "") {
+      writer.uint32(34).string(message.lastName);
+    }
+    if (message.displayName !== undefined) {
+      writer.uint32(42).string(message.displayName);
+    }
+    for (const v of message.roleIds) {
+      writer.uint32(50).string(v!);
+    }
+    if (message.status !== undefined) {
+      writer.uint32(56).int32(message.status);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateUserRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCreateUserRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.email = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.password = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.firstName = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.lastName = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.displayName = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.roleIds.push(reader.string());
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
+
+          message.status = reader.int32() as any;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseCreateUserResponse(): CreateUserResponse {
+  return { user: undefined };
+}
+
+export const CreateUserResponse: MessageFns<CreateUserResponse> = {
+  encode(message: CreateUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateUserResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCreateUserResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetUserByEmailRequest(): GetUserByEmailRequest {
+  return { email: "" };
+}
+
+export const GetUserByEmailRequest: MessageFns<GetUserByEmailRequest> = {
+  encode(message: GetUserByEmailRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.email !== "") {
+      writer.uint32(10).string(message.email);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetUserByEmailRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetUserByEmailRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.email = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetUserByEmailResponse(): GetUserByEmailResponse {
+  return { user: undefined };
+}
+
+export const GetUserByEmailResponse: MessageFns<GetUserByEmailResponse> = {
+  encode(message: GetUserByEmailResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetUserByEmailResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetUserByEmailResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseChangeEmailRequest(): ChangeEmailRequest {
+  return { userId: "", newEmail: "" };
+}
+
+export const ChangeEmailRequest: MessageFns<ChangeEmailRequest> = {
+  encode(message: ChangeEmailRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.newEmail !== "") {
+      writer.uint32(18).string(message.newEmail);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ChangeEmailRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseChangeEmailRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.newEmail = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseChangeEmailResponse(): ChangeEmailResponse {
+  return { user: undefined };
+}
+
+export const ChangeEmailResponse: MessageFns<ChangeEmailResponse> = {
+  encode(message: ChangeEmailResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ChangeEmailResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseChangeEmailResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseActivateUserRequest(): ActivateUserRequest {
+  return { userId: "" };
+}
+
+export const ActivateUserRequest: MessageFns<ActivateUserRequest> = {
+  encode(message: ActivateUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ActivateUserRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseActivateUserRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseActivateUserResponse(): ActivateUserResponse {
+  return { user: undefined };
+}
+
+export const ActivateUserResponse: MessageFns<ActivateUserResponse> = {
+  encode(message: ActivateUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ActivateUserResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseActivateUserResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseDeactivateUserRequest(): DeactivateUserRequest {
+  return { userId: "" };
+}
+
+export const DeactivateUserRequest: MessageFns<DeactivateUserRequest> = {
+  encode(message: DeactivateUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeactivateUserRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeactivateUserRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseDeactivateUserResponse(): DeactivateUserResponse {
+  return { user: undefined };
+}
+
+export const DeactivateUserResponse: MessageFns<DeactivateUserResponse> = {
+  encode(message: DeactivateUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeactivateUserResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeactivateUserResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseSuspendUserRequest(): SuspendUserRequest {
+  return { userId: "" };
+}
+
+export const SuspendUserRequest: MessageFns<SuspendUserRequest> = {
+  encode(message: SuspendUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SuspendUserRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSuspendUserRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseSuspendUserResponse(): SuspendUserResponse {
+  return { user: undefined };
+}
+
+export const SuspendUserResponse: MessageFns<SuspendUserResponse> = {
+  encode(message: SuspendUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SuspendUserResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSuspendUserResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseAssignRolesRequest(): AssignRolesRequest {
+  return { userId: "", roleIds: [] };
+}
+
+export const AssignRolesRequest: MessageFns<AssignRolesRequest> = {
+  encode(message: AssignRolesRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    for (const v of message.roleIds) {
+      writer.uint32(18).string(v!);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AssignRolesRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseAssignRolesRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.roleIds.push(reader.string());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseAssignRolesResponse(): AssignRolesResponse {
+  return { user: undefined };
+}
+
+export const AssignRolesResponse: MessageFns<AssignRolesResponse> = {
+  encode(message: AssignRolesResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AssignRolesResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseAssignRolesResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseRemoveRolesRequest(): RemoveRolesRequest {
+  return { userId: "", roleIds: [] };
+}
+
+export const RemoveRolesRequest: MessageFns<RemoveRolesRequest> = {
+  encode(message: RemoveRolesRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    for (const v of message.roleIds) {
+      writer.uint32(18).string(v!);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RemoveRolesRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRemoveRolesRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.roleIds.push(reader.string());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseRemoveRolesResponse(): RemoveRolesResponse {
+  return { user: undefined };
+}
+
+export const RemoveRolesResponse: MessageFns<RemoveRolesResponse> = {
+  encode(message: RemoveRolesResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RemoveRolesResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRemoveRolesResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
 /**
  * =============================================================================
  * Auth Service - Authentication & Authorization
@@ -1631,9 +2403,17 @@ export interface AuthServiceServer extends UntypedServiceImplementation {
  */
 
 export interface UserServiceClient {
+  /** Create user (admin only - without auto-login) */
+
+  createUser(request: CreateUserRequest, metadata?: Metadata): Observable<CreateUserResponse>;
+
   /** Get user by ID */
 
   getUser(request: GetUserRequest, metadata?: Metadata): Observable<GetUserResponse>;
+
+  /** Get user by email */
+
+  getUserByEmail(request: GetUserByEmailRequest, metadata?: Metadata): Observable<GetUserByEmailResponse>;
 
   /** Get current user profile */
 
@@ -1654,6 +2434,30 @@ export interface UserServiceClient {
   /** Change password */
 
   changePassword(request: ChangePasswordRequest, metadata?: Metadata): Observable<ChangePasswordResponse>;
+
+  /** Change email */
+
+  changeEmail(request: ChangeEmailRequest, metadata?: Metadata): Observable<ChangeEmailResponse>;
+
+  /** Activate user */
+
+  activateUser(request: ActivateUserRequest, metadata?: Metadata): Observable<ActivateUserResponse>;
+
+  /** Deactivate user */
+
+  deactivateUser(request: DeactivateUserRequest, metadata?: Metadata): Observable<DeactivateUserResponse>;
+
+  /** Suspend user */
+
+  suspendUser(request: SuspendUserRequest, metadata?: Metadata): Observable<SuspendUserResponse>;
+
+  /** Assign roles to user */
+
+  assignRoles(request: AssignRolesRequest, metadata?: Metadata): Observable<AssignRolesResponse>;
+
+  /** Remove roles from user */
+
+  removeRoles(request: RemoveRolesRequest, metadata?: Metadata): Observable<RemoveRolesResponse>;
 }
 
 /**
@@ -1663,12 +2467,26 @@ export interface UserServiceClient {
  */
 
 export interface UserServiceController {
+  /** Create user (admin only - without auto-login) */
+
+  createUser(
+    request: CreateUserRequest,
+    metadata?: Metadata,
+  ): Promise<CreateUserResponse> | Observable<CreateUserResponse> | CreateUserResponse;
+
   /** Get user by ID */
 
   getUser(
     request: GetUserRequest,
     metadata?: Metadata,
   ): Promise<GetUserResponse> | Observable<GetUserResponse> | GetUserResponse;
+
+  /** Get user by email */
+
+  getUserByEmail(
+    request: GetUserByEmailRequest,
+    metadata?: Metadata,
+  ): Promise<GetUserByEmailResponse> | Observable<GetUserByEmailResponse> | GetUserByEmailResponse;
 
   /** Get current user profile */
 
@@ -1701,11 +2519,68 @@ export interface UserServiceController {
     request: ChangePasswordRequest,
     metadata?: Metadata,
   ): Promise<ChangePasswordResponse> | Observable<ChangePasswordResponse> | ChangePasswordResponse;
+
+  /** Change email */
+
+  changeEmail(
+    request: ChangeEmailRequest,
+    metadata?: Metadata,
+  ): Promise<ChangeEmailResponse> | Observable<ChangeEmailResponse> | ChangeEmailResponse;
+
+  /** Activate user */
+
+  activateUser(
+    request: ActivateUserRequest,
+    metadata?: Metadata,
+  ): Promise<ActivateUserResponse> | Observable<ActivateUserResponse> | ActivateUserResponse;
+
+  /** Deactivate user */
+
+  deactivateUser(
+    request: DeactivateUserRequest,
+    metadata?: Metadata,
+  ): Promise<DeactivateUserResponse> | Observable<DeactivateUserResponse> | DeactivateUserResponse;
+
+  /** Suspend user */
+
+  suspendUser(
+    request: SuspendUserRequest,
+    metadata?: Metadata,
+  ): Promise<SuspendUserResponse> | Observable<SuspendUserResponse> | SuspendUserResponse;
+
+  /** Assign roles to user */
+
+  assignRoles(
+    request: AssignRolesRequest,
+    metadata?: Metadata,
+  ): Promise<AssignRolesResponse> | Observable<AssignRolesResponse> | AssignRolesResponse;
+
+  /** Remove roles from user */
+
+  removeRoles(
+    request: RemoveRolesRequest,
+    metadata?: Metadata,
+  ): Promise<RemoveRolesResponse> | Observable<RemoveRolesResponse> | RemoveRolesResponse;
 }
 
 export function UserServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["getUser", "getMe", "updateUser", "listUsers", "deleteUser", "changePassword"];
+    const grpcMethods: string[] = [
+      "createUser",
+      "getUser",
+      "getUserByEmail",
+      "getMe",
+      "updateUser",
+      "listUsers",
+      "deleteUser",
+      "changePassword",
+      "changeEmail",
+      "activateUser",
+      "deactivateUser",
+      "suspendUser",
+      "assignRoles",
+      "removeRoles",
+    ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("UserService", method)(constructor.prototype[method], method, descriptor);
@@ -1727,6 +2602,16 @@ export const USER_SERVICE_NAME = "UserService";
  */
 export type UserServiceService = typeof UserServiceService;
 export const UserServiceService = {
+  /** Create user (admin only - without auto-login) */
+  createUser: {
+    path: "/user.UserService/CreateUser",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: CreateUserRequest): Buffer => Buffer.from(CreateUserRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): CreateUserRequest => CreateUserRequest.decode(value),
+    responseSerialize: (value: CreateUserResponse): Buffer => Buffer.from(CreateUserResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): CreateUserResponse => CreateUserResponse.decode(value),
+  },
   /** Get user by ID */
   getUser: {
     path: "/user.UserService/GetUser",
@@ -1736,6 +2621,18 @@ export const UserServiceService = {
     requestDeserialize: (value: Buffer): GetUserRequest => GetUserRequest.decode(value),
     responseSerialize: (value: GetUserResponse): Buffer => Buffer.from(GetUserResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): GetUserResponse => GetUserResponse.decode(value),
+  },
+  /** Get user by email */
+  getUserByEmail: {
+    path: "/user.UserService/GetUserByEmail",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: GetUserByEmailRequest): Buffer =>
+      Buffer.from(GetUserByEmailRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetUserByEmailRequest => GetUserByEmailRequest.decode(value),
+    responseSerialize: (value: GetUserByEmailResponse): Buffer =>
+      Buffer.from(GetUserByEmailResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetUserByEmailResponse => GetUserByEmailResponse.decode(value),
   },
   /** Get current user profile */
   getMe: {
@@ -1789,11 +2686,78 @@ export const UserServiceService = {
       Buffer.from(ChangePasswordResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): ChangePasswordResponse => ChangePasswordResponse.decode(value),
   },
+  /** Change email */
+  changeEmail: {
+    path: "/user.UserService/ChangeEmail",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: ChangeEmailRequest): Buffer => Buffer.from(ChangeEmailRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ChangeEmailRequest => ChangeEmailRequest.decode(value),
+    responseSerialize: (value: ChangeEmailResponse): Buffer => Buffer.from(ChangeEmailResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ChangeEmailResponse => ChangeEmailResponse.decode(value),
+  },
+  /** Activate user */
+  activateUser: {
+    path: "/user.UserService/ActivateUser",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: ActivateUserRequest): Buffer => Buffer.from(ActivateUserRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ActivateUserRequest => ActivateUserRequest.decode(value),
+    responseSerialize: (value: ActivateUserResponse): Buffer =>
+      Buffer.from(ActivateUserResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ActivateUserResponse => ActivateUserResponse.decode(value),
+  },
+  /** Deactivate user */
+  deactivateUser: {
+    path: "/user.UserService/DeactivateUser",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: DeactivateUserRequest): Buffer =>
+      Buffer.from(DeactivateUserRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeactivateUserRequest => DeactivateUserRequest.decode(value),
+    responseSerialize: (value: DeactivateUserResponse): Buffer =>
+      Buffer.from(DeactivateUserResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): DeactivateUserResponse => DeactivateUserResponse.decode(value),
+  },
+  /** Suspend user */
+  suspendUser: {
+    path: "/user.UserService/SuspendUser",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: SuspendUserRequest): Buffer => Buffer.from(SuspendUserRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): SuspendUserRequest => SuspendUserRequest.decode(value),
+    responseSerialize: (value: SuspendUserResponse): Buffer => Buffer.from(SuspendUserResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): SuspendUserResponse => SuspendUserResponse.decode(value),
+  },
+  /** Assign roles to user */
+  assignRoles: {
+    path: "/user.UserService/AssignRoles",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: AssignRolesRequest): Buffer => Buffer.from(AssignRolesRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): AssignRolesRequest => AssignRolesRequest.decode(value),
+    responseSerialize: (value: AssignRolesResponse): Buffer => Buffer.from(AssignRolesResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): AssignRolesResponse => AssignRolesResponse.decode(value),
+  },
+  /** Remove roles from user */
+  removeRoles: {
+    path: "/user.UserService/RemoveRoles",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: RemoveRolesRequest): Buffer => Buffer.from(RemoveRolesRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): RemoveRolesRequest => RemoveRolesRequest.decode(value),
+    responseSerialize: (value: RemoveRolesResponse): Buffer => Buffer.from(RemoveRolesResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): RemoveRolesResponse => RemoveRolesResponse.decode(value),
+  },
 } as const;
 
 export interface UserServiceServer extends UntypedServiceImplementation {
+  /** Create user (admin only - without auto-login) */
+  createUser: handleUnaryCall<CreateUserRequest, CreateUserResponse>;
   /** Get user by ID */
   getUser: handleUnaryCall<GetUserRequest, GetUserResponse>;
+  /** Get user by email */
+  getUserByEmail: handleUnaryCall<GetUserByEmailRequest, GetUserByEmailResponse>;
   /** Get current user profile */
   getMe: handleUnaryCall<GetMeRequest, GetMeResponse>;
   /** Update user profile */
@@ -1804,6 +2768,18 @@ export interface UserServiceServer extends UntypedServiceImplementation {
   deleteUser: handleUnaryCall<DeleteUserRequest, DeleteUserResponse>;
   /** Change password */
   changePassword: handleUnaryCall<ChangePasswordRequest, ChangePasswordResponse>;
+  /** Change email */
+  changeEmail: handleUnaryCall<ChangeEmailRequest, ChangeEmailResponse>;
+  /** Activate user */
+  activateUser: handleUnaryCall<ActivateUserRequest, ActivateUserResponse>;
+  /** Deactivate user */
+  deactivateUser: handleUnaryCall<DeactivateUserRequest, DeactivateUserResponse>;
+  /** Suspend user */
+  suspendUser: handleUnaryCall<SuspendUserRequest, SuspendUserResponse>;
+  /** Assign roles to user */
+  assignRoles: handleUnaryCall<AssignRolesRequest, AssignRolesResponse>;
+  /** Remove roles from user */
+  removeRoles: handleUnaryCall<RemoveRolesRequest, RemoveRolesResponse>;
 }
 
 function toTimestamp(date: Date): Timestamp {

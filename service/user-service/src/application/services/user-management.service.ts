@@ -2,20 +2,8 @@ import { Injectable, Inject } from '@nestjs/common';
 import { User, UserStatus } from '../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../ports/user-repository.port';
 import { UserNotFoundError } from '../errors/user-not-found.error';
-
-export interface UpdateUserInput {
-  firstName?: string;
-  lastName?: string;
-  displayName?: string;
-  status?: UserStatus;
-}
-
-export interface ListUsersInput {
-  page: number;
-  pageSize: number;
-  status?: string;
-  search?: string;
-}
+import { DuplicateEmailError } from '../errors/duplicate-email.error';
+import { CreateUserDto, UpdateUserDto, ListUsersDto } from '../dtos';
 
 /**
  * User Management Service
@@ -51,7 +39,7 @@ export class UserManagementService {
    */
   async listUsers(
     tenantId: string,
-    input: ListUsersInput,
+    input: ListUsersDto,
   ): Promise<{ users: User[]; total: number }> {
     return this.userRepository.findAll(tenantId, input);
   }
@@ -62,7 +50,7 @@ export class UserManagementService {
   async updateUser(
     tenantId: string,
     userId: string,
-    input: UpdateUserInput,
+    input: UpdateUserDto,
   ): Promise<User> {
     const user = await this.getUserById(tenantId, userId);
 
@@ -117,5 +105,117 @@ export class UserManagementService {
     const user = await this.getUserById(tenantId, userId);
     user.changePassword(currentPassword, newPassword);
     await this.userRepository.save(user);
+  }
+
+  /**
+   * Create user (admin operation)
+   */
+  async createUser(input: CreateUserDto): Promise<User> {
+    // Check if email already exists
+    const emailExists = await this.userRepository.emailExists(input.tenantId, input.email);
+    if (emailExists) {
+      throw new DuplicateEmailError(input.email);
+    }
+
+    // Create user aggregate
+    const user = User.create({
+      tenantId: input.tenantId,
+      email: input.email,
+      password: input.password,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      displayName: input.displayName,
+      roleIds: input.roleIds,
+    });
+
+    // Set custom status if provided
+    if (input.status && input.status !== UserStatus.ACTIVE) {
+      switch (input.status) {
+        case UserStatus.INACTIVE:
+          user.deactivate();
+          break;
+        case UserStatus.SUSPENDED:
+          user.suspend();
+          break;
+      }
+    }
+
+    return this.userRepository.save(user);
+  }
+
+  /**
+   * Change user email
+   */
+  async changeEmail(
+    tenantId: string,
+    userId: string,
+    newEmail: string,
+  ): Promise<User> {
+    // Check if new email already exists
+    const emailExists = await this.userRepository.emailExists(tenantId, newEmail);
+    if (emailExists) {
+      throw new DuplicateEmailError(newEmail);
+    }
+
+    const user = await this.getUserById(tenantId, userId);
+    user.changeEmail(newEmail);
+    return this.userRepository.save(user);
+  }
+
+  /**
+   * Activate user
+   */
+  async activateUser(tenantId: string, userId: string): Promise<User> {
+    const user = await this.getUserById(tenantId, userId);
+    user.activate();
+    return this.userRepository.save(user);
+  }
+
+  /**
+   * Deactivate user
+   */
+  async deactivateUser(tenantId: string, userId: string): Promise<User> {
+    const user = await this.getUserById(tenantId, userId);
+    user.deactivate();
+    return this.userRepository.save(user);
+  }
+
+  /**
+   * Suspend user
+   */
+  async suspendUser(tenantId: string, userId: string): Promise<User> {
+    const user = await this.getUserById(tenantId, userId);
+    user.suspend();
+    return this.userRepository.save(user);
+  }
+
+  /**
+   * Assign roles to user
+   */
+  async assignRoles(
+    tenantId: string,
+    userId: string,
+    roleIds: string[],
+  ): Promise<User> {
+    const user = await this.getUserById(tenantId, userId);
+    for (const roleId of roleIds) {
+      user.addRole(roleId);
+    }
+    return this.userRepository.save(user);
+  }
+
+  /**
+   * Remove roles from user
+   */
+  async removeRoles(
+    tenantId: string,
+    userId: string,
+    roleIds: string[],
+  ): Promise<User> {
+    const user = await this.getUserById(tenantId, userId);
+    for (const roleId of roleIds) {
+      user.removeRole(roleId);
+    }
+    return this.userRepository.save(user);
   }
 }

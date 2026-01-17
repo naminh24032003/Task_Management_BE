@@ -1,4 +1,5 @@
 import { User } from '../../domain/aggregates/user.aggregate';
+import { ListUsersDto } from '../dtos';
 
 /**
  * User Repository Port (Interface)
@@ -30,12 +31,7 @@ export interface IUserRepository {
    */
   findAll(
     tenantId: string,
-    options: {
-      page: number;
-      pageSize: number;
-      status?: string;
-      search?: string;
-    },
+    options: ListUsersDto,
   ): Promise<{ users: User[]; total: number }>;
 
   /**

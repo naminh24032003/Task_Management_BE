@@ -56,10 +56,25 @@ service AuthService {
 // User Service - User Management
 // =============================================================================
 service UserService {
+  // Create user (admin only - without auto-login)
+  rpc CreateUser (CreateUserRequest) returns (CreateUserResponse) {
+    option (google.api.http) = {
+      post: "/v1/users"
+      body: "*"
+    };
+  }
+
   // Get user by ID
   rpc GetUser (GetUserRequest) returns (GetUserResponse) {
     option (google.api.http) = {
       get: "/v1/users/{user_id}"
+    };
+  }
+
+  // Get user by email
+  rpc GetUserByEmail (GetUserByEmailRequest) returns (GetUserByEmailResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/email/{email}"
     };
   }
 
@@ -96,6 +111,51 @@ service UserService {
   rpc ChangePassword (ChangePasswordRequest) returns (ChangePasswordResponse) {
     option (google.api.http) = {
       post: "/v1/users/{user_id}/change-password"
+      body: "*"
+    };
+  }
+
+  // Change email
+  rpc ChangeEmail (ChangeEmailRequest) returns (ChangeEmailResponse) {
+    option (google.api.http) = {
+      post: "/v1/users/{user_id}/change-email"
+      body: "*"
+    };
+  }
+
+  // Activate user
+  rpc ActivateUser (ActivateUserRequest) returns (ActivateUserResponse) {
+    option (google.api.http) = {
+      post: "/v1/users/{user_id}/activate"
+    };
+  }
+
+  // Deactivate user
+  rpc DeactivateUser (DeactivateUserRequest) returns (DeactivateUserResponse) {
+    option (google.api.http) = {
+      post: "/v1/users/{user_id}/deactivate"
+    };
+  }
+
+  // Suspend user
+  rpc SuspendUser (SuspendUserRequest) returns (SuspendUserResponse) {
+    option (google.api.http) = {
+      post: "/v1/users/{user_id}/suspend"
+    };
+  }
+
+  // Assign roles to user
+  rpc AssignRoles (AssignRolesRequest) returns (AssignRolesResponse) {
+    option (google.api.http) = {
+      post: "/v1/users/{user_id}/roles"
+      body: "*"
+    };
+  }
+
+  // Remove roles from user
+  rpc RemoveRoles (RemoveRolesRequest) returns (RemoveRolesResponse) {
+    option (google.api.http) = {
+      delete: "/v1/users/{user_id}/roles"
       body: "*"
     };
   }
@@ -248,4 +308,89 @@ message ChangePasswordRequest {
 
 message ChangePasswordResponse {
   bool success = 1;
+}
+
+// =============================================================================
+// New CRUD Messages
+// =============================================================================
+
+// Create User (Admin)
+message CreateUserRequest {
+  string email = 1;
+  string password = 2;
+  string first_name = 3;
+  string last_name = 4;
+  optional string display_name = 5;
+  repeated string role_ids = 6;
+  optional UserStatus status = 7;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}
+
+// Get User By Email
+message GetUserByEmailRequest {
+  string email = 1;
+}
+
+message GetUserByEmailResponse {
+  User user = 1;
+}
+
+// Change Email
+message ChangeEmailRequest {
+  string user_id = 1;
+  string new_email = 2;
+}
+
+message ChangeEmailResponse {
+  User user = 1;
+}
+
+// Activate User
+message ActivateUserRequest {
+  string user_id = 1;
+}
+
+message ActivateUserResponse {
+  User user = 1;
+}
+
+// Deactivate User
+message DeactivateUserRequest {
+  string user_id = 1;
+}
+
+message DeactivateUserResponse {
+  User user = 1;
+}
+
+// Suspend User
+message SuspendUserRequest {
+  string user_id = 1;
+}
+
+message SuspendUserResponse {
+  User user = 1;
+}
+
+// Assign Roles
+message AssignRolesRequest {
+  string user_id = 1;
+  repeated string role_ids = 2;
+}
+
+message AssignRolesResponse {
+  User user = 1;
+}
+
+// Remove Roles
+message RemoveRolesRequest {
+  string user_id = 1;
+  repeated string role_ids = 2;
+}
+
+message RemoveRolesResponse {
+  User user = 1;
 }
