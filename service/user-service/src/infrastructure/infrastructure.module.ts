@@ -6,14 +6,16 @@ import { TypeOrmConfigModule } from './database/typeorm/typeorm.module';
 import { TypeOrmRepositoriesModule } from './database/typeorm/repositories/repositories.module';
 import { MultiTenancyModule } from './multi-tenancy/multi-tenancy.module';
 import { HealthModule } from './health/health.module';
+import { RedisModule } from './redis/redis.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
+import redisConfig from './config/redis.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, appConfig],
+      load: [databaseConfig, appConfig, redisConfig],
       envFilePath: ['.env.local', '.env'],
       cache: true,
     }),
@@ -22,6 +24,7 @@ import appConfig from './config/app.config';
     RepositoriesModule,
     TypeOrmConfigModule,
     TypeOrmRepositoriesModule,
+    RedisModule,
     HealthModule,
   ],
   exports: [
@@ -30,6 +33,7 @@ import appConfig from './config/app.config';
     TypeOrmConfigModule,
     TypeOrmRepositoriesModule,
     MultiTenancyModule,
+    RedisModule,
   ],
 })
 export class InfrastructureModule {}

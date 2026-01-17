@@ -29,6 +29,14 @@ microservice:
     MONGODB_SERVER_SELECTION_TIMEOUT: "30000"
     # JWT Configuration - non-sensitive
     JWT_EXPIRES_IN: "3600"
+    # Redis Configuration - non-sensitive settings
+    REDIS_HOST: "redis-cluster-master.redis.svc.cluster.local"
+    REDIS_PORT: "6379"
+    REDIS_DB: "0"
+    REDIS_KEY_PREFIX: "user-service:"
+    REDIS_CONNECT_TIMEOUT: "10000"
+    REDIS_COMMAND_TIMEOUT: "5000"
+    REDIS_MAX_RETRIES: "3"
 
   # =========================================================
   # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
@@ -122,6 +130,9 @@ secrets:
 
   # JWT Secret for token signing
   jwtSecret: "your-super-secret-jwt-key-change-in-production"
+
+  # Redis Password
+  redisPassword: "Redis@Cluster2024Secure!"
 
   # Additional secrets can be added here
   extra: {}
