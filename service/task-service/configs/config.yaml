@@ -26,9 +26,14 @@ data:
     write_concern: majority
 
   redis:
-    addr: 127.0.0.1:6379
+    addr: ${REDIS_HOST}:${REDIS_PORT}
+    password: ${REDIS_PASSWORD}
+    db: 0
+    key_prefix: "task-service:"
     read_timeout: 0.2s
     write_timeout: 0.2s
+    connect_timeout: 10s
+    max_retries: 3
 
 logging:
   level: debug

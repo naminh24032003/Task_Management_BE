@@ -17,35 +17,30 @@ export interface RedisConfig {
 
 export default registerAs(
   'redis',
-  (): RedisConfig => ({
-    host:
-      process.env.REDIS_HOST ||
-      'redis-cluster-master.redis.svc.cluster.local',
-    port: parseInt(process.env.REDIS_PORT || '6379', 10),
-    password: process.env.REDIS_PASSWORD || '',
-    db: parseInt(process.env.REDIS_DB || '0', 10),
-    keyPrefix: process.env.REDIS_KEY_PREFIX || 'user-service:',
-    connectTimeout: parseInt(
-      process.env.REDIS_CONNECT_TIMEOUT || '10000',
-      10,
-    ),
-    commandTimeout: parseInt(
-      process.env.REDIS_COMMAND_TIMEOUT || '5000',
-      10,
-    ),
-    maxRetriesPerRequest: parseInt(
-      process.env.REDIS_MAX_RETRIES || '3',
-      10,
-    ),
-    retryStrategy: {
-      maxRetryTime: parseInt(
-        process.env.REDIS_RETRY_MAX_TIME || '30000',
-        10,
-      ),
-      retryDelayBase: parseInt(
-        process.env.REDIS_RETRY_DELAY_BASE || '100',
-        10,
-      ),
-    },
-  }),
+  (): RedisConfig => {
+    if (!process.env.REDIS_HOST) {
+      throw new Error('REDIS_HOST environment variable is required');
+    }
+    if (!process.env.REDIS_PASSWORD) {
+      throw new Error('REDIS_PASSWORD environment variable is required');
+    }
+
+    return {
+      host: process.env.REDIS_HOST,
+      port: parseInt(process.env.REDIS_PORT, 10),
+      password: process.env.REDIS_PASSWORD,
+      db: parseInt(process.env.REDIS_DB, 10),
+      keyPrefix: process.env.REDIS_KEY_PREFIX,
+      connectTimeout: parseInt(process.env.REDIS_CONNECT_TIMEOUT, 10),
+      commandTimeout: parseInt(process.env.REDIS_COMMAND_TIMEOUT, 10),
+      maxRetriesPerRequest: parseInt(process.env.REDIS_MAX_RETRIES, 10),
+      retryStrategy: {
+        maxRetryTime: parseInt(process.env.REDIS_RETRY_MAX_TIME || '30000', 10),
+        retryDelayBase: parseInt(
+          process.env.REDIS_RETRY_DELAY_BASE || '100',
+          10,
+        ),
+      },
+    };
+  },
 );
