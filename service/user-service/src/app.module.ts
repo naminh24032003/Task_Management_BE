@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { SharedModule } from '@task-management/shared';
-import { UserController } from './ports/inbound/user.controller';
-import { AuthController } from './ports/inbound/auth.controller';
+import { UserController } from './infrastructure/grpc/user.controller';
+import { AuthController } from './infrastructure/grpc/auth.controller';
 import { InfrastructureModule } from './infrastructure/infrastructure.module';
 import { ApplicationModule } from './application/application.module';
 

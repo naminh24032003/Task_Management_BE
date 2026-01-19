@@ -230,20 +230,32 @@ describe('Clean Architecture Dependency Rules', () => {
         });
     });
 
-    describe('Ports Layer', () => {
-        const portsDir = path.join(SRC_DIR, 'ports');
+    describe('Application Ports', () => {
+        const portsDir = path.join(SRC_DIR, 'application', 'ports');
         const portsFiles = getAllTsFiles(portsDir);
 
-        it('should have ports files', () => {
+        it('should have ports files in application layer', () => {
             expect(portsFiles.length).toBeGreaterThan(0);
         });
 
-        it('inbound ports should not import from infrastructure', () => {
-            const inboundDir = path.join(portsDir, 'inbound');
-            const inboundFiles = getAllTsFiles(inboundDir);
+        it('ports should define interfaces (not implementations)', () => {
+            let hasInterfaces = false;
+
+            for (const file of portsFiles) {
+                const content = fs.readFileSync(file, 'utf-8');
+                if (content.includes('export interface') || content.includes('export const')) {
+                    hasInterfaces = true;
+                    break;
+                }
+            }
+
+            expect(hasInterfaces).toBe(true);
+        });
+
+        it('ports should not import from infrastructure', () => {
             const violations: string[] = [];
 
-            for (const file of inboundFiles) {
+            for (const file of portsFiles) {
                 const imports = getImports(file);
                 for (const imp of imports) {
                     if (isFromLayer(imp, 'infrastructure')) {
@@ -254,23 +266,31 @@ describe('Clean Architecture Dependency Rules', () => {
 
             expect(violations).toEqual([]);
         });
+    });
 
-        it('outbound ports should define interfaces for infrastructure', () => {
-            const outboundDir = path.join(portsDir, 'outbound');
-            const outboundFiles = getAllTsFiles(outboundDir);
+    describe('gRPC Controllers', () => {
+        const grpcDir = path.join(SRC_DIR, 'infrastructure', 'grpc');
+        const grpcFiles = getAllTsFiles(grpcDir);
 
-            // Check that outbound ports contain interfaces
-            let hasInterfaces = false;
+        it('should have gRPC controller files', () => {
+            expect(grpcFiles.length).toBeGreaterThan(0);
+        });
 
-            for (const file of outboundFiles) {
-                const content = fs.readFileSync(file, 'utf-8');
-                if (content.includes('interface') || content.includes('abstract class')) {
-                    hasInterfaces = true;
-                    break;
+        it('can import from application layer (commands, queries)', () => {
+            let hasApplicationImport = false;
+
+            for (const file of grpcFiles) {
+                const imports = getImports(file);
+                for (const imp of imports) {
+                    if (imp.includes('application') || imp.includes('../application')) {
+                        hasApplicationImport = true;
+                        break;
+                    }
                 }
+                if (hasApplicationImport) break;
             }
 
-            expect(hasInterfaces).toBe(true);
+            expect(hasApplicationImport).toBe(true);
         });
     });
 });

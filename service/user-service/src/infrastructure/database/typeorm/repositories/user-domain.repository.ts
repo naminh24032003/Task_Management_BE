@@ -42,6 +42,23 @@ export class UserDomainRepository implements IUserRepository {
     return count > 0;
   }
 
+  async isEmailUnique(tenantId: string, email: string, excludeUserId?: string): Promise<boolean> {
+    const entity = await this.repository.findOne({
+      where: { tenantId, email: email.toLowerCase(), isDeleted: false } as any,
+    });
+
+    if (!entity) {
+      return true;
+    }
+
+    // If excludeUserId is provided, check if the found user is the same
+    if (excludeUserId && entity._id.toString() === excludeUserId) {
+      return true;
+    }
+
+    return false;
+  }
+
   async save(user: User): Promise<User> {
     const entity = this.toEntity(user);
     const saved = await this.repository.save(entity);

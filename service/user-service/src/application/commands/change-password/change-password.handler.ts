@@ -15,7 +15,7 @@ export class ChangePasswordHandler implements ICommandHandler<ChangePasswordComm
     private readonly userRepository: IUserRepository,
   ) { }
 
-  async execute(command: ChangePasswordCommand): Promise<boolean> {
+  async execute(command: ChangePasswordCommand): Promise<ChangePasswordResult> {
     const user = await this.userRepository.findById(command.tenantId, command.userId);
 
     if (!user) {
@@ -28,6 +28,6 @@ export class ChangePasswordHandler implements ICommandHandler<ChangePasswordComm
     await this.userRepository.save(user);
     user.clearDomainEvents();
 
-    return true;
+    return { success: true };
   }
 }

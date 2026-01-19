@@ -13,7 +13,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommandBus } from '@nestjs/cqrs';
 import { RpcException } from '@nestjs/microservices';
-import { AuthController } from '../../../src/ports/inbound/auth.controller';
+import { AuthController } from '../../../src/infrastructure/grpc/auth.controller';
 import { UserAuthenticationService } from '../../../src/application/services/user-authentication.service';
 import { User, UserStatus as DomainUserStatus } from '../../../src/domain/aggregates/user.aggregate';
 import { UserStatus } from '../../../src/generated/user/v1/user';

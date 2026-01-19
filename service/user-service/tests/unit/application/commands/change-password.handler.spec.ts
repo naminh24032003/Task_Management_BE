@@ -37,7 +37,7 @@ describe('ChangePasswordHandler', () => {
 
         const result = await handler.execute(command);
 
-        expect(result).toBe(true);
+        expect(result).toEqual({ success: true });
         expect(user.verifyPassword(newPassword)).toBe(true);
         expect(userRepository.save).toHaveBeenCalled();
     });

@@ -13,7 +13,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { RpcException } from '@nestjs/microservices';
-import { UserController } from '../../../src/ports/inbound/user.controller';
+import { UserController } from '../../../src/infrastructure/grpc/user.controller';
 import { User, UserStatus as DomainUserStatus } from '../../../src/domain/aggregates/user.aggregate';
 import { UserStatus } from '../../../src/generated/user/v1/user';
 import { createDefaultMetadata, createAuthenticatedMetadata, createEmptyMetadata } from '../../mocks/metadata.mock';

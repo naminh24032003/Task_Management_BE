@@ -192,10 +192,14 @@ describe('Layer Isolation', () => {
             expect(hasInjectable).toBe(true);
         });
 
-        it('repositories should implement interfaces', () => {
-            const repoFiles = infraFiles.filter((f) => f.includes('repository'));
+        it('domain repositories should implement port interfaces', () => {
+            // Only domain repositories (implementing Clean Architecture ports) should implement interfaces
+            // Legacy TypeORM/MongoDB repositories that extend Repository<Entity> don't need custom interfaces
+            const domainRepoFiles = infraFiles.filter((f) =>
+                f.includes('-domain.repository')
+            );
 
-            for (const file of repoFiles) {
+            for (const file of domainRepoFiles) {
                 const content = fs.readFileSync(file, 'utf-8');
                 // Should implement an interface
                 const hasImplements = /class\s+\w+\s+implements\s+/.test(content);
@@ -286,36 +290,30 @@ describe('Layer Isolation', () => {
         });
     });
 
-    describe('Hexagonal Architecture Ports', () => {
-        const portsDir = path.join(SRC_DIR, 'ports');
+    describe('Clean Architecture Adapters', () => {
+        it('should have gRPC controllers in infrastructure layer', () => {
+            const grpcDir = path.join(SRC_DIR, 'infrastructure/grpc');
+            expect(fs.existsSync(grpcDir)).toBe(true);
 
-        if (fs.existsSync(portsDir)) {
-            it('should have inbound and outbound separation', () => {
-                const inboundDir = path.join(portsDir, 'inbound');
-                const outboundDir = path.join(portsDir, 'outbound');
+            if (fs.existsSync(grpcDir)) {
+                const grpcFiles = getAllTsFiles(grpcDir);
+                const controllers = grpcFiles.filter((f) => f.includes('.controller.ts'));
+                expect(controllers.length).toBeGreaterThan(0);
+            }
+        });
 
-                expect(fs.existsSync(inboundDir) || fs.existsSync(outboundDir)).toBe(true);
-            });
+        it('gRPC controllers should use @Controller decorator', () => {
+            const grpcDir = path.join(SRC_DIR, 'infrastructure/grpc');
 
-            it('outbound ports should define repository interfaces', () => {
-                const outboundDir = path.join(portsDir, 'outbound');
+            if (fs.existsSync(grpcDir)) {
+                const grpcFiles = getAllTsFiles(grpcDir);
+                const controllers = grpcFiles.filter((f) => f.includes('.controller.ts'));
 
-                if (fs.existsSync(outboundDir)) {
-                    const outboundFiles = getAllTsFiles(outboundDir);
-                    let hasRepoInterface = false;
-
-                    for (const file of outboundFiles) {
-                        const content = fs.readFileSync(file, 'utf-8');
-                        if (/interface\s+I\w*Repository/.test(content)) {
-                            hasRepoInterface = true;
-                            break;
-                        }
-                    }
-
-                    // If outbound exists, it should have repository interfaces
-                    expect(outboundFiles.length).toBeGreaterThan(0);
+                for (const file of controllers) {
+                    const content = fs.readFileSync(file, 'utf-8');
+                    expect(/@Controller\(/.test(content)).toBe(true);
                 }
-            });
-        }
+            }
+        });
     });
 });

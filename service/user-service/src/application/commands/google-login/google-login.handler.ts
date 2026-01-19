@@ -6,7 +6,7 @@ import { GoogleLoginCommand } from './google-login.command';
 import { User } from '../../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
 import { UserRegisteredEvent } from '../../integration-events/user-registered.event';
-import { OAuthConfig } from '../../../infrastructure/config/oauth.config';
+import { IOAuthConfig } from '../../ports/oauth.port';
 
 export interface GoogleLoginResult {
   user: User;
@@ -23,7 +23,7 @@ export class GoogleLoginHandler implements ICommandHandler<GoogleLoginCommand> {
     private readonly userRepository: IUserRepository,
     private readonly eventBus: EventBus,
   ) {
-    const oauthConfig = this.configService.get<OAuthConfig>('oauth');
+    const oauthConfig = this.configService.get<IOAuthConfig>('oauth');
     this.oauthClient = new OAuth2Client(oauthConfig.google.clientId);
   }
 
@@ -71,7 +71,7 @@ export class GoogleLoginHandler implements ICommandHandler<GoogleLoginCommand> {
   }
 
   private async verifyIdToken(idToken: string) {
-    const oauthConfig = this.configService.get<OAuthConfig>('oauth');
+    const oauthConfig = this.configService.get<IOAuthConfig>('oauth');
 
     const ticket = await this.oauthClient.verifyIdToken({
       idToken,

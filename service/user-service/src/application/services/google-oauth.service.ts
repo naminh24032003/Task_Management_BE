@@ -4,7 +4,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { User } from '../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../ports/user-repository.port';
 import { UserAuthenticationService } from './user-authentication.service';
-import { OAuthConfig } from '../../infrastructure/config/oauth.config';
+import { IOAuthConfig } from '../ports/oauth.port';
 
 export interface GoogleUserInfo {
   email: string;
@@ -34,7 +34,7 @@ export class GoogleOAuthService {
     private readonly userRepository: IUserRepository,
     private readonly authService: UserAuthenticationService,
   ) {
-    const oauthConfig = this.configService.get<OAuthConfig>('oauth');
+    const oauthConfig = this.configService.get<IOAuthConfig>('oauth');
     this.oauthClient = new OAuth2Client(oauthConfig.google.clientId);
   }
 
@@ -42,7 +42,7 @@ export class GoogleOAuthService {
    * Verify Google ID token and extract user info
    */
   async verifyIdToken(idToken: string): Promise<GoogleUserInfo> {
-    const oauthConfig = this.configService.get<OAuthConfig>('oauth');
+    const oauthConfig = this.configService.get<IOAuthConfig>('oauth');
 
     const ticket = await this.oauthClient.verifyIdToken({
       idToken,

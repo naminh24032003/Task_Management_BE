@@ -2,20 +2,12 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-
-// Entities
-import { User } from '../infrastructure/database/typeorm/entities/user.entity';
-
-// Repository
-import { UserDomainRepository } from '../infrastructure/database/typeorm/repositories/user-domain.repository';
-import { USER_REPOSITORY } from './ports/user-repository.port';
 
 // CQRS Handlers
 import { CommandHandlers } from './commands';
 import { QueryHandlers } from './queries';
 
-// Services (kept for backwards compatibility)
+// Services
 import { UserRegistrationService } from './services/user-registration.service';
 import { UserAuthenticationService } from './services/user-authentication.service';
 import { UserManagementService } from './services/user-management.service';
@@ -24,7 +16,6 @@ import { GoogleOAuthService } from './services/google-oauth.service';
 @Module({
   imports: [
     CqrsModule,
-    TypeOrmModule.forFeature([User]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -37,15 +28,10 @@ import { GoogleOAuthService } from './services/google-oauth.service';
     }),
   ],
   providers: [
-    // Repository binding
-    {
-      provide: USER_REPOSITORY,
-      useClass: UserDomainRepository,
-    },
     // CQRS Handlers
     ...CommandHandlers,
     ...QueryHandlers,
-    // Application services (backwards compatibility)
+    // Application services
     UserRegistrationService,
     UserAuthenticationService,
     UserManagementService,
@@ -57,7 +43,6 @@ import { GoogleOAuthService } from './services/google-oauth.service';
     UserAuthenticationService,
     UserManagementService,
     GoogleOAuthService,
-    USER_REPOSITORY,
   ],
 })
 export class ApplicationModule {}
