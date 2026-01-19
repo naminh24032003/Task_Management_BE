@@ -51,4 +51,4 @@ lerna-debug.log*
 # NestJS build/test artifacts
 /test/__image_snapshots__
 
-**/package-lock.json
+package-lock.json
