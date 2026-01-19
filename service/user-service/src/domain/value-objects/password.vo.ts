@@ -33,6 +33,20 @@ export class Password {
   }
 
   /**
+   * Create empty password for OAuth users
+   */
+  static createEmpty(): Password {
+    return new Password('OAUTH_USER_NO_PASSWORD', 'OAUTH_USER_NO_SALT');
+  }
+
+  /**
+   * Check if this is an OAuth user (no password)
+   */
+  isOAuthUser(): boolean {
+    return this.hashedValue === 'OAUTH_USER_NO_PASSWORD';
+  }
+
+  /**
    * Validate password strength
    */
   private static validateStrength(password: string): void {

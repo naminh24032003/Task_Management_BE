@@ -1,4 +1,5 @@
 import { Controller } from '@nestjs/common';
+import { CommandBus } from '@nestjs/cqrs';
 import { RpcException } from '@nestjs/microservices';
 import {
   AuthServiceController,
@@ -13,9 +14,16 @@ import {
   ValidateTokenResponse,
   LogoutRequest,
   LogoutResponse,
+  GoogleLoginRequest,
+  GoogleLoginResponse,
   UserStatus,
 } from '../../generated/user/v1/user';
-import { UserRegistrationService } from '../../application/services/user-registration.service';
+import { RegisterUserCommand } from '../../application/commands/register-user/register-user.command';
+import { RegisterUserResult } from '../../application/commands/register-user/register-user.handler';
+import { LoginCommand } from '../../application/commands/login/login.command';
+import { LoginResult } from '../../application/commands/login/login.handler';
+import { GoogleLoginCommand } from '../../application/commands/google-login/google-login.command';
+import { GoogleLoginResult } from '../../application/commands/google-login/google-login.handler';
 import { UserAuthenticationService } from '../../application/services/user-authentication.service';
 import { User } from '../../domain/aggregates/user.aggregate';
 
@@ -23,30 +31,27 @@ import { User } from '../../domain/aggregates/user.aggregate';
 @AuthServiceControllerMethods()
 export class AuthController implements AuthServiceController {
   constructor(
-    private readonly registrationService: UserRegistrationService,
-    private readonly authService: UserAuthenticationService,
+    private readonly commandBus: CommandBus,
+    private readonly authService: UserAuthenticationService, // For refresh/validate/logout
   ) {}
 
   async register(request: RegisterRequest): Promise<RegisterResponse> {
     try {
-      const user = await this.registrationService.register({
-        tenantId: request.tenantId,
-        email: request.email,
-        password: request.password,
-        firstName: request.firstName,
-        lastName: request.lastName,
-        displayName: request.displayName,
-      });
-
-      const tokens = await this.authService.generateTokens(user);
+      const result = await this.commandBus.execute<RegisterUserCommand, RegisterUserResult>(
+        new RegisterUserCommand(
+          request.tenantId,
+          request.email,
+          request.password,
+          request.firstName,
+          request.lastName,
+          request.displayName,
+        ),
+      );
 
       return {
-        user: this.toProtoUser(user),
-        tokens: {
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-          expiresIn: tokens.expiresIn,
-        },
+        user: this.toProtoUser(result.user),
+        success: result.success,
+        message: result.message,
       };
     } catch (error: any) {
       throw new RpcException({
@@ -56,20 +61,44 @@ export class AuthController implements AuthServiceController {
     }
   }
 
-  async login(request: LoginRequest): Promise<LoginResponse> {
+  async googleLogin(request: GoogleLoginRequest): Promise<GoogleLoginResponse> {
     try {
-      const { user, tokens } = await this.authService.login({
-        tenantId: request.tenantId,
-        email: request.email,
-        password: request.password,
-      });
+      const result = await this.commandBus.execute<GoogleLoginCommand, GoogleLoginResult>(
+        new GoogleLoginCommand(request.tenantId, request.idToken),
+      );
+
+      // Generate tokens for the user
+      const tokens = await this.authService.generateTokens(result.user);
 
       return {
-        user: this.toProtoUser(user),
+        user: this.toProtoUser(result.user),
         tokens: {
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
           expiresIn: tokens.expiresIn,
+        },
+        isNewUser: result.isNewUser,
+      };
+    } catch (error: any) {
+      throw new RpcException({
+        code: 'UNAUTHORIZED',
+        message: error.message || 'Google authentication failed',
+      });
+    }
+  }
+
+  async login(request: LoginRequest): Promise<LoginResponse> {
+    try {
+      const result = await this.commandBus.execute<LoginCommand, LoginResult>(
+        new LoginCommand(request.tenantId, request.email, request.password),
+      );
+
+      return {
+        user: this.toProtoUser(result.user),
+        tokens: {
+          accessToken: result.tokens.accessToken,
+          refreshToken: result.tokens.refreshToken,
+          expiresIn: result.tokens.expiresIn,
         },
       };
     } catch (error: any) {

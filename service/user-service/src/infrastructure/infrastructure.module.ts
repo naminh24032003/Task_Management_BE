@@ -10,12 +10,13 @@ import { RedisModule } from './redis/redis.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
 import redisConfig from './config/redis.config';
+import oauthConfig from './config/oauth.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, appConfig, redisConfig],
+      load: [databaseConfig, appConfig, redisConfig, oauthConfig],
       envFilePath: ['.env.local', '.env'],
       cache: true,
     }),

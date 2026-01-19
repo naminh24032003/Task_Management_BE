@@ -42,6 +42,11 @@ export type UserDomainEvent =
   | UserLoggedInEvent;
 
 /**
+ * OAuth Provider types
+ */
+export type OAuthProvider = 'google' | 'facebook' | 'github';
+
+/**
  * Props for creating a new User
  */
 export interface CreateUserProps {
@@ -51,6 +56,20 @@ export interface CreateUserProps {
   firstName: string;
   lastName: string;
   displayName?: string;
+  roleIds?: string[];
+}
+
+/**
+ * Props for creating OAuth User
+ */
+export interface CreateOAuthUserProps {
+  tenantId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  displayName?: string;
+  provider: OAuthProvider;
+  providerId: string;
   roleIds?: string[];
 }
 
@@ -71,6 +90,8 @@ export interface UserProps {
   createdAt: Date;
   updatedAt: Date;
   lastLoginAt?: Date;
+  provider?: OAuthProvider;
+  providerId?: string;
 }
 
 /**
@@ -90,6 +111,8 @@ export class User {
   private _createdAt: Date;
   private _updatedAt: Date;
   private _lastLoginAt?: Date;
+  private _provider?: OAuthProvider;
+  private _providerId?: string;
 
   private _domainEvents: UserDomainEvent[] = [];
 
@@ -128,6 +151,40 @@ export class User {
   }
 
   /**
+   * Create OAuth User (no password required)
+   */
+  static createOAuthUser(props: CreateOAuthUserProps): User {
+    const user = new User();
+
+    user._id = UserId.create();
+    user._tenantId = props.tenantId;
+    user._email = Email.create(props.email);
+    user._password = Password.createEmpty(); // No password for OAuth users
+    user._firstName = props.firstName.trim();
+    user._lastName = props.lastName.trim();
+    user._displayName = props.displayName?.trim() || `${props.firstName} ${props.lastName}`;
+    user._status = UserStatus.ACTIVE;
+    user._roleIds = props.roleIds || [];
+    user._provider = props.provider;
+    user._providerId = props.providerId;
+    user._createdAt = new Date();
+    user._updatedAt = new Date();
+
+    // Emit domain event
+    user._domainEvents.push(
+      new UserCreatedEvent(
+        user._id.toString(),
+        user._tenantId,
+        user._email.toString(),
+        user._firstName,
+        user._lastName,
+      ),
+    );
+
+    return user;
+  }
+
+  /**
    * Reconstitute User from persistence
    */
   static reconstitute(props: UserProps): User {
@@ -145,6 +202,8 @@ export class User {
     user._createdAt = props.createdAt;
     user._updatedAt = props.updatedAt;
     user._lastLoginAt = props.lastLoginAt;
+    user._provider = props.provider;
+    user._providerId = props.providerId;
 
     return user;
   }
@@ -198,6 +257,21 @@ export class User {
 
   get domainEvents(): UserDomainEvent[] {
     return [...this._domainEvents];
+  }
+
+  get provider(): OAuthProvider | undefined {
+    return this._provider;
+  }
+
+  get providerId(): string | undefined {
+    return this._providerId;
+  }
+
+  /**
+   * Check if user is OAuth user
+   */
+  isOAuthUser(): boolean {
+    return !!this._provider;
   }
 
   // ============================================
@@ -301,6 +375,14 @@ export class User {
         userAgent,
       ),
     );
+  }
+
+  /**
+   * Update last login time (without event)
+   */
+  updateLastLogin(): void {
+    this._lastLoginAt = new Date();
+    this._updatedAt = new Date();
   }
 
   /**

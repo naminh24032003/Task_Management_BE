@@ -27,6 +27,14 @@ service AuthService {
     };
   }
 
+  // Login with Google OAuth2
+  rpc GoogleLogin (GoogleLoginRequest) returns (GoogleLoginResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/google"
+      body: "*"
+    };
+  }
+
   // Refresh access token
   rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse) {
     option (google.api.http) = {
@@ -206,7 +214,8 @@ message RegisterRequest {
 
 message RegisterResponse {
   User user = 1;
-  TokenPair tokens = 2;
+  bool success = 2;
+  string message = 3;
 }
 
 message LoginRequest {
@@ -245,6 +254,18 @@ message LogoutRequest {
 
 message LogoutResponse {
   bool success = 1;
+}
+
+// Google OAuth2 Login
+message GoogleLoginRequest {
+  string tenant_id = 1;
+  string id_token = 2; // Google ID token from frontend
+}
+
+message GoogleLoginResponse {
+  User user = 1;
+  TokenPair tokens = 2;
+  bool is_new_user = 3; // true if user was created during this login
 }
 
 // =============================================================================

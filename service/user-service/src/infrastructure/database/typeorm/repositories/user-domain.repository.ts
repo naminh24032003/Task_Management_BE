@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ObjectId } from 'mongodb';
 import { User as UserEntity, UserStatus as EntityUserStatus } from '../entities/user.entity';
-import { User, UserStatus as DomainUserStatus, UserProps } from '../../../../domain/aggregates/user.aggregate';
+import { User, UserStatus as DomainUserStatus, UserProps, OAuthProvider } from '../../../../domain/aggregates/user.aggregate';
 import { IUserRepository } from '../../../../application/ports/user-repository.port';
 
 /**
@@ -106,6 +106,8 @@ export class UserDomainRepository implements IUserRepository {
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       lastLoginAt: entity.lastLoginAt,
+      provider: entity.provider as OAuthProvider,
+      providerId: entity.providerId,
     };
 
     return User.reconstitute(props);
@@ -129,6 +131,8 @@ export class UserDomainRepository implements IUserRepository {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       lastLoginAt: user.lastLoginAt,
+      provider: user.provider,
+      providerId: user.providerId,
       isDeleted: user.status === DomainUserStatus.DELETED,
     };
   }

@@ -1,30 +1,37 @@
 import { CommandHandler, ICommandHandler, EventBus } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
-import { CreateUserCommand } from './create-user.command';
+import { RegisterUserCommand } from './register-user.command';
+import { User } from '../../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
-import { User, UserStatus } from '../../../domain/aggregates/user.aggregate';
+import { DuplicateEmailError } from '../../errors/duplicate-email.error';
 import { UserRegisteredEvent } from '../../integration-events/user-registered.event';
 
-export interface CreateUserResult {
+export interface RegisterUserResult {
   user: User;
+  success: boolean;
+  message: string;
 }
 
-@CommandHandler(CreateUserCommand)
-export class CreateUserHandler implements ICommandHandler<CreateUserCommand> {
+@CommandHandler(RegisterUserCommand)
+export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand> {
   constructor(
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     private readonly eventBus: EventBus,
   ) {}
 
-  async execute(command: CreateUserCommand): Promise<CreateUserResult> {
+  async execute(command: RegisterUserCommand): Promise<RegisterUserResult> {
     // Check if email already exists
-    const existingUser = await this.userRepository.findByEmail(command.tenantId, command.email);
-    if (existingUser) {
-      throw new Error('Email already registered');
+    const emailExists = await this.userRepository.emailExists(
+      command.tenantId,
+      command.email,
+    );
+
+    if (emailExists) {
+      throw new DuplicateEmailError(command.email);
     }
 
-    // Create user with provided status or default to active
+    // Create user aggregate
     const user = User.create({
       tenantId: command.tenantId,
       email: command.email,
@@ -32,22 +39,12 @@ export class CreateUserHandler implements ICommandHandler<CreateUserCommand> {
       firstName: command.firstName,
       lastName: command.lastName,
       displayName: command.displayName,
-      roleIds: command.roleIds,
     });
 
-    // If status provided and different from default, update it
-    if (command.status && command.status !== UserStatus.ACTIVE) {
-      if (command.status === UserStatus.INACTIVE) {
-        user.deactivate();
-      } else if (command.status === UserStatus.SUSPENDED) {
-        user.suspend();
-      }
-    }
-
-    // Save the user
+    // Persist user
     const savedUser = await this.userRepository.save(user);
 
-    // Publish domain event
+    // Publish integration event
     this.eventBus.publish(
       new UserRegisteredEvent(
         savedUser.id.toString(),
@@ -58,6 +55,13 @@ export class CreateUserHandler implements ICommandHandler<CreateUserCommand> {
       ),
     );
 
-    return { user: savedUser };
+    // Clear domain events
+    savedUser.clearDomainEvents();
+
+    return {
+      user: savedUser,
+      success: true,
+      message: 'User registered successfully. Please login to continue.',
+    };
   }
 }

@@ -63,7 +63,8 @@ export interface RegisterRequest {
 
 export interface RegisterResponse {
   user: User | undefined;
-  tokens: TokenPair | undefined;
+  success: boolean;
+  message: string;
 }
 
 export interface LoginRequest {
@@ -102,6 +103,22 @@ export interface LogoutRequest {
 
 export interface LogoutResponse {
   success: boolean;
+}
+
+/** Google OAuth2 Login */
+export interface GoogleLoginRequest {
+  tenantId: string;
+  /** Google ID token from frontend */
+  idToken: string;
+}
+
+export interface GoogleLoginResponse {
+  user: User | undefined;
+  tokens:
+    | TokenPair
+    | undefined;
+  /** true if user was created during this login */
+  isNewUser: boolean;
 }
 
 /**
@@ -572,7 +589,7 @@ export const RegisterRequest: MessageFns<RegisterRequest> = {
 };
 
 function createBaseRegisterResponse(): RegisterResponse {
-  return { user: undefined, tokens: undefined };
+  return { user: undefined, success: false, message: "" };
 }
 
 export const RegisterResponse: MessageFns<RegisterResponse> = {
@@ -580,8 +597,11 @@ export const RegisterResponse: MessageFns<RegisterResponse> = {
     if (message.user !== undefined) {
       User.encode(message.user, writer.uint32(10).fork()).join();
     }
-    if (message.tokens !== undefined) {
-      TokenPair.encode(message.tokens, writer.uint32(18).fork()).join();
+    if (message.success !== false) {
+      writer.uint32(16).bool(message.success);
+    }
+    if (message.message !== "") {
+      writer.uint32(26).string(message.message);
     }
     return writer;
   },
@@ -602,11 +622,19 @@ export const RegisterResponse: MessageFns<RegisterResponse> = {
           continue;
         }
         case 2: {
-          if (tag !== 18) {
+          if (tag !== 16) {
             break;
           }
 
-          message.tokens = TokenPair.decode(reader, reader.uint32());
+          message.success = reader.bool();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.message = reader.string();
           continue;
         }
       }
@@ -969,6 +997,113 @@ export const LogoutResponse: MessageFns<LogoutResponse> = {
           }
 
           message.success = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGoogleLoginRequest(): GoogleLoginRequest {
+  return { tenantId: "", idToken: "" };
+}
+
+export const GoogleLoginRequest: MessageFns<GoogleLoginRequest> = {
+  encode(message: GoogleLoginRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.tenantId !== "") {
+      writer.uint32(10).string(message.tenantId);
+    }
+    if (message.idToken !== "") {
+      writer.uint32(18).string(message.idToken);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GoogleLoginRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGoogleLoginRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.tenantId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.idToken = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGoogleLoginResponse(): GoogleLoginResponse {
+  return { user: undefined, tokens: undefined, isNewUser: false };
+}
+
+export const GoogleLoginResponse: MessageFns<GoogleLoginResponse> = {
+  encode(message: GoogleLoginResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    if (message.tokens !== undefined) {
+      TokenPair.encode(message.tokens, writer.uint32(18).fork()).join();
+    }
+    if (message.isNewUser !== false) {
+      writer.uint32(24).bool(message.isNewUser);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GoogleLoginResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGoogleLoginResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.tokens = TokenPair.decode(reader, reader.uint32());
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.isNewUser = reader.bool();
           continue;
         }
       }
@@ -2252,6 +2387,10 @@ export interface AuthServiceClient {
 
   login(request: LoginRequest, metadata?: Metadata): Observable<LoginResponse>;
 
+  /** Login with Google OAuth2 */
+
+  googleLogin(request: GoogleLoginRequest, metadata?: Metadata): Observable<GoogleLoginResponse>;
+
   /** Refresh access token */
 
   refreshToken(request: RefreshTokenRequest, metadata?: Metadata): Observable<RefreshTokenResponse>;
@@ -2283,6 +2422,13 @@ export interface AuthServiceController {
 
   login(request: LoginRequest, metadata?: Metadata): Promise<LoginResponse> | Observable<LoginResponse> | LoginResponse;
 
+  /** Login with Google OAuth2 */
+
+  googleLogin(
+    request: GoogleLoginRequest,
+    metadata?: Metadata,
+  ): Promise<GoogleLoginResponse> | Observable<GoogleLoginResponse> | GoogleLoginResponse;
+
   /** Refresh access token */
 
   refreshToken(
@@ -2307,7 +2453,7 @@ export interface AuthServiceController {
 
 export function AuthServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["register", "login", "refreshToken", "validateToken", "logout"];
+    const grpcMethods: string[] = ["register", "login", "googleLogin", "refreshToken", "validateToken", "logout"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("AuthService", method)(constructor.prototype[method], method, descriptor);
@@ -2349,6 +2495,16 @@ export const AuthServiceService = {
     responseSerialize: (value: LoginResponse): Buffer => Buffer.from(LoginResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): LoginResponse => LoginResponse.decode(value),
   },
+  /** Login with Google OAuth2 */
+  googleLogin: {
+    path: "/user.AuthService/GoogleLogin",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: GoogleLoginRequest): Buffer => Buffer.from(GoogleLoginRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GoogleLoginRequest => GoogleLoginRequest.decode(value),
+    responseSerialize: (value: GoogleLoginResponse): Buffer => Buffer.from(GoogleLoginResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GoogleLoginResponse => GoogleLoginResponse.decode(value),
+  },
   /** Refresh access token */
   refreshToken: {
     path: "/user.AuthService/RefreshToken",
@@ -2388,6 +2544,8 @@ export interface AuthServiceServer extends UntypedServiceImplementation {
   register: handleUnaryCall<RegisterRequest, RegisterResponse>;
   /** Login with email and password */
   login: handleUnaryCall<LoginRequest, LoginResponse>;
+  /** Login with Google OAuth2 */
+  googleLogin: handleUnaryCall<GoogleLoginRequest, GoogleLoginResponse>;
   /** Refresh access token */
   refreshToken: handleUnaryCall<RefreshTokenRequest, RefreshTokenResponse>;
   /** Validate access token */

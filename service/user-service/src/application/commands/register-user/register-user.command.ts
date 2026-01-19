@@ -1,6 +1,4 @@
-import { UserStatus } from '../../../domain/aggregates/user.aggregate';
-
-export class CreateUserCommand {
+export class RegisterUserCommand {
   constructor(
     public readonly tenantId: string,
     public readonly email: string,
@@ -8,7 +6,5 @@ export class CreateUserCommand {
     public readonly firstName: string,
     public readonly lastName: string,
     public readonly displayName?: string,
-    public readonly roleIds?: string[],
-    public readonly status?: UserStatus,
   ) {}
 }

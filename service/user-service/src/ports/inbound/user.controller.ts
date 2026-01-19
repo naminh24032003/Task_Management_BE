@@ -1,4 +1,5 @@
 import { Controller } from '@nestjs/common';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { GrpcMethod, RpcException } from '@nestjs/microservices';
 import {
   UserServiceController,
@@ -33,21 +34,51 @@ import {
   RemoveRolesRequest,
   RemoveRolesResponse,
 } from '../../generated/user/v1/user';
-import { UserManagementService } from '../../application/services/user-management.service';
 import { User, UserStatus as DomainUserStatus } from '../../domain/aggregates/user.aggregate';
 import { Metadata } from '@grpc/grpc-js';
+
+// Queries
+import { GetUserByIdQuery } from '../../application/queries/get-user-by-id/get-user-by-id.query';
+import { GetUserByIdResult } from '../../application/queries/get-user-by-id/get-user-by-id.handler';
+import { GetUserByEmailQuery } from '../../application/queries/get-user-by-email/get-user-by-email.query';
+import { GetUserByEmailResult } from '../../application/queries/get-user-by-email/get-user-by-email.handler';
+import { ListUsersQuery } from '../../application/queries/list-users/list-users.query';
+import { ListUsersResult } from '../../application/queries/list-users/list-users.handler';
+
+// Commands
+import { CreateUserCommand } from '../../application/commands/create-user/create-user.command';
+import { CreateUserResult } from '../../application/commands/create-user/create-user.handler';
+import { UpdateUserCommand } from '../../application/commands/update-user/update-user.command';
+import { UpdateUserResult } from '../../application/commands/update-user/update-user.handler';
+import { DeleteUserCommand } from '../../application/commands/delete-user/delete-user.command';
+import { DeleteUserResult } from '../../application/commands/delete-user/delete-user.handler';
+import { ChangePasswordCommand } from '../../application/commands/change-password/change-password.command';
+import { ChangePasswordResult } from '../../application/commands/change-password/change-password.handler';
+import { ChangeEmailCommand } from '../../application/commands/change-email/change-email.command';
+import { ChangeEmailResult } from '../../application/commands/change-email/change-email.handler';
+import { UpdateUserStatusCommand } from '../../application/commands/update-user-status/update-user-status.command';
+import { UpdateUserStatusResult } from '../../application/commands/update-user-status/update-user-status.handler';
+import { AssignRolesCommand } from '../../application/commands/assign-roles/assign-roles.command';
+import { AssignRolesResult } from '../../application/commands/assign-roles/assign-roles.handler';
+import { RemoveRolesCommand } from '../../application/commands/remove-roles/remove-roles.command';
+import { RemoveRolesResult } from '../../application/commands/remove-roles/remove-roles.handler';
 
 @Controller()
 @UserServiceControllerMethods()
 export class UserController implements UserServiceController {
-  constructor(private readonly userManagementService: UserManagementService) {}
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
+  ) {}
 
   async getUser(request: GetUserRequest, metadata?: Metadata): Promise<GetUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
-      const user = await this.userManagementService.getUserById(tenantId, request.userId);
+      const result = await this.queryBus.execute<GetUserByIdQuery, GetUserByIdResult>(
+        new GetUserByIdQuery(tenantId, request.userId),
+      );
 
-      return { user: this.toProtoUser(user) };
+      return { user: this.toProtoUser(result.user) };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'NOT_FOUND',
@@ -60,9 +91,11 @@ export class UserController implements UserServiceController {
     try {
       const tenantId = this.extractTenantId(metadata);
       const userId = this.extractUserId(metadata);
-      const user = await this.userManagementService.getUserById(tenantId, userId);
+      const result = await this.queryBus.execute<GetUserByIdQuery, GetUserByIdResult>(
+        new GetUserByIdQuery(tenantId, userId),
+      );
 
-      return { user: this.toProtoUser(user) };
+      return { user: this.toProtoUser(result.user) };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'NOT_FOUND',
@@ -74,14 +107,18 @@ export class UserController implements UserServiceController {
   async updateUser(request: UpdateUserRequest, metadata?: Metadata): Promise<UpdateUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
-      const user = await this.userManagementService.updateUser(tenantId, request.userId, {
-        firstName: request.firstName,
-        lastName: request.lastName,
-        displayName: request.displayName,
-        status: request.status ? this.toDomainStatus(request.status) : undefined,
-      });
+      const result = await this.commandBus.execute<UpdateUserCommand, UpdateUserResult>(
+        new UpdateUserCommand(
+          tenantId,
+          request.userId,
+          request.firstName,
+          request.lastName,
+          request.displayName,
+          request.status ? this.toDomainStatus(request.status) : undefined,
+        ),
+      );
 
-      return { user: this.toProtoUser(user) };
+      return { user: this.toProtoUser(result.user) };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'INTERNAL_ERROR',
@@ -93,16 +130,19 @@ export class UserController implements UserServiceController {
   async listUsers(request: ListUsersRequest, metadata?: Metadata): Promise<ListUsersResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
-      const { users, total } = await this.userManagementService.listUsers(tenantId, {
-        page: request.page || 1,
-        pageSize: request.pageSize || 10,
-        status: request.statusFilter ? this.toDomainStatus(request.statusFilter) : undefined,
-        search: request.search,
-      });
+      const result = await this.queryBus.execute<ListUsersQuery, ListUsersResult>(
+        new ListUsersQuery(
+          tenantId,
+          request.page || 1,
+          request.pageSize || 10,
+          request.statusFilter ? this.toDomainStatus(request.statusFilter) : undefined,
+          request.search,
+        ),
+      );
 
       return {
-        users: users.map((u) => this.toProtoUser(u)),
-        total,
+        users: result.users.map((u) => this.toProtoUser(u)),
+        total: result.total,
         page: request.page || 1,
         pageSize: request.pageSize || 10,
       };
@@ -117,9 +157,11 @@ export class UserController implements UserServiceController {
   async deleteUser(request: DeleteUserRequest, metadata?: Metadata): Promise<DeleteUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
-      await this.userManagementService.deleteUser(tenantId, request.userId);
+      const result = await this.commandBus.execute<DeleteUserCommand, DeleteUserResult>(
+        new DeleteUserCommand(tenantId, request.userId),
+      );
 
-      return { success: true };
+      return { success: result.success };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'INTERNAL_ERROR',
@@ -131,14 +173,16 @@ export class UserController implements UserServiceController {
   async changePassword(request: ChangePasswordRequest, metadata?: Metadata): Promise<ChangePasswordResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
-      await this.userManagementService.changePassword(
-        tenantId,
-        request.userId,
-        request.currentPassword,
-        request.newPassword,
+      const result = await this.commandBus.execute<ChangePasswordCommand, ChangePasswordResult>(
+        new ChangePasswordCommand(
+          tenantId,
+          request.userId,
+          request.currentPassword,
+          request.newPassword,
+        ),
       );
 
-      return { success: true };
+      return { success: result.success };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'INTERNAL_ERROR',
@@ -155,18 +199,20 @@ export class UserController implements UserServiceController {
   async createUser(request: CreateUserRequest, metadata?: Metadata): Promise<CreateUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
-      const user = await this.userManagementService.createUser({
-        tenantId,
-        email: request.email,
-        password: request.password,
-        firstName: request.firstName,
-        lastName: request.lastName,
-        displayName: request.displayName,
-        roleIds: request.roleIds,
-        status: request.status ? this.toDomainStatus(request.status) : undefined,
-      });
+      const result = await this.commandBus.execute<CreateUserCommand, CreateUserResult>(
+        new CreateUserCommand(
+          tenantId,
+          request.email,
+          request.password,
+          request.firstName,
+          request.lastName,
+          request.displayName,
+          request.roleIds,
+          request.status ? this.toDomainStatus(request.status) : undefined,
+        ),
+      );
 
-      return { user: this.toProtoUser(user) };
+      return { user: this.toProtoUser(result.user) };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'INTERNAL_ERROR',
@@ -179,16 +225,18 @@ export class UserController implements UserServiceController {
   async getUserByEmail(request: GetUserByEmailRequest, metadata?: Metadata): Promise<GetUserByEmailResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
-      const user = await this.userManagementService.getUserByEmail(tenantId, request.email);
+      const result = await this.queryBus.execute<GetUserByEmailQuery, GetUserByEmailResult>(
+        new GetUserByEmailQuery(tenantId, request.email),
+      );
 
-      if (!user) {
+      if (!result.user) {
         throw new RpcException({
           code: 'NOT_FOUND',
           message: `User with email ${request.email} not found`,
         });
       }
 
-      return { user: this.toProtoUser(user) };
+      return { user: this.toProtoUser(result.user) };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'NOT_FOUND',
@@ -201,13 +249,11 @@ export class UserController implements UserServiceController {
   async changeEmail(request: ChangeEmailRequest, metadata?: Metadata): Promise<ChangeEmailResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
-      const user = await this.userManagementService.changeEmail(
-        tenantId,
-        request.userId,
-        request.newEmail,
+      const result = await this.commandBus.execute<ChangeEmailCommand, ChangeEmailResult>(
+        new ChangeEmailCommand(tenantId, request.userId, request.newEmail),
       );
 
-      return { user: this.toProtoUser(user) };
+      return { user: this.toProtoUser(result.user) };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'INTERNAL_ERROR',
@@ -220,9 +266,11 @@ export class UserController implements UserServiceController {
   async activateUser(request: ActivateUserRequest, metadata?: Metadata): Promise<ActivateUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
-      const user = await this.userManagementService.activateUser(tenantId, request.userId);
+      const result = await this.commandBus.execute<UpdateUserStatusCommand, UpdateUserStatusResult>(
+        new UpdateUserStatusCommand(tenantId, request.userId, DomainUserStatus.ACTIVE),
+      );
 
-      return { user: this.toProtoUser(user) };
+      return { user: this.toProtoUser(result.user) };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'INTERNAL_ERROR',
@@ -235,9 +283,11 @@ export class UserController implements UserServiceController {
   async deactivateUser(request: DeactivateUserRequest, metadata?: Metadata): Promise<DeactivateUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
-      const user = await this.userManagementService.deactivateUser(tenantId, request.userId);
+      const result = await this.commandBus.execute<UpdateUserStatusCommand, UpdateUserStatusResult>(
+        new UpdateUserStatusCommand(tenantId, request.userId, DomainUserStatus.INACTIVE),
+      );
 
-      return { user: this.toProtoUser(user) };
+      return { user: this.toProtoUser(result.user) };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'INTERNAL_ERROR',
@@ -250,9 +300,11 @@ export class UserController implements UserServiceController {
   async suspendUser(request: SuspendUserRequest, metadata?: Metadata): Promise<SuspendUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
-      const user = await this.userManagementService.suspendUser(tenantId, request.userId);
+      const result = await this.commandBus.execute<UpdateUserStatusCommand, UpdateUserStatusResult>(
+        new UpdateUserStatusCommand(tenantId, request.userId, DomainUserStatus.SUSPENDED),
+      );
 
-      return { user: this.toProtoUser(user) };
+      return { user: this.toProtoUser(result.user) };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'INTERNAL_ERROR',
@@ -265,13 +317,11 @@ export class UserController implements UserServiceController {
   async assignRoles(request: AssignRolesRequest, metadata?: Metadata): Promise<AssignRolesResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
-      const user = await this.userManagementService.assignRoles(
-        tenantId,
-        request.userId,
-        request.roleIds,
+      const result = await this.commandBus.execute<AssignRolesCommand, AssignRolesResult>(
+        new AssignRolesCommand(tenantId, request.userId, request.roleIds),
       );
 
-      return { user: this.toProtoUser(user) };
+      return { user: this.toProtoUser(result.user) };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'INTERNAL_ERROR',
@@ -284,13 +334,11 @@ export class UserController implements UserServiceController {
   async removeRoles(request: RemoveRolesRequest, metadata?: Metadata): Promise<RemoveRolesResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
-      const user = await this.userManagementService.removeRoles(
-        tenantId,
-        request.userId,
-        request.roleIds,
+      const result = await this.commandBus.execute<RemoveRolesCommand, RemoveRolesResult>(
+        new RemoveRolesCommand(tenantId, request.userId, request.roleIds),
       );
 
-      return { user: this.toProtoUser(user) };
+      return { user: this.toProtoUser(result.user) };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'INTERNAL_ERROR',
@@ -362,5 +410,4 @@ export class UserController implements UserServiceController {
     };
     return statusMap[status];
   }
-
 }

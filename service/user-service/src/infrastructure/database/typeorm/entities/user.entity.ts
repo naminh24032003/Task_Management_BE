@@ -59,6 +59,12 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   lastLoginIp?: string;
 
+  @Column({ nullable: true })
+  provider?: string; // OAuth provider: google, facebook, github
+
+  @Column({ nullable: true })
+  providerId?: string; // OAuth provider user ID
+
   @Column({ type: 'simple-json', nullable: true })
   preferences?: {
     language?: string;

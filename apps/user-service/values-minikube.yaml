@@ -134,5 +134,9 @@ secrets:
   # Redis Password
   redisPassword: "Redis@Cluster2024Secure!"
 
+  # Google OAuth2 - Get from Google Cloud Console
+  googleClientId: "your-google-client-id.apps.googleusercontent.com"
+  googleClientSecret: "your-google-client-secret"
+
   # Additional secrets can be added here
   extra: {}
