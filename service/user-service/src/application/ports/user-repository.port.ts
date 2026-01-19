@@ -22,6 +22,11 @@ export interface IUserRepository {
   emailExists(tenantId: string, email: string): Promise<boolean>;
 
   /**
+   * Check if email is unique within tenant (optionally excluding a user)
+   */
+  isEmailUnique(tenantId: string, email: string, excludeUserId?: string): Promise<boolean>;
+
+  /**
    * Save user (create or update)
    */
   save(user: User): Promise<User>;

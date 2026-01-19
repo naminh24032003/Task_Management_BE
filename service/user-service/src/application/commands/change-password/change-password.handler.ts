@@ -4,12 +4,16 @@ import { ChangePasswordCommand } from './change-password.command';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
 import { UserNotFoundError } from '../../errors/user-not-found.error';
 
+export interface ChangePasswordResult {
+  success: boolean;
+}
+
 @CommandHandler(ChangePasswordCommand)
 export class ChangePasswordHandler implements ICommandHandler<ChangePasswordCommand> {
   constructor(
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-  ) {}
+  ) { }
 
   async execute(command: ChangePasswordCommand): Promise<boolean> {
     const user = await this.userRepository.findById(command.tenantId, command.userId);
