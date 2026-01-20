@@ -37,10 +37,9 @@ import {
 import { User, UserStatus as DomainUserStatus } from '../../domain/aggregates/user.aggregate';
 import { Metadata } from '@grpc/grpc-js';
 
-// gRPC Auth Guards and Interceptors
+// gRPC Auth - only AuthN (authentication), AuthZ will be in task-service
 import { GrpcAuthInterceptor } from './interceptors/grpc-auth.interceptor';
-import { GrpcAuthGuard, GrpcRolesGuard } from './guards/grpc-auth.guard';
-import { GrpcRequireRoles } from './decorators/grpc-auth.decorator';
+import { GrpcAuthGuard } from './guards/grpc-auth.guard';
 
 // Queries
 import { GetUserByIdQuery } from '../../application/queries/get-user-by-id/get-user-by-id.query';
@@ -68,6 +67,18 @@ import { AssignRolesResult } from '../../application/commands/assign-roles/assig
 import { RemoveRolesCommand } from '../../application/commands/remove-roles/remove-roles.command';
 import { RemoveRolesResult } from '../../application/commands/remove-roles/remove-roles.handler';
 
+/**
+ * UserController - gRPC endpoints for user management
+ *
+ * Authentication (AuthN):
+ * - Kong verifies JWT and injects identity headers (x-user-id, x-tenant-id, etc.)
+ * - GrpcAuthInterceptor extracts identity from gRPC metadata
+ * - GrpcAuthGuard verifies user is authenticated
+ *
+ * Authorization (AuthZ):
+ * - Role/permission checks will be implemented in task-service (core service)
+ * - User-service only handles AuthN
+ */
 @Controller()
 @UserServiceControllerMethods()
 @UseInterceptors(GrpcAuthInterceptor)
@@ -76,6 +87,10 @@ export class UserController implements UserServiceController {
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
   ) {}
+
+  // ============================================
+  // Query Endpoints
+  // ============================================
 
   async getUser(request: GetUserRequest, metadata?: Metadata): Promise<GetUserResponse> {
     try {
@@ -111,29 +126,6 @@ export class UserController implements UserServiceController {
     }
   }
 
-  async updateUser(request: UpdateUserRequest, metadata?: Metadata): Promise<UpdateUserResponse> {
-    try {
-      const tenantId = this.extractTenantId(metadata);
-      const result = await this.commandBus.execute<UpdateUserCommand, UpdateUserResult>(
-        new UpdateUserCommand(
-          tenantId,
-          request.userId,
-          request.firstName,
-          request.lastName,
-          request.displayName,
-          request.status ? this.toDomainStatus(request.status) : undefined,
-        ),
-      );
-
-      return { user: this.toProtoUser(result.user) };
-    } catch (error: any) {
-      throw new RpcException({
-        code: error.code || 'INTERNAL_ERROR',
-        message: error.message,
-      });
-    }
-  }
-
   async listUsers(request: ListUsersRequest, metadata?: Metadata): Promise<ListUsersResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -153,77 +145,6 @@ export class UserController implements UserServiceController {
         page: request.page || 1,
         pageSize: request.pageSize || 10,
       };
-    } catch (error: any) {
-      throw new RpcException({
-        code: error.code || 'INTERNAL_ERROR',
-        message: error.message,
-      });
-    }
-  }
-
-  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
-  @GrpcRequireRoles('admin')
-  async deleteUser(request: DeleteUserRequest, metadata?: Metadata): Promise<DeleteUserResponse> {
-    try {
-      const tenantId = this.extractTenantId(metadata);
-      const result = await this.commandBus.execute<DeleteUserCommand, DeleteUserResult>(
-        new DeleteUserCommand(tenantId, request.userId),
-      );
-
-      return { success: result.success };
-    } catch (error: any) {
-      throw new RpcException({
-        code: error.code || 'INTERNAL_ERROR',
-        message: error.message,
-      });
-    }
-  }
-
-  async changePassword(request: ChangePasswordRequest, metadata?: Metadata): Promise<ChangePasswordResponse> {
-    try {
-      const tenantId = this.extractTenantId(metadata);
-      const result = await this.commandBus.execute<ChangePasswordCommand, ChangePasswordResult>(
-        new ChangePasswordCommand(
-          tenantId,
-          request.userId,
-          request.currentPassword,
-          request.newPassword,
-        ),
-      );
-
-      return { success: result.success };
-    } catch (error: any) {
-      throw new RpcException({
-        code: error.code || 'INTERNAL_ERROR',
-        message: error.message,
-      });
-    }
-  }
-
-  // ============================================
-  // New CRUD Methods
-  // ============================================
-
-  @GrpcMethod('UserService', 'CreateUser')
-  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
-  @GrpcRequireRoles('admin')
-  async createUser(request: CreateUserRequest, metadata?: Metadata): Promise<CreateUserResponse> {
-    try {
-      const tenantId = this.extractTenantId(metadata);
-      const result = await this.commandBus.execute<CreateUserCommand, CreateUserResult>(
-        new CreateUserCommand(
-          tenantId,
-          request.email,
-          request.password,
-          request.firstName,
-          request.lastName,
-          request.displayName,
-          request.roleIds,
-          request.status ? this.toDomainStatus(request.status) : undefined,
-        ),
-      );
-
-      return { user: this.toProtoUser(result.user) };
     } catch (error: any) {
       throw new RpcException({
         code: error.code || 'INTERNAL_ERROR',
@@ -256,7 +177,102 @@ export class UserController implements UserServiceController {
     }
   }
 
+  // ============================================
+  // Command Endpoints (AuthN required)
+  // ============================================
+
+  @GrpcMethod('UserService', 'CreateUser')
+  @UseGuards(GrpcAuthGuard)
+  async createUser(request: CreateUserRequest, metadata?: Metadata): Promise<CreateUserResponse> {
+    try {
+      const tenantId = this.extractTenantId(metadata);
+      const result = await this.commandBus.execute<CreateUserCommand, CreateUserResult>(
+        new CreateUserCommand(
+          tenantId,
+          request.email,
+          request.password,
+          request.firstName,
+          request.lastName,
+          request.displayName,
+          request.roleIds,
+          request.status ? this.toDomainStatus(request.status) : undefined,
+        ),
+      );
+
+      return { user: this.toProtoUser(result.user) };
+    } catch (error: any) {
+      throw new RpcException({
+        code: error.code || 'INTERNAL_ERROR',
+        message: error.message,
+      });
+    }
+  }
+
+  @UseGuards(GrpcAuthGuard)
+  async updateUser(request: UpdateUserRequest, metadata?: Metadata): Promise<UpdateUserResponse> {
+    try {
+      const tenantId = this.extractTenantId(metadata);
+      const result = await this.commandBus.execute<UpdateUserCommand, UpdateUserResult>(
+        new UpdateUserCommand(
+          tenantId,
+          request.userId,
+          request.firstName,
+          request.lastName,
+          request.displayName,
+          request.status ? this.toDomainStatus(request.status) : undefined,
+        ),
+      );
+
+      return { user: this.toProtoUser(result.user) };
+    } catch (error: any) {
+      throw new RpcException({
+        code: error.code || 'INTERNAL_ERROR',
+        message: error.message,
+      });
+    }
+  }
+
+  @UseGuards(GrpcAuthGuard)
+  async deleteUser(request: DeleteUserRequest, metadata?: Metadata): Promise<DeleteUserResponse> {
+    try {
+      const tenantId = this.extractTenantId(metadata);
+      const result = await this.commandBus.execute<DeleteUserCommand, DeleteUserResult>(
+        new DeleteUserCommand(tenantId, request.userId),
+      );
+
+      return { success: result.success };
+    } catch (error: any) {
+      throw new RpcException({
+        code: error.code || 'INTERNAL_ERROR',
+        message: error.message,
+      });
+    }
+  }
+
+  @UseGuards(GrpcAuthGuard)
+  async changePassword(request: ChangePasswordRequest, metadata?: Metadata): Promise<ChangePasswordResponse> {
+    try {
+      const tenantId = this.extractTenantId(metadata);
+      const result = await this.commandBus.execute<ChangePasswordCommand, ChangePasswordResult>(
+        new ChangePasswordCommand(
+          tenantId,
+          request.userId,
+          request.currentPassword,
+          request.newPassword,
+        ),
+      );
+
+      return { success: result.success };
+    } catch (error: any) {
+      throw new RpcException({
+        code: error.code || 'INTERNAL_ERROR',
+        message: error.message,
+      });
+    }
+  }
+
   @GrpcMethod('UserService', 'ChangeEmail')
+  @UseGuards(GrpcAuthGuard)
   async changeEmail(request: ChangeEmailRequest, metadata?: Metadata): Promise<ChangeEmailResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -274,8 +290,7 @@ export class UserController implements UserServiceController {
   }
 
   @GrpcMethod('UserService', 'ActivateUser')
-  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
-  @GrpcRequireRoles('admin')
+  @UseGuards(GrpcAuthGuard)
   async activateUser(request: ActivateUserRequest, metadata?: Metadata): Promise<ActivateUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -293,8 +308,7 @@ export class UserController implements UserServiceController {
   }
 
   @GrpcMethod('UserService', 'DeactivateUser')
-  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
-  @GrpcRequireRoles('admin')
+  @UseGuards(GrpcAuthGuard)
   async deactivateUser(request: DeactivateUserRequest, metadata?: Metadata): Promise<DeactivateUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -312,8 +326,7 @@ export class UserController implements UserServiceController {
   }
 
   @GrpcMethod('UserService', 'SuspendUser')
-  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
-  @GrpcRequireRoles('admin')
+  @UseGuards(GrpcAuthGuard)
   async suspendUser(request: SuspendUserRequest, metadata?: Metadata): Promise<SuspendUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -331,8 +344,7 @@ export class UserController implements UserServiceController {
   }
 
   @GrpcMethod('UserService', 'AssignRoles')
-  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
-  @GrpcRequireRoles('admin')
+  @UseGuards(GrpcAuthGuard)
   async assignRoles(request: AssignRolesRequest, metadata?: Metadata): Promise<AssignRolesResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -350,8 +362,7 @@ export class UserController implements UserServiceController {
   }
 
   @GrpcMethod('UserService', 'RemoveRoles')
-  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
-  @GrpcRequireRoles('admin')
+  @UseGuards(GrpcAuthGuard)
   async removeRoles(request: RemoveRolesRequest, metadata?: Metadata): Promise<RemoveRolesResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
