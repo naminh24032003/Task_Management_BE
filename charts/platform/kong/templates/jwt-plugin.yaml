@@ -1,0 +1,135 @@
+# =============================================================================
+# Kong OSS Authentication Plugins
+# =============================================================================
+# Architecture:
+#   Client → Kong (JWT decode + header injection) → gRPC Gateway → Service
+#
+# Kong does:
+#   1. Decode JWT from Authorization header
+#   2. Check token expiration (exp claim)
+#   3. Inject identity headers from JWT claims:
+#      - x-user-id (from sub)
+#      - x-tenant-id (from tenantId)
+#      - x-roles (from roles)
+#      - x-permissions (from permissions)
+#      - x-email (from email)
+#
+# Note: Signature verification is handled by the service if needed.
+# In internal network with mTLS (Istio), this provides sufficient security.
+# =============================================================================
+
+---
+# KongClusterPlugin: JWT Decode & Header Injection
+apiVersion: configuration.konghq.com/v1
+kind: KongClusterPlugin
+metadata:
+  name: jwt-auth
+  annotations:
+    kubernetes.io/ingress.class: kong
+  labels:
+    global: "false"
+plugin: pre-function
+config:
+  access:
+    - |
+      local cjson = require("cjson.safe")
+
+      -- Paths that don't require authentication
+      local PUBLIC_PATHS = {
+        ["/v1/auth/register"] = true,
+        ["/v1/auth/login"] = true,
+        ["/v1/auth/google"] = true,
+        ["/v1/auth/refresh"] = true,
+        ["/healthz"] = true,
+        ["/api/health"] = true,
+      }
+
+      -- Base64URL decode helper
+      local function base64url_decode(input)
+        if not input then return nil end
+        local remainder = #input % 4
+        if remainder > 0 then
+          input = input .. string.rep("=", 4 - remainder)
+        end
+        input = input:gsub("-", "+"):gsub("_", "/")
+        return ngx.decode_base64(input)
+      end
+
+      -- Main function
+      local function process_jwt()
+        local path = kong.request.get_path()
+
+        -- Skip auth for public paths
+        if PUBLIC_PATHS[path] then
+          return
+        end
+
+        -- Check for Authorization header
+        local auth_header = kong.request.get_header("Authorization")
+        if not auth_header then
+          return kong.response.exit(401, { message = "Missing authorization header" })
+        end
+
+        -- Extract Bearer token
+        local token = auth_header:match("Bearer%s+(.+)")
+        if not token then
+          return kong.response.exit(401, { message = "Invalid authorization header format" })
+        end
+
+        -- Split JWT into parts
+        local parts = {}
+        for part in token:gmatch("[^%.]+") do
+          table.insert(parts, part)
+        end
+
+        if #parts ~= 3 then
+          return kong.response.exit(401, { message = "Invalid token format" })
+        end
+
+        -- Decode payload (middle part)
+        local payload_json = base64url_decode(parts[2])
+        if not payload_json then
+          return kong.response.exit(401, { message = "Invalid token payload" })
+        end
+
+        local payload = cjson.decode(payload_json)
+        if not payload then
+          return kong.response.exit(401, { message = "Invalid token payload" })
+        end
+
+        -- Check expiration
+        if payload.exp then
+          local now = ngx.time()
+          if now > payload.exp then
+            return kong.response.exit(401, { message = "Token expired" })
+          end
+        end
+
+        -- Check token type
+        if payload.type and payload.type ~= "access" then
+          return kong.response.exit(401, { message = "Invalid token type" })
+        end
+
+        -- Inject identity headers
+        if payload.sub then
+          kong.service.request.set_header("x-user-id", tostring(payload.sub))
+        end
+
+        if payload.tenantId then
+          kong.service.request.set_header("x-tenant-id", tostring(payload.tenantId))
+        end
+
+        if payload.email then
+          kong.service.request.set_header("x-email", tostring(payload.email))
+        end
+
+        if payload.roles and type(payload.roles) == "table" then
+          kong.service.request.set_header("x-roles", table.concat(payload.roles, ","))
+        end
+
+        if payload.permissions and type(payload.permissions) == "table" then
+          kong.service.request.set_header("x-permissions", table.concat(payload.permissions, ","))
+        end
+      end
+
+      process_jwt()

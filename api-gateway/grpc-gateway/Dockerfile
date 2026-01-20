@@ -59,10 +59,21 @@ var (
 )
 
 // headerMatcher allows forwarding custom HTTP headers as gRPC metadata
+// These headers are injected by Kong after JWT verification
 func headerMatcher(key string) (string, bool) {
     switch key {
+    // Identity headers injected by Kong from JWT claims
+    case "X-User-Id", "x-user-id":
+        return "x-user-id", true
     case "X-Tenant-Id", "x-tenant-id":
         return "x-tenant-id", true
+    case "X-Roles", "x-roles":
+        return "x-roles", true
+    case "X-Permissions", "x-permissions":
+        return "x-permissions", true
+    case "X-Email", "x-email":
+        return "x-email", true
+    // Standard headers
     case "Authorization", "authorization":
         return "authorization", true
     case "X-Request-Id", "x-request-id":

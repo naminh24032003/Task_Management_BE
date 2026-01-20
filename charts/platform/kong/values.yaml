@@ -7,6 +7,8 @@ kong:
   env:
     database: "off"
     log_level: debug
+    # Enable pre-function/post-function plugins with custom Lua code
+    untrusted_lua: "on"
 
   # Bật Ingress Controller để dùng Kubernetes Ingress
   ingressController:

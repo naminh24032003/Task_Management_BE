@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { GrpcMethod, RpcException } from '@nestjs/microservices';
 import {
@@ -37,6 +37,11 @@ import {
 import { User, UserStatus as DomainUserStatus } from '../../domain/aggregates/user.aggregate';
 import { Metadata } from '@grpc/grpc-js';
 
+// gRPC Auth Guards and Interceptors
+import { GrpcAuthInterceptor } from './interceptors/grpc-auth.interceptor';
+import { GrpcAuthGuard, GrpcRolesGuard } from './guards/grpc-auth.guard';
+import { GrpcRequireRoles } from './decorators/grpc-auth.decorator';
+
 // Queries
 import { GetUserByIdQuery } from '../../application/queries/get-user-by-id/get-user-by-id.query';
 import { GetUserByIdResult } from '../../application/queries/get-user-by-id/get-user-by-id.handler';
@@ -65,6 +70,7 @@ import { RemoveRolesResult } from '../../application/commands/remove-roles/remov
 
 @Controller()
 @UserServiceControllerMethods()
+@UseInterceptors(GrpcAuthInterceptor)
 export class UserController implements UserServiceController {
   constructor(
     private readonly commandBus: CommandBus,
@@ -87,7 +93,8 @@ export class UserController implements UserServiceController {
     }
   }
 
-  async getMe(request: GetMeRequest, metadata?: Metadata): Promise<GetMeResponse> {
+  @UseGuards(GrpcAuthGuard)
+  async getMe(_request: GetMeRequest, metadata?: Metadata): Promise<GetMeResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
       const userId = this.extractUserId(metadata);
@@ -154,6 +161,8 @@ export class UserController implements UserServiceController {
     }
   }
 
+  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
+  @GrpcRequireRoles('admin')
   async deleteUser(request: DeleteUserRequest, metadata?: Metadata): Promise<DeleteUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -196,6 +205,8 @@ export class UserController implements UserServiceController {
   // ============================================
 
   @GrpcMethod('UserService', 'CreateUser')
+  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
+  @GrpcRequireRoles('admin')
   async createUser(request: CreateUserRequest, metadata?: Metadata): Promise<CreateUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -263,6 +274,8 @@ export class UserController implements UserServiceController {
   }
 
   @GrpcMethod('UserService', 'ActivateUser')
+  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
+  @GrpcRequireRoles('admin')
   async activateUser(request: ActivateUserRequest, metadata?: Metadata): Promise<ActivateUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -280,6 +293,8 @@ export class UserController implements UserServiceController {
   }
 
   @GrpcMethod('UserService', 'DeactivateUser')
+  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
+  @GrpcRequireRoles('admin')
   async deactivateUser(request: DeactivateUserRequest, metadata?: Metadata): Promise<DeactivateUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -297,6 +312,8 @@ export class UserController implements UserServiceController {
   }
 
   @GrpcMethod('UserService', 'SuspendUser')
+  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
+  @GrpcRequireRoles('admin')
   async suspendUser(request: SuspendUserRequest, metadata?: Metadata): Promise<SuspendUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -314,6 +331,8 @@ export class UserController implements UserServiceController {
   }
 
   @GrpcMethod('UserService', 'AssignRoles')
+  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
+  @GrpcRequireRoles('admin')
   async assignRoles(request: AssignRolesRequest, metadata?: Metadata): Promise<AssignRolesResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -331,6 +350,8 @@ export class UserController implements UserServiceController {
   }
 
   @GrpcMethod('UserService', 'RemoveRoles')
+  @UseGuards(GrpcAuthGuard, GrpcRolesGuard)
+  @GrpcRequireRoles('admin')
   async removeRoles(request: RemoveRolesRequest, metadata?: Metadata): Promise<RemoveRolesResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);

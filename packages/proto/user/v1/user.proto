@@ -160,10 +160,10 @@ service UserService {
     };
   }
 
-  // Remove roles from user
+  // Remove roles from user (using POST instead of DELETE to allow body)
   rpc RemoveRoles (RemoveRolesRequest) returns (RemoveRolesResponse) {
     option (google.api.http) = {
-      delete: "/v1/users/{user_id}/roles"
+      post: "/v1/users/{user_id}/roles/remove"
       body: "*"
     };
   }
