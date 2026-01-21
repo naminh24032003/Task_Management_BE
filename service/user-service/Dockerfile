@@ -39,7 +39,8 @@ WORKDIR /build/service/user-service
 COPY service/user-service/package*.json ./
 
 # Install full deps (including dev) - shared package is at correct relative path
-RUN npm ci
+# Using npm install instead of npm ci since package-lock.json may be gitignored/out of sync
+RUN npm install
 
 # ─────────────────────────────────────────────────────────────
 # Copy proto files from source of truth BEFORE build
@@ -81,7 +82,7 @@ ENV NODE_ENV=production
 COPY service/user-service/package*.json ./
 
 # Install prod deps only (shared package is at correct relative path)
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copy compiled output from builder
 COPY --from=builder /build/service/user-service/dist ./dist

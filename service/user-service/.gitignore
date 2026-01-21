@@ -1,54 +1,39 @@
-# compiled output
-/dist
-/node_modules
+# Dependencies
+node_modules/
 
-# Runtime proto artifact (synced from packages/proto)
-# Source of truth: packages/proto
-/proto
+# Build output
+dist/
+build/
 
-# Generated proto files (comment out if you want to commit generated files)
-# /src/generated
+# Environment variables
+.env
+.env.*
+!.env.example
 
-# logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
 
 # OS
 .DS_Store
+Thumbs.db
 
-# tests
-/coverage
-/.nyc_output
+# Logs
+*.log
+logs/
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
+# Test coverage
+coverage/
 
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# NestJS specific
+.nest/
 
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-.env.*
+# Generated files
+src/generated/
 
-# NestJS build/test artifacts
-/test/__image_snapshots__
-
-package-lock.json
+# Temporary
+*.tmp
+*.temp
+.cache/

@@ -76,14 +76,14 @@ spec:
     tls:
       mode: ISTIO_MUTUAL
 ---
-# DestinationRule for grpc-gateway in kong namespace
+# DestinationRule for bff-service in dev namespace
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: grpc-gateway
-  namespace: kong
+  name: bff-service
+  namespace: dev
 spec:
-  host: grpc-gateway.kong.svc.cluster.local
+  host: bff-service-microservice.dev.svc.cluster.local
   trafficPolicy:
     tls:
       mode: ISTIO_MUTUAL

@@ -55,14 +55,14 @@ export class UserAuthenticationService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {
-    this.accessTokenExpiresIn = this.configService.get<number>(
+    this.accessTokenExpiresIn = Number(this.configService.get<number>(
       'JWT_ACCESS_EXPIRES_IN',
       3600,
-    ); // 1 hour
-    this.refreshTokenExpiresIn = this.configService.get<number>(
+    )); // 1 hour
+    this.refreshTokenExpiresIn = Number(this.configService.get<number>(
       'JWT_REFRESH_EXPIRES_IN',
       604800,
-    ); // 7 days
+    )); // 7 days
   }
 
   /**

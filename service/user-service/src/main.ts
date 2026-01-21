@@ -1,4 +1,4 @@
-  import { NestFactory } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
 import { AppModule } from './app.module';
@@ -21,7 +21,7 @@ async function bootstrap() {
       res.end('Not Found');
     }
   });
-  
+
   metricsServer.listen(metricsPort, () => {
     console.log(`📊 Metrics endpoint running at http://0.0.0.0:${metricsPort}/metrics`);
   });
@@ -32,7 +32,7 @@ async function bootstrap() {
     {
       transport: Transport.GRPC,
       options: {
-        package: 'user',
+        package: 'user.v1',
         protoPath,
         url: grpcUrl,
         loader: {

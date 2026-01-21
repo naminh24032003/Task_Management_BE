@@ -110,3 +110,26 @@ variable "redis_persistence_enabled" {
   description = "Enable persistence for Redis"
   default     = false
 }
+
+# =========================
+# BFF Configuration
+# =========================
+variable "bff_enabled" {
+  type        = bool
+  description = "Enable BFF (GraphQL Gateway) service"
+  default     = true
+}
+
+variable "bff_jwt_secret" {
+  type        = string
+  description = "JWT secret for BFF service (same as user-service)"
+  default     = "dev-jwt-secret-for-local-testing-only"
+  sensitive   = true
+}
+
+variable "bff_redis_password" {
+  type        = string
+  description = "Redis password for BFF service"
+  default     = "Redis@Cluster2024Secure!"
+  sensitive   = true
+}

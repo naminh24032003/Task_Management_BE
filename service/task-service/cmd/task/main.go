@@ -3,15 +3,18 @@ package main
 import (
 	"flag"
 	"os"
+	"path/filepath"
 
 	"task-service/internal/pkg/logger"
 
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/config"
+	"github.com/go-kratos/kratos/v2/config/env"
 	"github.com/go-kratos/kratos/v2/config/file"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/transport/grpc"
 	"github.com/go-kratos/kratos/v2/transport/http"
+	"github.com/joho/godotenv"
 )
 
 // go build -ldflags "-X main.Version=x.y.z"
@@ -46,6 +49,14 @@ func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
 
 func main() {
 	flag.Parse()
+
+	// Load .env file (optional - won't fail if not exists)
+	envFile := filepath.Join(filepath.Dir(flagconf), "..", ".env")
+	if err := godotenv.Load(envFile); err != nil {
+		// Try loading from current directory
+		_ = godotenv.Load()
+	}
+
 	// Logger with colors
 	logger := log.With(logger.New(),
 		"ts", log.DefaultTimestamp,
@@ -58,6 +69,7 @@ func main() {
 	c := config.New(
 		config.WithSource(
 			file.NewSource(flagconf),
+			env.NewSource(),
 		),
 	)
 	defer c.Close()

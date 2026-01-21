@@ -1,41 +1,50 @@
 server:
   http:
-    addr: 0.0.0.0:9091
-    timeout: 1s
+    addr: ${HTTP_ADDR:0.0.0.0:9091}
+    timeout: ${SERVER_TIMEOUT:1s}
   grpc:
-    addr: 0.0.0.0:50052
-    timeout: 1s
+    addr: ${GRPC_ADDR:0.0.0.0:50052}
+    timeout: ${SERVER_TIMEOUT:1s}
 
 data:
   database:
     driver: mongodb
-    # MongoDB Connection String for Local Development
-    # Port-forward: kubectl port-forward -n mongodb-task svc/task-mongodb-mongodb-sharded 27018:27017
-    source: mongodb://root:MongoDB%40Root2024Secure%21@localhost:27018/task-service?authSource=admin
-    name: task-service
+    source: ${MONGODB_URI}
+    name: ${MONGODB_DATABASE:task-service}
     # Connection Pool
-    min_pool_size: 5
-    max_pool_size: 50
+    min_pool_size: ${MONGODB_MIN_POOL_SIZE:5}
+    max_pool_size: ${MONGODB_MAX_POOL_SIZE:50}
     # Timeouts (in seconds)
-    connect_timeout: 10
-    server_selection_timeout: 30
-    socket_timeout: 45
+    connect_timeout: ${MONGODB_CONNECT_TIMEOUT:10}
+    server_selection_timeout: ${MONGODB_SERVER_SELECTION_TIMEOUT:30}
+    socket_timeout: ${MONGODB_SOCKET_TIMEOUT:45}
     # Read/Write Concerns
-    read_preference: primaryPreferred
-    read_concern: majority
-    write_concern: majority
+    read_preference: ${MONGODB_READ_PREFERENCE:primaryPreferred}
+    read_concern: ${MONGODB_READ_CONCERN:majority}
+    write_concern: ${MONGODB_WRITE_CONCERN:majority}
 
   redis:
-    addr: ${REDIS_HOST}:${REDIS_PORT}
-    password: ${REDIS_PASSWORD}
-    db: 0
-    key_prefix: "task-service:"
-    read_timeout: 0.2s
-    write_timeout: 0.2s
-    connect_timeout: 10s
-    max_retries: 3
+    addr: ${REDIS_HOST:localhost}:${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    db: ${REDIS_DB:0}
+    key_prefix: ${REDIS_KEY_PREFIX:task-service:}
+    read_timeout: ${REDIS_READ_TIMEOUT:0.2s}
+    write_timeout: ${REDIS_WRITE_TIMEOUT:0.2s}
+    connect_timeout: ${REDIS_CONNECT_TIMEOUT:10s}
+    max_retries: ${REDIS_MAX_RETRIES:3}
+
+  kafka:
+    brokers: ${KAFKA_BROKERS:localhost:9092}
+    topic_task_events: ${KAFKA_TOPIC_TASK_EVENTS:task-events}
+    consumer_group: ${KAFKA_CONSUMER_GROUP:task-service-consumer}
+
+  user_service:
+    addr: ${USER_SERVICE_ADDR:localhost:50051}
 
 logging:
-  level: debug
-  format: console
-  output: stdout
+  level: ${LOG_LEVEL:debug}
+  format: ${LOG_FORMAT:console}
+  output: ${LOG_OUTPUT:stdout}
+
+app:
+  env: ${APP_ENV:development}

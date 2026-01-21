@@ -1,0 +1,151 @@
+# =============================================================================
+# BFF Service - Base Values
+# =============================================================================
+microservice:
+  nameOverride: bff-service
+  replicaCount: 2
+
+  # =========================================================================
+  # Container Image
+  # =========================================================================
+  image:
+    repository: bff-service
+    tag: v1
+    pullPolicy: IfNotPresent
+
+  # =========================================================================
+  # Environment Variables (Non-sensitive - ConfigMap)
+  # =========================================================================
+  envVarsCM:
+    NODE_ENV: production
+
+    # Application
+    APP_PORT: "4000"
+    APP_METRICS_PORT: "9092"
+
+    # GraphQL
+    GRAPHQL_PLAYGROUND: "false"
+    GRAPHQL_INTROSPECTION: "false"
+    GRAPHQL_DEBUG: "false"
+
+    # gRPC Services
+    GRPC_USER_SERVICE_URL: "user-service.dev.svc.cluster.local:50051"
+    GRPC_TASK_SERVICE_URL: "task-service.dev.svc.cluster.local:50052"
+
+    # Redis Configuration
+    REDIS_HOST: "redis-cluster-master.redis.svc.cluster.local"
+    REDIS_PORT: "6379"
+    REDIS_DB: "1"
+    REDIS_KEY_PREFIX: "bff-service:"
+
+    # Rate Limiting
+    RATE_LIMIT_USER_LIMIT: "100"
+    RATE_LIMIT_USER_WINDOW: "60"
+    RATE_LIMIT_IP_LIMIT: "50"
+    RATE_LIMIT_IP_WINDOW: "60"
+
+    # JWT Configuration
+    JWT_EXPIRES_IN: "3600"
+
+    # CORS
+    CORS_ORIGINS: "http://localhost:3000,https://app.example.com"
+
+  # =========================================================================
+  # Sensitive Environment Variables (Secrets)
+  # =========================================================================
+  envVarsSecret: {}
+
+  # =========================================================================
+  # Reference to External Secrets
+  # =========================================================================
+  envFromSecretRefs:
+    - bff-service-secrets
+
+  # =========================================================================
+  # Container Ports
+  # =========================================================================
+  containerPorts:
+    http:
+      port: 4000
+    http-metrics:
+      port: 9092
+
+  # =========================================================================
+  # Service Configuration
+  # =========================================================================
+  service:
+    type: ClusterIP
+    ports:
+      http:
+        port: 4000
+        targetPort: http
+      http-metrics:
+        port: 9092
+        targetPort: http-metrics
+
+  # =========================================================================
+  # Resource Requests & Limits
+  # =========================================================================
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # =========================================================================
+  # Health Probes
+  # =========================================================================
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http-metrics
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http-metrics
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  # =========================================================================
+  # Monitoring
+  # =========================================================================
+  metrics:
+    enabled: true
+    port: http-metrics
+    path: /metrics
+    interval: 30s
+    serviceMonitor:
+      labels:
+        release: monitoring
+
+# =============================================================================
+# Secrets Configuration
+# =============================================================================
+secrets:
+  jwtSecret: "your-super-secret-jwt-key-change-in-production"
+  redisPassword: "Redis@Cluster2024Secure!"
+
+# =============================================================================
+# BFF-Specific Ingress Configuration
+# =============================================================================
+bffIngress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+  hosts:
+    - host: graphql.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

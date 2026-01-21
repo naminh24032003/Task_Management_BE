@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Runtime proto artifact (synced from packages/proto)
+# Source of truth: packages/proto
+/proto
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Proto generated files (if any)
+src/grpc/generated/
+
+# GraphQL schema (auto-generated)
+src/schema.gql

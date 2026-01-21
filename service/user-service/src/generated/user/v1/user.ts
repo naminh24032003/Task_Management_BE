@@ -2477,7 +2477,7 @@ export type AuthServiceService = typeof AuthServiceService;
 export const AuthServiceService = {
   /** Register a new user */
   register: {
-    path: "/user.AuthService/Register",
+    path: "/user.v1.AuthService/Register",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: RegisterRequest): Buffer => Buffer.from(RegisterRequest.encode(value).finish()),
@@ -2487,7 +2487,7 @@ export const AuthServiceService = {
   },
   /** Login with email and password */
   login: {
-    path: "/user.AuthService/Login",
+    path: "/user.v1.AuthService/Login",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: LoginRequest): Buffer => Buffer.from(LoginRequest.encode(value).finish()),
@@ -2497,7 +2497,7 @@ export const AuthServiceService = {
   },
   /** Login with Google OAuth2 */
   googleLogin: {
-    path: "/user.AuthService/GoogleLogin",
+    path: "/user.v1.AuthService/GoogleLogin",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: GoogleLoginRequest): Buffer => Buffer.from(GoogleLoginRequest.encode(value).finish()),
@@ -2507,7 +2507,7 @@ export const AuthServiceService = {
   },
   /** Refresh access token */
   refreshToken: {
-    path: "/user.AuthService/RefreshToken",
+    path: "/user.v1.AuthService/RefreshToken",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: RefreshTokenRequest): Buffer => Buffer.from(RefreshTokenRequest.encode(value).finish()),
@@ -2518,7 +2518,7 @@ export const AuthServiceService = {
   },
   /** Validate access token */
   validateToken: {
-    path: "/user.AuthService/ValidateToken",
+    path: "/user.v1.AuthService/ValidateToken",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: ValidateTokenRequest): Buffer => Buffer.from(ValidateTokenRequest.encode(value).finish()),
@@ -2529,7 +2529,7 @@ export const AuthServiceService = {
   },
   /** Logout (invalidate refresh token) */
   logout: {
-    path: "/user.AuthService/Logout",
+    path: "/user.v1.AuthService/Logout",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: LogoutRequest): Buffer => Buffer.from(LogoutRequest.encode(value).finish()),
@@ -2613,7 +2613,7 @@ export interface UserServiceClient {
 
   assignRoles(request: AssignRolesRequest, metadata?: Metadata): Observable<AssignRolesResponse>;
 
-  /** Remove roles from user */
+  /** Remove roles from user (using POST instead of DELETE to allow body) */
 
   removeRoles(request: RemoveRolesRequest, metadata?: Metadata): Observable<RemoveRolesResponse>;
 }
@@ -2713,7 +2713,7 @@ export interface UserServiceController {
     metadata?: Metadata,
   ): Promise<AssignRolesResponse> | Observable<AssignRolesResponse> | AssignRolesResponse;
 
-  /** Remove roles from user */
+  /** Remove roles from user (using POST instead of DELETE to allow body) */
 
   removeRoles(
     request: RemoveRolesRequest,
@@ -2762,7 +2762,7 @@ export type UserServiceService = typeof UserServiceService;
 export const UserServiceService = {
   /** Create user (admin only - without auto-login) */
   createUser: {
-    path: "/user.UserService/CreateUser",
+    path: "/user.v1.UserService/CreateUser",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: CreateUserRequest): Buffer => Buffer.from(CreateUserRequest.encode(value).finish()),
@@ -2772,7 +2772,7 @@ export const UserServiceService = {
   },
   /** Get user by ID */
   getUser: {
-    path: "/user.UserService/GetUser",
+    path: "/user.v1.UserService/GetUser",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: GetUserRequest): Buffer => Buffer.from(GetUserRequest.encode(value).finish()),
@@ -2782,7 +2782,7 @@ export const UserServiceService = {
   },
   /** Get user by email */
   getUserByEmail: {
-    path: "/user.UserService/GetUserByEmail",
+    path: "/user.v1.UserService/GetUserByEmail",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: GetUserByEmailRequest): Buffer =>
@@ -2794,7 +2794,7 @@ export const UserServiceService = {
   },
   /** Get current user profile */
   getMe: {
-    path: "/user.UserService/GetMe",
+    path: "/user.v1.UserService/GetMe",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: GetMeRequest): Buffer => Buffer.from(GetMeRequest.encode(value).finish()),
@@ -2804,7 +2804,7 @@ export const UserServiceService = {
   },
   /** Update user profile */
   updateUser: {
-    path: "/user.UserService/UpdateUser",
+    path: "/user.v1.UserService/UpdateUser",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: UpdateUserRequest): Buffer => Buffer.from(UpdateUserRequest.encode(value).finish()),
@@ -2814,7 +2814,7 @@ export const UserServiceService = {
   },
   /** List users (with pagination) */
   listUsers: {
-    path: "/user.UserService/ListUsers",
+    path: "/user.v1.UserService/ListUsers",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: ListUsersRequest): Buffer => Buffer.from(ListUsersRequest.encode(value).finish()),
@@ -2824,7 +2824,7 @@ export const UserServiceService = {
   },
   /** Delete user (soft delete) */
   deleteUser: {
-    path: "/user.UserService/DeleteUser",
+    path: "/user.v1.UserService/DeleteUser",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: DeleteUserRequest): Buffer => Buffer.from(DeleteUserRequest.encode(value).finish()),
@@ -2834,7 +2834,7 @@ export const UserServiceService = {
   },
   /** Change password */
   changePassword: {
-    path: "/user.UserService/ChangePassword",
+    path: "/user.v1.UserService/ChangePassword",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: ChangePasswordRequest): Buffer =>
@@ -2846,7 +2846,7 @@ export const UserServiceService = {
   },
   /** Change email */
   changeEmail: {
-    path: "/user.UserService/ChangeEmail",
+    path: "/user.v1.UserService/ChangeEmail",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: ChangeEmailRequest): Buffer => Buffer.from(ChangeEmailRequest.encode(value).finish()),
@@ -2856,7 +2856,7 @@ export const UserServiceService = {
   },
   /** Activate user */
   activateUser: {
-    path: "/user.UserService/ActivateUser",
+    path: "/user.v1.UserService/ActivateUser",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: ActivateUserRequest): Buffer => Buffer.from(ActivateUserRequest.encode(value).finish()),
@@ -2867,7 +2867,7 @@ export const UserServiceService = {
   },
   /** Deactivate user */
   deactivateUser: {
-    path: "/user.UserService/DeactivateUser",
+    path: "/user.v1.UserService/DeactivateUser",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: DeactivateUserRequest): Buffer =>
@@ -2879,7 +2879,7 @@ export const UserServiceService = {
   },
   /** Suspend user */
   suspendUser: {
-    path: "/user.UserService/SuspendUser",
+    path: "/user.v1.UserService/SuspendUser",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: SuspendUserRequest): Buffer => Buffer.from(SuspendUserRequest.encode(value).finish()),
@@ -2889,7 +2889,7 @@ export const UserServiceService = {
   },
   /** Assign roles to user */
   assignRoles: {
-    path: "/user.UserService/AssignRoles",
+    path: "/user.v1.UserService/AssignRoles",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: AssignRolesRequest): Buffer => Buffer.from(AssignRolesRequest.encode(value).finish()),
@@ -2897,9 +2897,9 @@ export const UserServiceService = {
     responseSerialize: (value: AssignRolesResponse): Buffer => Buffer.from(AssignRolesResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): AssignRolesResponse => AssignRolesResponse.decode(value),
   },
-  /** Remove roles from user */
+  /** Remove roles from user (using POST instead of DELETE to allow body) */
   removeRoles: {
-    path: "/user.UserService/RemoveRoles",
+    path: "/user.v1.UserService/RemoveRoles",
     requestStream: false,
     responseStream: false,
     requestSerialize: (value: RemoveRolesRequest): Buffer => Buffer.from(RemoveRolesRequest.encode(value).finish()),
@@ -2936,7 +2936,7 @@ export interface UserServiceServer extends UntypedServiceImplementation {
   suspendUser: handleUnaryCall<SuspendUserRequest, SuspendUserResponse>;
   /** Assign roles to user */
   assignRoles: handleUnaryCall<AssignRolesRequest, AssignRolesResponse>;
-  /** Remove roles from user */
+  /** Remove roles from user (using POST instead of DELETE to allow body) */
   removeRoles: handleUnaryCall<RemoveRolesRequest, RemoveRolesResponse>;
 }
 

@@ -36,6 +36,10 @@ config:
 
       -- Paths that don't require authentication
       local PUBLIC_PATHS = {
+        -- BFF GraphQL endpoints (auth handled by BFF)
+        ["/graphql"] = true,
+        ["/bff/health"] = true,
+        -- Legacy REST API paths (deprecated)
         ["/v1/auth/register"] = true,
         ["/v1/auth/login"] = true,
         ["/v1/auth/google"] = true,

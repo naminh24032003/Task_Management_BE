@@ -86,12 +86,13 @@ export class UserController implements UserServiceController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
-  ) {}
+  ) { }
 
   // ============================================
   // Query Endpoints
   // ============================================
 
+  @GrpcMethod('UserService', 'GetUser')
   async getUser(request: GetUserRequest, metadata?: Metadata): Promise<GetUserResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -108,6 +109,7 @@ export class UserController implements UserServiceController {
     }
   }
 
+  @GrpcMethod('UserService', 'GetMe')
   @UseGuards(GrpcAuthGuard)
   async getMe(_request: GetMeRequest, metadata?: Metadata): Promise<GetMeResponse> {
     try {
@@ -126,6 +128,7 @@ export class UserController implements UserServiceController {
     }
   }
 
+  @GrpcMethod('UserService', 'ListUsers')
   async listUsers(request: ListUsersRequest, metadata?: Metadata): Promise<ListUsersResponse> {
     try {
       const tenantId = this.extractTenantId(metadata);
@@ -208,6 +211,7 @@ export class UserController implements UserServiceController {
     }
   }
 
+  @GrpcMethod('UserService', 'UpdateUser')
   @UseGuards(GrpcAuthGuard)
   async updateUser(request: UpdateUserRequest, metadata?: Metadata): Promise<UpdateUserResponse> {
     try {
@@ -232,6 +236,7 @@ export class UserController implements UserServiceController {
     }
   }
 
+  @GrpcMethod('UserService', 'DeleteUser')
   @UseGuards(GrpcAuthGuard)
   async deleteUser(request: DeleteUserRequest, metadata?: Metadata): Promise<DeleteUserResponse> {
     try {
@@ -249,6 +254,7 @@ export class UserController implements UserServiceController {
     }
   }
 
+  @GrpcMethod('UserService', 'ChangePassword')
   @UseGuards(GrpcAuthGuard)
   async changePassword(request: ChangePasswordRequest, metadata?: Metadata): Promise<ChangePasswordResponse> {
     try {

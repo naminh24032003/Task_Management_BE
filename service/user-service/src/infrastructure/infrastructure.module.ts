@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MongoDbModule } from './database/mongodb/mongodb.module';
 import { RepositoriesModule } from './database/mongodb/repositories/repositories.module';
@@ -12,6 +12,7 @@ import appConfig from './config/app.config';
 import redisConfig from './config/redis.config';
 import oauthConfig from './config/oauth.config';
 
+@Global()
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -37,4 +38,4 @@ import oauthConfig from './config/oauth.config';
     RedisModule,
   ],
 })
-export class InfrastructureModule {}
+export class InfrastructureModule { }

@@ -122,16 +122,16 @@ kubectl apply -f charts/platform/kong/templates/jwt-plugin.yaml
 kubectl apply -f charts/platform/kong/templates/ingress.yaml
 ```
 
-### 3. Rebuild and Deploy gRPC Gateway
+### 3. Rebuild and Deploy BFF Service
 ```bash
 # Build new image
-docker build -t grpc-gateway:v8 -f api-gateway/grpc-gateway/Dockerfile .
+docker build -t bff-service:v1 -f service/bff-service/Dockerfile .
 
 # Load to minikube
-minikube image load grpc-gateway:v8
+minikube image load bff-service:v1
 
-# Update deployment
-kubectl set image deployment/grpc-gateway -n kong grpc-gateway=grpc-gateway:v8
+# Deploy via Helm
+helm upgrade --install bff-service apps/bff-service -n dev -f apps/bff-service/values-minikube.yaml
 ```
 
 ### 4. Rebuild and Deploy User Service

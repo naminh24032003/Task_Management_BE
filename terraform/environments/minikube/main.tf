@@ -315,3 +315,83 @@ module "redis" {
   maxmemory_policy = "allkeys-lru"
   enable_metrics   = true
 }
+
+# -----------------------------------------------------------------------------
+# BFF Module (GraphQL Gateway)
+# -----------------------------------------------------------------------------
+
+module "bff_service" {
+  source = "../../modules/platform/bff"
+  count  = var.bff_enabled ? 1 : 0
+
+  environment      = var.environment
+  namespace        = "dev"
+  create_namespace = false  # dev namespace already exists
+  release_name     = "bff-service"
+
+  # Image configuration
+  image_repository  = "bff-service"
+  image_tag         = "v1"
+  image_pull_policy = "IfNotPresent"
+
+  # Replicas (minimal for minikube)
+  replica_count = 1
+
+  # gRPC service URLs
+  user_service_url = "user-service.dev.svc.cluster.local:50051"
+  task_service_url = "task-service.dev.svc.cluster.local:50052"
+
+  # Redis configuration
+  redis_host     = "redis-cluster-master.redis.svc.cluster.local"
+  redis_port     = 6379
+  redis_db       = 1
+  redis_password = var.bff_redis_password
+
+  # Authentication
+  auth_mode  = "kong"  # BFF is behind Kong, trust Kong-injected headers
+  jwt_secret = var.bff_jwt_secret
+
+  # GraphQL settings (development)
+  graphql_playground    = true
+  graphql_introspection = true
+  graphql_debug         = true
+
+  # Rate limiting (relaxed for development)
+  rate_limit_config = {
+    user_limit  = 1000
+    user_window = 60
+    ip_limit    = 500
+    ip_window   = 60
+  }
+
+  # Resources (optimized for minikube)
+  resources = {
+    requests = { cpu = "100m", memory = "128Mi" }
+    limits   = { cpu = "300m", memory = "256Mi" }
+  }
+
+  # CORS
+  cors_origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:4200"
+  ]
+
+  # Ingress - disabled because BFF is behind Kong
+  # Kong routes /graphql -> bff-service:4000
+  ingress_enabled = false
+  ingress_class   = "nginx"
+  ingress_host    = "bff.local"
+
+  # Istio (if enabled)
+  istio_enabled  = var.istio_enabled
+  istio_mtls_mode = "STRICT"
+
+  # Monitoring
+  metrics_enabled = true
+  service_monitor_labels = {
+    release = "monitoring"
+  }
+
+  depends_on = [module.redis]
+}

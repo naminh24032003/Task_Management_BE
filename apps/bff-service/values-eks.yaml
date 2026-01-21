@@ -1,0 +1,175 @@
+# =============================================================================
+# BFF Service - EKS Production Environment Values
+# =============================================================================
+microservice:
+  nameOverride: bff-service
+  replicaCount: 3
+
+  image:
+    # Replace with your actual ECR repository
+    repository: <aws-account-id>.dkr.ecr.<region>.amazonaws.com/bff-service
+    tag: v1
+    pullPolicy: Always
+
+  envVarsCM:
+    NODE_ENV: production
+
+    # Application
+    APP_PORT: "4000"
+    APP_METRICS_PORT: "9092"
+
+    # Auth mode: 'kong' (behind Kong) - Kong validates JWT and injects headers
+    AUTH_MODE: "kong"
+
+    # GraphQL - Disable for production
+    GRAPHQL_PLAYGROUND: "false"
+    GRAPHQL_INTROSPECTION: "false"
+    GRAPHQL_DEBUG: "false"
+
+    # gRPC Services (EKS internal DNS)
+    GRPC_USER_SERVICE_URL: "user-service.prod.svc.cluster.local:50051"
+    GRPC_TASK_SERVICE_URL: "task-service.prod.svc.cluster.local:50052"
+
+    # Redis (ElastiCache or EKS Redis)
+    REDIS_HOST: "redis-cluster.prod.svc.cluster.local"
+    REDIS_PORT: "6379"
+    REDIS_DB: "1"
+    REDIS_KEY_PREFIX: "bff-service:"
+
+    # Production rate limits
+    RATE_LIMIT_USER_LIMIT: "200"
+    RATE_LIMIT_USER_WINDOW: "60"
+    RATE_LIMIT_IP_LIMIT: "100"
+    RATE_LIMIT_IP_WINDOW: "60"
+
+    # CORS for production domains
+    CORS_ORIGINS: "https://app.example.com,https://admin.example.com"
+
+  envVarsSecret: {}
+
+  # Use External Secrets Operator in production
+  envFromSecretRefs:
+    - bff-service-secrets
+
+  containerPorts:
+    http:
+      port: 4000
+    http-metrics:
+      port: 9092
+
+  service:
+    type: ClusterIP
+    ports:
+      http:
+        port: 4000
+        targetPort: http
+      http-metrics:
+        port: 9092
+        targetPort: http-metrics
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http-metrics
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http-metrics
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  metrics:
+    enabled: true
+    port: http-metrics
+    path: /metrics
+    interval: 30s
+    serviceMonitor:
+      labels:
+        release: monitoring
+
+  # Pod Disruption Budget for HA
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+
+  # Pod Anti-Affinity for spreading across nodes
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - bff-service
+            topologyKey: kubernetes.io/hostname
+
+  # Topology spread for HA across AZs
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: bff-service
+
+# External secrets - do not include actual secrets in values file
+secrets: {}
+
+# External Secrets Operator configuration
+externalSecrets:
+  enabled: true
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+  data:
+    - secretKey: JWT_SECRET
+      remoteRef:
+        key: prod/bff-service
+        property: jwt_secret
+    - secretKey: REDIS_PASSWORD
+      remoteRef:
+        key: prod/redis
+        property: password
+
+# EKS ingress settings (AWS ALB)
+# NOTE: BFF is accessed through Kong, so own ingress is disabled
+# Kong routes /graphql → bff-service:4000
+bffIngress:
+  enabled: false
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:region:account:certificate/xxx
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/actions.ssl-redirect: '{"Type": "redirect", "RedirectConfig": {"Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}'
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-port: "9092"
+  hosts:
+    - host: graphql.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: graphql-tls
+      hosts:
+        - graphql.example.com

@@ -73,6 +73,48 @@ services:
     profiles:
       - services
 
+  # =========================================================
+  # BFF SERVICE (Node.js/NestJS + GraphQL)
+  # =========================================================
+  bff-service:
+    container_name: bff-service-build
+    build:
+      context: ./service/bff-service
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - NODE_VERSION=20
+    image: bff-service:latest
+    ports:
+      - "4000:4000"  # GraphQL API
+      - "9092:9092"  # Metrics
+    environment:
+      - NODE_ENV=development
+      - APP_PORT=4000
+      - APP_METRICS_PORT=9092
+      - GRAPHQL_PLAYGROUND=true
+      - GRAPHQL_INTROSPECTION=true
+      - GRAPHQL_DEBUG=true
+      - GRPC_USER_SERVICE_URL=user-service:50051
+      - GRPC_TASK_SERVICE_URL=task-service:50052
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=dev-jwt-secret-for-local-testing-only
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+    depends_on:
+      - user-service
+      - task-service
+    networks:
+      - services-network
+    restart: unless-stopped
+    labels:
+      - "service.name=bff-service"
+      - "service.language=nodejs"
+      - "service.type=graphql-gateway"
+      - "service.version=latest"
+    profiles:
+      - services
+
 networks:
   services-network:
     driver: bridge

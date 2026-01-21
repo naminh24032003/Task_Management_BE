@@ -1,0 +1,20 @@
+# ExternalName service to reference BFF service from dev namespace
+# This allows Kong ingress (in kong namespace) to route to BFF service (in dev namespace)
+apiVersion: v1
+kind: Service
+metadata:
+  name: bff-service
+  namespace: kong
+  labels:
+    app.kubernetes.io/name: bff-service
+    app.kubernetes.io/component: external-reference
+spec:
+  type: ExternalName
+  externalName: bff-service.dev.svc.cluster.local
+  ports:
+    - name: http
+      port: 4000
+      targetPort: 4000
+    - name: metrics
+      port: 9092
+      targetPort: 9092

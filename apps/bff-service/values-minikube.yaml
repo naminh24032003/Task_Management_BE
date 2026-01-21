@@ -1,0 +1,122 @@
+# =============================================================================
+# BFF Service - Minikube Environment Values
+# =============================================================================
+microservice:
+  nameOverride: bff-service
+  replicaCount: 1
+
+  image:
+    repository: bff-service
+    tag: v1
+    pullPolicy: IfNotPresent
+
+  envVarsCM:
+    NODE_ENV: development
+
+    # Application
+    APP_PORT: "4000"
+    APP_METRICS_PORT: "9092"
+
+    # Auth mode: 'kong' (behind Kong) or 'standalone' (validate JWT directly)
+    AUTH_MODE: "kong"
+
+    # GraphQL - Enable for development
+    GRAPHQL_PLAYGROUND: "true"
+    GRAPHQL_INTROSPECTION: "true"
+    GRAPHQL_DEBUG: "true"
+
+    # gRPC Services (Minikube internal DNS)
+    GRPC_USER_SERVICE_URL: "user-service.dev.svc.cluster.local:50051"
+    GRPC_TASK_SERVICE_URL: "task-service.dev.svc.cluster.local:50052"
+
+    # Redis (Minikube)
+    REDIS_HOST: "redis-cluster-master.redis.svc.cluster.local"
+    REDIS_PORT: "6379"
+    REDIS_DB: "1"
+    REDIS_KEY_PREFIX: "bff-service:"
+
+    # Rate Limiting (relaxed for development)
+    RATE_LIMIT_USER_LIMIT: "1000"
+    RATE_LIMIT_USER_WINDOW: "60"
+    RATE_LIMIT_IP_LIMIT: "500"
+    RATE_LIMIT_IP_WINDOW: "60"
+
+    # CORS for local development
+    CORS_ORIGINS: "http://localhost:3000,http://localhost:5173,http://localhost:4200"
+
+  envVarsSecret: {}
+
+  envFromSecretRefs:
+    - bff-service-secrets
+
+  containerPorts:
+    http:
+      port: 4000
+    http-metrics:
+      port: 9092
+
+  service:
+    type: ClusterIP
+    ports:
+      http:
+        port: 4000
+        targetPort: http
+      http-metrics:
+        port: 9092
+        targetPort: http-metrics
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http-metrics
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http-metrics
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  metrics:
+    enabled: true
+    port: http-metrics
+    path: /metrics
+    interval: 30s
+    serviceMonitor:
+      labels:
+        release: monitoring
+
+# Minikube secrets (development only - DO NOT use in production)
+secrets:
+  jwtSecret: "dev-jwt-secret-for-local-testing-only-change-in-production"
+  redisPassword: "Redis@Cluster2024Secure!"
+
+# Minikube ingress settings
+# NOTE: BFF is accessed through Kong, so own ingress is disabled
+# Kong routes /graphql → bff-service:4000
+bffIngress:
+  enabled: false
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  hosts:
+    - host: bff.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { RpcException } from '@nestjs/microservices';
+import { GrpcMethod, RpcException } from '@nestjs/microservices';
 import {
   AuthServiceController,
   AuthServiceControllerMethods,
@@ -33,8 +33,9 @@ export class AuthController implements AuthServiceController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly authService: UserAuthenticationService, // For refresh/validate/logout
-  ) {}
+  ) { }
 
+  @GrpcMethod('AuthService', 'Register')
   async register(request: RegisterRequest): Promise<RegisterResponse> {
     try {
       const result = await this.commandBus.execute<RegisterUserCommand, RegisterUserResult>(
@@ -61,6 +62,7 @@ export class AuthController implements AuthServiceController {
     }
   }
 
+  @GrpcMethod('AuthService', 'GoogleLogin')
   async googleLogin(request: GoogleLoginRequest): Promise<GoogleLoginResponse> {
     try {
       const result = await this.commandBus.execute<GoogleLoginCommand, GoogleLoginResult>(
@@ -87,6 +89,7 @@ export class AuthController implements AuthServiceController {
     }
   }
 
+  @GrpcMethod('AuthService', 'Login')
   async login(request: LoginRequest): Promise<LoginResponse> {
     try {
       const result = await this.commandBus.execute<LoginCommand, LoginResult>(
@@ -109,6 +112,7 @@ export class AuthController implements AuthServiceController {
     }
   }
 
+  @GrpcMethod('AuthService', 'RefreshToken')
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
     try {
       const tokens = await this.authService.refreshToken(request.refreshToken);
@@ -128,6 +132,7 @@ export class AuthController implements AuthServiceController {
     }
   }
 
+  @GrpcMethod('AuthService', 'ValidateToken')
   async validateToken(request: ValidateTokenRequest): Promise<ValidateTokenResponse> {
     const result = await this.authService.validateToken(request.accessToken);
 
@@ -139,6 +144,7 @@ export class AuthController implements AuthServiceController {
     };
   }
 
+  @GrpcMethod('AuthService', 'Logout')
   async logout(request: LogoutRequest): Promise<LogoutResponse> {
     const success = await this.authService.logout(request.refreshToken);
     return { success };

@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
 # Deploy User API to Minikube
-# Flow: Kong -> gRPC Gateway -> User Service -> MongoDB
+# Flow: Kong -> BFF (GraphQL) -> User Service -> MongoDB
 # =============================================================================
 
 set -e
@@ -39,11 +39,11 @@ cd "$PROJECT_ROOT"
 docker build -t user-service:v2 -f service/user-service/Dockerfile .
 
 # =============================================================================
-# Step 2: Build gRPC Gateway Image
+# Step 2: Build BFF Service Image
 # =============================================================================
 echo ""
-echo -e "${GREEN}Step 2: Building gRPC Gateway image...${NC}"
-docker build -t grpc-gateway:v6 -f api-gateway/grpc-gateway/Dockerfile .
+echo -e "${GREEN}Step 2: Building BFF Service image...${NC}"
+docker build -t bff-service:v1 -f service/bff-service/Dockerfile .
 
 # =============================================================================
 # Step 3: Deploy User Service
@@ -63,19 +63,18 @@ helm upgrade --install user-service . \
     --wait
 
 # =============================================================================
-# Step 4: Deploy gRPC Gateway
+# Step 4: Deploy BFF Service
 # =============================================================================
 echo ""
-echo -e "${GREEN}Step 4: Deploying gRPC Gateway...${NC}"
+echo -e "${GREEN}Step 4: Deploying BFF Service...${NC}"
 
-# Update image tag in deployment.yaml
-cd "$PROJECT_ROOT/api-gateway/grpc-gateway"
-sed -i 's/grpc-gateway:v[0-9]*/grpc-gateway:v6/g' deployment.yaml
+cd "$PROJECT_ROOT/apps/bff-service"
+helm dependency update
 
-kubectl apply -f deployment.yaml
-
-# Wait for deployment
-kubectl rollout status deployment/grpc-gateway -n kong --timeout=120s
+helm upgrade --install bff-service . \
+    -n dev \
+    -f values-minikube.yaml \
+    --wait
 
 # =============================================================================
 # Step 5: Apply Kong Ingress
@@ -100,26 +99,24 @@ echo ""
 echo -e "${YELLOW}API Endpoints:${NC}"
 echo "  Base URL: http://${MINIKUBE_IP}:${KONG_PORT}"
 echo ""
-echo "  Auth Endpoints:"
-echo "    POST /v1/auth/register  - Create new user"
-echo "    POST /v1/auth/login     - Login with email/password"
-echo "    POST /v1/auth/refresh   - Refresh access token"
-echo "    POST /v1/auth/logout    - Logout"
+echo "  GraphQL Endpoint (BFF):"
+echo "    POST /graphql  - GraphQL API"
 echo ""
-echo "  User Endpoints:"
-echo "    GET  /v1/users          - List users"
-echo "    GET  /v1/users/{id}     - Get user by ID"
-echo "    GET  /v1/users/me       - Get current user"
-echo "    PATCH /v1/users/{id}    - Update user"
-echo "    DELETE /v1/users/{id}   - Delete user"
+echo "  BFF Health Check:"
+echo "    GET /bff/health  - Health check"
 echo ""
 echo -e "${YELLOW}Quick Test:${NC}"
-echo "  curl http://${MINIKUBE_IP}:${KONG_PORT}/healthz"
+echo "  curl http://${MINIKUBE_IP}:${KONG_PORT}/bff/health"
+echo ""
+echo -e "${YELLOW}GraphQL Introspection:${NC}"
+echo "  curl -X POST http://${MINIKUBE_IP}:${KONG_PORT}/graphql \\"
+echo "    -H 'Content-Type: application/json' \\"
+echo "    -d '{\"query\": \"{ __schema { types { name } } }\"}'"
 echo ""
 echo -e "${YELLOW}Register a User:${NC}"
-echo "  curl -X POST http://${MINIKUBE_IP}:${KONG_PORT}/v1/auth/register \\"
+echo "  curl -X POST http://${MINIKUBE_IP}:${KONG_PORT}/graphql \\"
 echo "    -H 'Content-Type: application/json' \\"
-echo "    -d '{\"tenant_id\":\"tenant-1\",\"email\":\"test@example.com\",\"password\":\"Test@123456\",\"first_name\":\"Test\",\"last_name\":\"User\"}'"
+echo "    -d '{\"query\": \"mutation { register(input: { tenantId: \\\"tenant-1\\\", email: \\\"test@example.com\\\", password: \\\"Test@123456\\\", firstName: \\\"Test\\\", lastName: \\\"User\\\" }) { accessToken refreshToken } }\"}'"
 echo ""
 echo -e "${YELLOW}Check Pods:${NC}"
 echo "  kubectl get pods -n dev"

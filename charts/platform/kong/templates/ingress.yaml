@@ -14,19 +14,22 @@ spec:
   rules:
   - http:
       paths:
-      # Route all /v1/* to grpc-gateway
-      - path: /v1
+      # ============================================================
+      # BFF (GraphQL Gateway) - Primary API endpoint
+      # ============================================================
+      # GraphQL endpoint - main entry point for frontend apps
+      - path: /graphql
         pathType: Prefix
         backend:
           service:
-            name: grpc-gateway
+            name: bff-service
             port:
-              number: 8080
-      # Health check endpoint
-      - path: /healthz
+              number: 4000
+      # BFF health check
+      - path: /bff/health
         pathType: Exact
         backend:
           service:
-            name: grpc-gateway
+            name: bff-service
             port:
-              number: 8080
+              number: 9092
