@@ -2,34 +2,30 @@ package repository
 
 import (
 	"context"
-
 	"task-service/internal/domain/aggregate"
+	"task-service/internal/domain/valueobject"
+	"time"
 )
 
-// TaskRepository defines the interface for task persistence
-// This is a PORT in Hexagonal Architecture
+type TaskFilter struct {
+	ProjectID   string
+	SpaceID     string
+	AssigneeIDs []string
+	Statuses    []valueobject.TaskStatus
+	Priorities  []valueobject.TaskPriority
+	Tags        []string
+	SearchQuery string
+	DueDateFrom *time.Time
+	DueDateTo   *time.Time
+}
+
 type TaskRepository interface {
-	// Create saves a new task
 	Create(ctx context.Context, task *aggregate.Task) error
-
-	// FindByID finds a task by ID
-	FindByID(ctx context.Context, id string) (*aggregate.Task, error)
-
-	// Update updates an existing task
 	Update(ctx context.Context, task *aggregate.Task) error
+	Delete(ctx context.Context, tenantID, id string) error
+	FindByID(ctx context.Context, tenantID, id string) (*aggregate.Task, error)
+	FindAll(ctx context.Context, tenantID string, page, pageSize int32, filter TaskFilter) ([]*aggregate.Task, int64, error)
 
-	// Delete deletes a task
-	Delete(ctx context.Context, id string) error
-
-	// List returns a paginated list of tasks
-	List(ctx context.Context, offset, limit int) ([]*aggregate.Task, error)
-
-	// FindByProjectID finds tasks by project ID
-	FindByProjectID(ctx context.Context, projectID string, offset, limit int) ([]*aggregate.Task, error)
-
-	// FindByAssigneeID finds tasks by assignee ID
-	FindByAssigneeID(ctx context.Context, assigneeID string, offset, limit int) ([]*aggregate.Task, error)
-
-	// FindByStatus finds tasks by status
-	FindByStatus(ctx context.Context, status string, offset, limit int) ([]*aggregate.Task, error)
+	BulkUpdateStatus(ctx context.Context, tenantID string, ids []string, status valueobject.TaskStatus) (int32, []string, error)
+	BulkAssign(ctx context.Context, tenantID string, ids []string, assigneeIDs []string) (int32, []string, error)
 }

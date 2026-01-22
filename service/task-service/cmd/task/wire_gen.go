@@ -23,12 +23,22 @@ func wireApp(c config.Config, logger log.Logger) (*kratos.App, func(), error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	taskRepository := data.NewTaskRepository(database, logger)
-	taskService := grpc.NewTaskService(taskRepository, logger)
+	taskRepository := data.NewTaskRepository(database)
+	taskDomainService := data.NewTaskDomainService(taskRepository)
+	producer, cleanup2, err := data.NewKafkaProducer(c, logger)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	eventPublisher := data.NewTaskEventPublisher(producer)
+	commandHandler := data.NewCommandHandler(taskRepository, taskDomainService, eventPublisher)
+	queryHandler := data.NewQueryHandler(taskRepository)
+	taskService := grpc.NewTaskService(commandHandler, queryHandler, logger)
 	grpcServer := server.NewGRPCServer(logger, taskService)
 	httpServer := server.NewHTTPServer(logger)
 	app := newApp(logger, grpcServer, httpServer)
 	return app, func() {
+		cleanup2()
 		cleanup()
 	}, nil
 }

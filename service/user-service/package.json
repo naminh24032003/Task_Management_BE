@@ -59,6 +59,7 @@
     "dotenv": "^17.2.3",
     "google-auth-library": "^10.5.0",
     "ioredis": "^5.9.2",
+    "kafkajs": "^2.2.4",
     "mongodb": "^6.10.0",
     "mongoose": "^8.8.0",
     "passport": "^0.7.0",

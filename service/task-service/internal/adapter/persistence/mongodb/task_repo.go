@@ -2,7 +2,6 @@ package mongodb
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -10,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"task-service/internal/domain/aggregate"
+	"task-service/internal/domain/repository"
 	"task-service/internal/domain/valueobject"
 )
 
@@ -18,21 +18,34 @@ type TaskRepository struct {
 	collection *mongo.Collection
 }
 
-// TaskDocument represents the MongoDB document structure
+// TaskDocument represents the MongoDB document structure for ClickUp tasks
 type TaskDocument struct {
-	ID          string     `bson:"_id"`
-	Title       string     `bson:"title"`
-	Description string     `bson:"description"`
-	Status      string     `bson:"status"`
-	Priority    string     `bson:"priority"`
-	AssigneeID  string     `bson:"assignee_id,omitempty"`
-	ProjectID   string     `bson:"project_id"`
-	DueDate     *time.Time `bson:"due_date,omitempty"`
-	CreatedAt   time.Time  `bson:"created_at"`
-	UpdatedAt   time.Time  `bson:"updated_at"`
+	ID                  string            `bson:"_id"`
+	TenantID            string            `bson:"tenant_id"`
+	Title               string            `bson:"title"`
+	Description         string            `bson:"description"`
+	Status              int32             `bson:"status"`
+	Priority            int32             `bson:"priority"`
+	AssigneeIDs         []string          `bson:"assignee_ids"`
+	WatcherIDs          []string          `bson:"watcher_ids"`
+	CreatorID           string            `bson:"creator_id"`
+	ProjectID           string            `bson:"project_id"`
+	SpaceID             string            `bson:"space_id"`
+	ParentTaskID        string            `bson:"parent_task_id,omitempty"`
+	CreatedAt           time.Time         `bson:"created_at"`
+	UpdatedAt           time.Time         `bson:"updated_at"`
+	DueDate             *time.Time        `bson:"due_date,omitempty"`
+	StartDate           *time.Time        `bson:"start_date,omitempty"`
+	CompletedAt         *time.Time        `bson:"completed_at,omitempty"`
+	TimeEstimateMinutes int32             `bson:"time_estimate_minutes"`
+	TimeTrackedMinutes  int32             `bson:"time_tracked_minutes"`
+	Tags                []string          `bson:"tags"`
+	DependencyIDs       []string          `bson:"dependency_ids"`
+	OrderIndex          int32             `bson:"order_index"`
+	CustomFields        map[string]string `bson:"custom_fields,omitempty"`
 }
 
-// NewTaskRepository creates a new MongoDB task repository
+// NewTaskRepository creates a new MongoDB task repository with ClickUp indexes
 func NewTaskRepository(db *mongo.Database) *TaskRepository {
 	collection := db.Collection("tasks")
 
@@ -42,147 +55,90 @@ func NewTaskRepository(db *mongo.Database) *TaskRepository {
 
 	indexes := []mongo.IndexModel{
 		{
-			Keys: bson.D{{Key: "project_id", Value: 1}},
+			Keys: bson.D{
+				{Key: "tenant_id", Value: 1},
+				{Key: "project_id", Value: 1},
+				{Key: "order_index", Value: 1},
+			},
 		},
 		{
-			Keys: bson.D{{Key: "assignee_id", Value: 1}},
+			Keys: bson.D{
+				{Key: "tenant_id", Value: 1},
+				{Key: "assignee_ids", Value: 1},
+			},
 		},
 		{
-			Keys: bson.D{{Key: "status", Value: 1}},
+			Keys: bson.D{
+				{Key: "tenant_id", Value: 1},
+				{Key: "status", Value: 1},
+			},
 		},
 		{
-			Keys: bson.D{{Key: "created_at", Value: -1}},
+			Keys: bson.D{{Key: "title", Value: "text"}, {Key: "description", Value: "text"}},
 		},
 	}
 
-	_, err := collection.Indexes().CreateMany(ctx, indexes)
-	if err != nil {
-		// Log error but don't fail - indexes might already exist
-		fmt.Printf("Warning: failed to create indexes: %v\n", err)
-	}
+	_, _ = collection.Indexes().CreateMany(ctx, indexes)
 
 	return &TaskRepository{collection: collection}
 }
 
-// Create saves a new task
 func (r *TaskRepository) Create(ctx context.Context, task *aggregate.Task) error {
 	doc := r.toDocument(task)
-
 	_, err := r.collection.InsertOne(ctx, doc)
-	if err != nil {
-		return fmt.Errorf("failed to insert task: %w", err)
-	}
-
-	return nil
+	return err
 }
 
-// FindByID finds a task by ID
-func (r *TaskRepository) FindByID(ctx context.Context, id string) (*aggregate.Task, error) {
-	var doc TaskDocument
-
-	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&doc)
-	if err == mongo.ErrNoDocuments {
-		return nil, fmt.Errorf("task not found")
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to find task: %w", err)
-	}
-
-	return r.toAggregate(&doc)
-}
-
-// Update updates an existing task
 func (r *TaskRepository) Update(ctx context.Context, task *aggregate.Task) error {
 	doc := r.toDocument(task)
+	filter := bson.M{"_id": task.ID, "tenant_id": task.TenantID}
+	_, err := r.collection.ReplaceOne(ctx, filter, doc)
+	return err
+}
 
-	filter := bson.M{"_id": task.ID}
-	update := bson.M{
-		"$set": bson.M{
-			"title":       doc.Title,
-			"description": doc.Description,
-			"status":      doc.Status,
-			"priority":    doc.Priority,
-			"assignee_id": doc.AssigneeID,
-			"due_date":    doc.DueDate,
-			"updated_at":  doc.UpdatedAt,
-		},
-	}
+func (r *TaskRepository) Delete(ctx context.Context, tenantID, id string) error {
+	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id, "tenant_id": tenantID})
+	return err
+}
 
-	result, err := r.collection.UpdateOne(ctx, filter, update)
+func (r *TaskRepository) FindByID(ctx context.Context, tenantID, id string) (*aggregate.Task, error) {
+	var doc TaskDocument
+	err := r.collection.FindOne(ctx, bson.M{"_id": id, "tenant_id": tenantID}).Decode(&doc)
 	if err != nil {
-		return fmt.Errorf("failed to update task: %w", err)
+		return nil, err
 	}
-
-	if result.MatchedCount == 0 {
-		return fmt.Errorf("task not found")
-	}
-
-	return nil
+	return r.toAggregate(&doc), nil
 }
 
-// Delete deletes a task
-func (r *TaskRepository) Delete(ctx context.Context, id string) error {
-	result, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
+func (r *TaskRepository) FindAll(ctx context.Context, tenantID string, page, pageSize int32, filter repository.TaskFilter) ([]*aggregate.Task, int64, error) {
+	bsonFilter := bson.M{"tenant_id": tenantID}
+
+	if filter.ProjectID != "" {
+		bsonFilter["project_id"] = filter.ProjectID
+	}
+	if filter.SpaceID != "" {
+		bsonFilter["space_id"] = filter.SpaceID
+	}
+	if len(filter.Statuses) > 0 {
+		bsonFilter["status"] = bson.M{"$in": filter.Statuses}
+	}
+	if len(filter.AssigneeIDs) > 0 {
+		bsonFilter["assignee_ids"] = bson.M{"$in": filter.AssigneeIDs}
+	}
+	if filter.SearchQuery != "" {
+		bsonFilter["$text"] = bson.M{"$search": filter.SearchQuery}
+	}
+
+	total, _ := r.collection.CountDocuments(ctx, bsonFilter)
+
+	findOptions := options.Find()
+	findOptions.SetLimit(int64(pageSize))
+	findOptions.SetSkip(int64((page - 1) * pageSize))
+	findOptions.SetSort(bson.D{{Key: "created_at", Value: -1}})
+
+	cursor, err := r.collection.Find(ctx, bsonFilter, findOptions)
 	if err != nil {
-		return fmt.Errorf("failed to delete task: %w", err)
-	}
-
-	if result.DeletedCount == 0 {
-		return fmt.Errorf("task not found")
-	}
-
-	return nil
-}
-
-// List returns a paginated list of tasks
-func (r *TaskRepository) List(ctx context.Context, offset, limit int) ([]*aggregate.Task, error) {
-	findOptions := options.Find().
-		SetSort(bson.D{{Key: "created_at", Value: -1}}).
-		SetSkip(int64(offset)).
-		SetLimit(int64(limit))
-
-	return r.findTasks(ctx, bson.M{}, findOptions)
-}
-
-// FindByProjectID finds tasks by project ID
-func (r *TaskRepository) FindByProjectID(ctx context.Context, projectID string, offset, limit int) ([]*aggregate.Task, error) {
-	filter := bson.M{"project_id": projectID}
-	findOptions := options.Find().
-		SetSort(bson.D{{Key: "created_at", Value: -1}}).
-		SetSkip(int64(offset)).
-		SetLimit(int64(limit))
-
-	return r.findTasks(ctx, filter, findOptions)
-}
-
-// FindByAssigneeID finds tasks by assignee ID
-func (r *TaskRepository) FindByAssigneeID(ctx context.Context, assigneeID string, offset, limit int) ([]*aggregate.Task, error) {
-	filter := bson.M{"assignee_id": assigneeID}
-	findOptions := options.Find().
-		SetSort(bson.D{{Key: "created_at", Value: -1}}).
-		SetSkip(int64(offset)).
-		SetLimit(int64(limit))
-
-	return r.findTasks(ctx, filter, findOptions)
-}
-
-// FindByStatus finds tasks by status
-func (r *TaskRepository) FindByStatus(ctx context.Context, status string, offset, limit int) ([]*aggregate.Task, error) {
-	filter := bson.M{"status": status}
-	findOptions := options.Find().
-		SetSort(bson.D{{Key: "created_at", Value: -1}}).
-		SetSkip(int64(offset)).
-		SetLimit(int64(limit))
-
-	return r.findTasks(ctx, filter, findOptions)
-}
-
-// Helper methods
-
-func (r *TaskRepository) findTasks(ctx context.Context, filter bson.M, opts *options.FindOptions) ([]*aggregate.Task, error) {
-	cursor, err := r.collection.Find(ctx, filter, opts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find tasks: %w", err)
+		return nil, 0, err
 	}
 	defer cursor.Close(ctx)
 
@@ -190,56 +146,90 @@ func (r *TaskRepository) findTasks(ctx context.Context, filter bson.M, opts *opt
 	for cursor.Next(ctx) {
 		var doc TaskDocument
 		if err := cursor.Decode(&doc); err != nil {
-			return nil, fmt.Errorf("failed to decode task: %w", err)
+			return nil, 0, err
 		}
-
-		task, err := r.toAggregate(&doc)
-		if err != nil {
-			return nil, err
-		}
-
-		tasks = append(tasks, task)
+		tasks = append(tasks, r.toAggregate(&doc))
 	}
 
-	if err := cursor.Err(); err != nil {
-		return nil, fmt.Errorf("cursor error: %w", err)
-	}
-
-	return tasks, nil
+	return tasks, total, nil
 }
+
+func (r *TaskRepository) BulkUpdateStatus(ctx context.Context, tenantID string, ids []string, status valueobject.TaskStatus) (int32, []string, error) {
+	filter := bson.M{"_id": bson.M{"$in": ids}, "tenant_id": tenantID}
+	update := bson.M{"$set": bson.M{"status": int32(status), "updated_at": time.Now()}}
+
+	result, err := r.collection.UpdateMany(ctx, filter, update)
+	if err != nil {
+		return 0, nil, err
+	}
+	return int32(result.ModifiedCount), nil, nil
+}
+
+func (r *TaskRepository) BulkAssign(ctx context.Context, tenantID string, ids []string, assigneeIDs []string) (int32, []string, error) {
+	filter := bson.M{"_id": bson.M{"$in": ids}, "tenant_id": tenantID}
+	update := bson.M{"$set": bson.M{"assignee_ids": assigneeIDs, "updated_at": time.Now()}}
+
+	result, err := r.collection.UpdateMany(ctx, filter, update)
+	if err != nil {
+		return 0, nil, err
+	}
+	return int32(result.ModifiedCount), nil, nil
+}
+
+// Helpers
 
 func (r *TaskRepository) toDocument(task *aggregate.Task) *TaskDocument {
 	return &TaskDocument{
-		ID:          task.ID,
-		Title:       task.Title,
-		Description: task.Description,
-		Status:      task.Status.String(),
-		Priority:    task.Priority.String(),
-		AssigneeID:  task.AssigneeID,
-		ProjectID:   task.ProjectID,
-		DueDate:     task.DueDate,
-		CreatedAt:   task.CreatedAt,
-		UpdatedAt:   task.UpdatedAt,
+		ID:                  task.ID,
+		TenantID:            task.TenantID,
+		Title:               task.Title,
+		Description:         task.Description,
+		Status:              int32(task.Status),
+		Priority:            int32(task.Priority),
+		AssigneeIDs:         task.AssigneeIDs,
+		WatcherIDs:          task.WatcherIDs,
+		CreatorID:           task.CreatorID,
+		ProjectID:           task.ProjectID,
+		SpaceID:             task.SpaceID,
+		ParentTaskID:        task.ParentTaskID,
+		CreatedAt:           task.CreatedAt,
+		UpdatedAt:           task.UpdatedAt,
+		DueDate:             task.DueDate,
+		StartDate:           task.StartDate,
+		CompletedAt:         task.CompletedAt,
+		TimeEstimateMinutes: task.TimeEstimateMinutes,
+		TimeTrackedMinutes:  task.TimeTrackedMinutes,
+		Tags:                task.Tags,
+		DependencyIDs:       task.DependencyIDs,
+		OrderIndex:          task.OrderIndex,
+		CustomFields:        task.CustomFields,
 	}
 }
 
-func (r *TaskRepository) toAggregate(doc *TaskDocument) (*aggregate.Task, error) {
-	task, err := aggregate.NewTask(
-		doc.ID,
-		doc.Title,
-		doc.Description,
-		doc.ProjectID,
-		valueobject.ParsePriority(doc.Priority),
-		doc.DueDate,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create task aggregate: %w", err)
+func (r *TaskRepository) toAggregate(doc *TaskDocument) *aggregate.Task {
+	return &aggregate.Task{
+		ID:                  doc.ID,
+		TenantID:            doc.TenantID,
+		Title:               doc.Title,
+		Description:         doc.Description,
+		Status:              valueobject.TaskStatus(doc.Status),
+		Priority:            valueobject.TaskPriority(doc.Priority),
+		AssigneeIDs:         doc.AssigneeIDs,
+		WatcherIDs:          doc.WatcherIDs,
+		CreatorID:           doc.CreatorID,
+		ProjectID:           doc.ProjectID,
+		SpaceID:             doc.SpaceID,
+		ParentTaskID:        doc.ParentTaskID,
+		CreatedAt:           doc.CreatedAt,
+		UpdatedAt:           doc.UpdatedAt,
+		DueDate:             doc.DueDate,
+		StartDate:           doc.StartDate,
+		CompletedAt:         doc.CompletedAt,
+		TimeEstimateMinutes: doc.TimeEstimateMinutes,
+		TimeTrackedMinutes:  doc.TimeTrackedMinutes,
+		Tags:                doc.Tags,
+		DependencyIDs:       doc.DependencyIDs,
+		OrderIndex:          doc.OrderIndex,
+		CustomFields:        doc.CustomFields,
 	}
-
-	task.Status = valueobject.TaskStatus(doc.Status)
-	task.AssigneeID = doc.AssigneeID
-	task.CreatedAt = doc.CreatedAt
-	task.UpdatedAt = doc.UpdatedAt
-
-	return task, nil
 }

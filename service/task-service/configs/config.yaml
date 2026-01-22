@@ -35,8 +35,15 @@ data:
 
   kafka:
     brokers: ${KAFKA_BROKERS:localhost:9092}
-    topic_task_events: ${KAFKA_TOPIC_TASK_EVENTS:task-events}
-    consumer_group: ${KAFKA_CONSUMER_GROUP:task-service-consumer}
+    topic_tasks: ${KAFKA_TOPIC_TASKS:tasks}
+    topic_task_assignments: ${KAFKA_TOPIC_TASK_ASSIGNMENTS:task-assignments}
+    consumer_group: ${KAFKA_CONSUMER_GROUP:task-service-group}
+    # SASL Authentication
+    sasl:
+      enabled: ${KAFKA_SASL_ENABLED:true}
+      mechanism: ${KAFKA_SASL_MECHANISM:SCRAM-SHA-256}
+      username: ${KAFKA_USERNAME:kafka-user}
+      password: ${KAFKA_PASSWORD:}
 
   user_service:
     addr: ${USER_SERVICE_ADDR:localhost:50051}

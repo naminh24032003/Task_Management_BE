@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { GrpcMethod, RpcException } from '@nestjs/microservices';
+import { SkipTenantCheck } from '../multi-tenancy/decorators/skip-tenant-check.decorator';
 import {
   AuthServiceController,
   AuthServiceControllerMethods,
@@ -112,6 +113,7 @@ export class AuthController implements AuthServiceController {
     }
   }
 
+  @SkipTenantCheck()
   @GrpcMethod('AuthService', 'RefreshToken')
   async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
     try {
@@ -132,6 +134,7 @@ export class AuthController implements AuthServiceController {
     }
   }
 
+  @SkipTenantCheck()
   @GrpcMethod('AuthService', 'ValidateToken')
   async validateToken(request: ValidateTokenRequest): Promise<ValidateTokenResponse> {
     const result = await this.authService.validateToken(request.accessToken);
@@ -144,6 +147,7 @@ export class AuthController implements AuthServiceController {
     };
   }
 
+  @SkipTenantCheck()
   @GrpcMethod('AuthService', 'Logout')
   async logout(request: LogoutRequest): Promise<LogoutResponse> {
     const success = await this.authService.logout(request.refreshToken);

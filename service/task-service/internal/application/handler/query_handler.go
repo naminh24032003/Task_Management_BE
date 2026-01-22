@@ -22,37 +22,35 @@ func NewQueryHandler(taskRepo repository.TaskRepository) *QueryHandler {
 }
 
 // HandleGetTask handles get task query
-func (h *QueryHandler) HandleGetTask(ctx context.Context, qry *query.GetTaskQuery) (*aggregate.Task, error) {
-	task, err := h.taskRepo.FindByID(ctx, qry.TaskID)
+func (h *QueryHandler) HandleGetTask(ctx context.Context, q *query.GetTaskQuery) (*aggregate.Task, error) {
+	task, err := h.taskRepo.FindByID(ctx, q.TenantID, q.ID)
 	if err != nil {
-		return nil, fmt.Errorf("task not found: %w", err)
+		return nil, fmt.Errorf("failed to find task: %w", err)
 	}
 	return task, nil
 }
 
 // HandleListTasks handles list tasks query
-func (h *QueryHandler) HandleListTasks(ctx context.Context, qry *query.ListTasksQuery) ([]*aggregate.Task, error) {
-	// Apply filters based on query
-	if qry.ProjectID != "" {
-		return h.taskRepo.FindByProjectID(ctx, qry.ProjectID, qry.Offset, qry.Limit)
+func (h *QueryHandler) HandleListTasks(ctx context.Context, q *query.ListTasksQuery) ([]*aggregate.Task, int64, error) {
+	filter := repository.TaskFilter{
+		ProjectID:   q.ProjectID,
+		SpaceID:     q.SpaceID,
+		AssigneeIDs: q.AssigneeIDs,
+		Statuses:    q.Statuses,
+		Priorities:  q.Priorities,
+		Tags:        q.Tags,
+		SearchQuery: q.SearchQuery,
 	}
 
-	if qry.AssigneeID != "" {
-		return h.taskRepo.FindByAssigneeID(ctx, qry.AssigneeID, qry.Offset, qry.Limit)
-	}
-
-	if qry.Status != "" {
-		return h.taskRepo.FindByStatus(ctx, qry.Status, qry.Offset, qry.Limit)
-	}
-
-	return h.taskRepo.List(ctx, qry.Offset, qry.Limit)
+	return h.taskRepo.FindAll(ctx, q.TenantID, q.Page, q.PageSize, filter)
 }
 
 // HandleGetTasksByProject handles get tasks by project query
-func (h *QueryHandler) HandleGetTasksByProject(ctx context.Context, qry *query.GetTasksByProjectQuery) ([]*aggregate.Task, error) {
-	tasks, err := h.taskRepo.FindByProjectID(ctx, qry.ProjectID, qry.Offset, qry.Limit)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list tasks: %w", err)
+func (h *QueryHandler) HandleGetTasksByProject(ctx context.Context, q *query.GetTasksByProjectQuery) ([]*aggregate.Task, int64, error) {
+	filter := repository.TaskFilter{
+		ProjectID: q.ProjectID,
+		Statuses:  q.Statuses,
 	}
-	return tasks, nil
+
+	return h.taskRepo.FindAll(ctx, q.TenantID, q.Page, q.PageSize, filter)
 }

@@ -7,7 +7,7 @@ const kafka = new Kafka({
   sasl: {
     mechanism: 'scram-sha-256',
     username: process.env.KAFKA_USERNAME || 'kafka-user',
-    password: process.env.KAFKA_PASSWORD || 'kafka-secret-password'
+    password: process.env.KAFKA_PASSWORD
   },
   retry: {
     initialRetryTime: 300,

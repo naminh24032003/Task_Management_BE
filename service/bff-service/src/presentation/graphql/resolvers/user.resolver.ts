@@ -11,6 +11,7 @@ import { LoginUseCase } from '../../../application/user/login.usecase';
 import {
   User,
   UserConnection,
+  UserStatus,
   TokenPair,
   AuthPayload,
   OperationResponse,
@@ -86,6 +87,7 @@ export class UserResolver {
     return this.mapTokens(result.tokens);
   }
 
+  @Public()
   @Mutation(() => OperationResponse, { description: 'Logout and invalidate refresh token' })
   async logout(@Args('refreshToken') refreshToken: string): Promise<OperationResponse> {
     this.logger.log('Logout attempt');
@@ -301,17 +303,43 @@ export class UserResolver {
     }
     return {
       id: grpcUser.id,
-      tenantId: grpcUser.tenantId,
+      tenantId: grpcUser.tenant_id,
       email: grpcUser.email,
-      firstName: grpcUser.firstName,
-      lastName: grpcUser.lastName,
-      displayName: grpcUser.displayName,
-      status: grpcUser.status,
-      roleIds: grpcUser.roleIds || [],
-      createdAt: grpcUser.createdAt,
-      updatedAt: grpcUser.updatedAt,
-      lastLoginAt: grpcUser.lastLoginAt,
+      firstName: grpcUser.first_name,
+      lastName: grpcUser.last_name,
+      displayName: grpcUser.display_name,
+      status: this.mapUserStatus(grpcUser.status),
+      roleIds: grpcUser.role_ids || [],
+      createdAt: this.convertTimestamp(grpcUser.created_at) || new Date().toISOString(),
+      updatedAt: this.convertTimestamp(grpcUser.updated_at) || new Date().toISOString(),
+      lastLoginAt: this.convertTimestamp(grpcUser.last_login_at),
     };
+  }
+
+  private mapUserStatus(status: any): UserStatus {
+    const userStatusMap: Record<number | string, UserStatus> = {
+      0: UserStatus.UNSPECIFIED,
+      1: UserStatus.ACTIVE,
+      2: UserStatus.INACTIVE,
+      3: UserStatus.SUSPENDED,
+      4: UserStatus.DELETED,
+      'USER_STATUS_UNSPECIFIED': UserStatus.UNSPECIFIED,
+      'USER_STATUS_ACTIVE': UserStatus.ACTIVE,
+      'USER_STATUS_INACTIVE': UserStatus.INACTIVE,
+      'USER_STATUS_SUSPENDED': UserStatus.SUSPENDED,
+      'USER_STATUS_PENDING': UserStatus.ACTIVE, // Map pending to active or similar if needed
+    };
+    return userStatusMap[status] ?? UserStatus.UNSPECIFIED;
+  }
+
+  private convertTimestamp(timestamp: any): string | undefined {
+    if (!timestamp) return undefined;
+    if (typeof timestamp === 'object' && timestamp.seconds) {
+      const seconds = Number(timestamp.seconds);
+      return new Date(seconds * 1000).toISOString();
+    }
+    if (typeof timestamp === 'string' && timestamp !== "") return timestamp;
+    return undefined;
   }
 
   private mapTokens(grpcTokens: any): TokenPair {
@@ -319,9 +347,9 @@ export class UserResolver {
       throw new Error('Failed to generate tokens');
     }
     return {
-      accessToken: grpcTokens.accessToken,
-      refreshToken: grpcTokens.refreshToken,
-      expiresIn: Number(grpcTokens.expiresIn),
+      accessToken: grpcTokens.access_token || grpcTokens.accessToken,
+      refreshToken: grpcTokens.refresh_token || grpcTokens.refreshToken,
+      expiresIn: Number(grpcTokens.expires_in || grpcTokens.expiresIn),
     };
   }
 }

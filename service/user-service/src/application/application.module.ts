@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 // CQRS Handlers
 import { CommandHandlers } from './commands';
 import { QueryHandlers } from './queries';
+import { EventHandlers } from './event-handlers';
 
 // Services
 import { UserRegistrationService } from './services/user-registration.service';
@@ -31,6 +32,8 @@ import { GoogleOAuthService } from './services/google-oauth.service';
     // CQRS Handlers
     ...CommandHandlers,
     ...QueryHandlers,
+    // Event Handlers (Kafka integration)
+    ...EventHandlers,
     // Application services
     UserRegistrationService,
     UserAuthenticationService,

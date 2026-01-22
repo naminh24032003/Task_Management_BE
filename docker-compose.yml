@@ -24,8 +24,12 @@ services:
     ports:
       - "50052:50052"  # gRPC
       - "9091:9091"    # HTTP Metrics
+    env_file:
+      - ./service/task-service/.env
     environment:
       - GO_ENV=development
+      # Override Kafka broker for Docker network
+      - KAFKA_BROKERS=kafka:9092
     volumes:
       # Mount config directory for easy config changes without rebuild
       - ./service/task-service/configs:/app/configs:ro
@@ -55,8 +59,12 @@ services:
     ports:
       - "50051:50051"  # gRPC
       - "9090:9090"    # HTTP Metrics
+    env_file:
+      - ./service/user-service/.env
     environment:
       - NODE_ENV=development
+      # Override Kafka broker for Docker network
+      - KAFKA_BROKERS=kafka:9092
     volumes:
       # Mount source for hot-reload in development
       # - ./service/user-service/src:/app/src:ro

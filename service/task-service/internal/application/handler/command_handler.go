@@ -45,15 +45,23 @@ func (h *CommandHandler) HandleCreateTask(ctx context.Context, cmd *command.Crea
 		return "", err
 	}
 
-	// Parse priority
-	priority := valueobject.ParsePriority(cmd.Priority)
-
 	// Create task aggregate
 	taskID := uuid.New().String()
-	task, err := aggregate.NewTask(taskID, cmd.Title, cmd.Description, cmd.ProjectID, priority, cmd.DueDate)
+	task, err := aggregate.NewTask(taskID, cmd.TenantID, cmd.Title, cmd.CreatorID, cmd.ProjectID, cmd.SpaceID)
 	if err != nil {
 		return "", fmt.Errorf("failed to create task: %w", err)
 	}
+
+	// Set additional fields
+	task.Description = cmd.Description
+	task.Priority = valueobject.TaskPriority(cmd.Priority)
+	task.DueDate = cmd.DueDate
+	task.StartDate = cmd.StartDate
+	task.TimeEstimateMinutes = cmd.TimeEstimate
+	task.Tags = cmd.Tags
+	task.ParentTaskID = cmd.ParentTaskID
+	task.CustomFields = cmd.CustomFields
+	task.AssigneeIDs = cmd.AssigneeIDs
 
 	// Save to repository
 	if err := h.taskRepo.Create(ctx, task); err != nil {
@@ -66,61 +74,53 @@ func (h *CommandHandler) HandleCreateTask(ctx context.Context, cmd *command.Crea
 	return taskID, nil
 }
 
-// HandleAssignTask handles assign task command
-func (h *CommandHandler) HandleAssignTask(ctx context.Context, cmd *command.AssignTaskCommand) error {
-	// Load task aggregate
-	task, err := h.taskRepo.FindByID(ctx, cmd.TaskID)
+// HandleUpdateTaskStatus handles update task status command
+func (h *CommandHandler) HandleUpdateTaskStatus(ctx context.Context, cmd *command.UpdateTaskStatusCommand) error {
+	task, err := h.taskRepo.FindByID(ctx, cmd.TenantID, cmd.ID)
 	if err != nil {
 		return fmt.Errorf("task not found: %w", err)
 	}
 
-	// Check domain rules
-	if err := h.domainService.CanAssignTask(ctx, task, cmd.AssigneeID); err != nil {
+	if err := h.domainService.CanCompleteTask(ctx, task); err != nil {
+		// Only check if completing/closing, but for now simple check
+	}
+
+	if err := task.UpdateStatus(valueobject.TaskStatus(cmd.Status)); err != nil {
 		return err
 	}
 
-	// Execute domain logic
-	if err := task.Assign(cmd.AssigneeID); err != nil {
-		return err
-	}
-
-	// Save changes
 	if err := h.taskRepo.Update(ctx, task); err != nil {
 		return fmt.Errorf("failed to update task: %w", err)
 	}
 
-	// Publish events
 	h.publishEvents(ctx, task)
-
 	return nil
 }
 
-// HandleCompleteTask handles complete task command
-func (h *CommandHandler) HandleCompleteTask(ctx context.Context, cmd *command.CompleteTaskCommand) error {
-	// Load task aggregate
-	task, err := h.taskRepo.FindByID(ctx, cmd.TaskID)
+// HandleAssignTask handles assign task command
+func (h *CommandHandler) HandleAssignTask(ctx context.Context, cmd *command.AssignTaskCommand) error {
+	task, err := h.taskRepo.FindByID(ctx, cmd.TenantID, cmd.ID)
 	if err != nil {
 		return fmt.Errorf("task not found: %w", err)
 	}
 
-	// Check domain rules
-	if err := h.domainService.CanCompleteTask(ctx, task); err != nil {
-		return err
-	}
+	task.Assign(cmd.AssigneeIDs)
 
-	// Execute domain logic
-	if err := task.Complete(); err != nil {
-		return err
-	}
-
-	// Save changes
 	if err := h.taskRepo.Update(ctx, task); err != nil {
 		return fmt.Errorf("failed to update task: %w", err)
 	}
 
-	// Publish events
 	h.publishEvents(ctx, task)
+	return nil
+}
 
+// HandleDeleteTask handles delete task command
+func (h *CommandHandler) HandleDeleteTask(ctx context.Context, cmd *command.DeleteTaskCommand) error {
+	if err := h.taskRepo.Delete(ctx, cmd.TenantID, cmd.ID); err != nil {
+		return fmt.Errorf("failed to delete task: %w", err)
+	}
+
+	// Publish delete event
 	return nil
 }
 

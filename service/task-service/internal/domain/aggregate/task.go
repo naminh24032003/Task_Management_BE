@@ -11,17 +11,44 @@ import (
 
 // Task is the aggregate root for task bounded context
 type Task struct {
-	// Aggregate Root
-	ID          string
+	// Aggregate Root Identity
+	ID       string
+	TenantID string
+
+	// Core Fields
 	Title       string
 	Description string
-	Status      valueobject.TaskStatus
-	Priority    valueobject.Priority
-	AssigneeID  string
-	ProjectID   string
-	DueDate     *time.Time
+
+	// Workflow
+	Status   valueobject.TaskStatus
+	Priority valueobject.TaskPriority
+
+	// People
+	AssigneeIDs []string
+	WatcherIDs  []string
+	CreatorID   string
+
+	// Organization
+	ProjectID    string
+	SpaceID      string
+	ParentTaskID string
+
+	// Timestamps
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	DueDate     *time.Time
+	StartDate   *time.Time
+	CompletedAt *time.Time
+
+	// Time Tracking
+	TimeEstimateMinutes int32
+	TimeTrackedMinutes  int32
+
+	// Metadata
+	Tags          []string
+	DependencyIDs []string
+	OrderIndex    int32
+	CustomFields  map[string]string
 
 	// Entities
 	Comments []*entity.Comment
@@ -30,8 +57,8 @@ type Task struct {
 	domainEvents []event.DomainEvent
 }
 
-// NewTask creates a new task aggregate
-func NewTask(id, title, description, projectID string, priority valueobject.Priority, dueDate *time.Time) (*Task, error) {
+// NewTask creates a new task aggregate (ClickUp-style)
+func NewTask(id, tenantID, title, creatorID, projectID, spaceID string) (*Task, error) {
 	if id == "" {
 		return nil, errors.New("task ID cannot be empty")
 	}
@@ -44,70 +71,76 @@ func NewTask(id, title, description, projectID string, priority valueobject.Prio
 
 	now := time.Now()
 	task := &Task{
-		ID:           id,
-		Title:        title,
-		Description:  description,
-		Status:       valueobject.TaskStatusTodo,
-		Priority:     priority,
-		ProjectID:    projectID,
-		DueDate:      dueDate,
-		CreatedAt:    now,
-		UpdatedAt:    now,
-		Comments:     make([]*entity.Comment, 0),
-		domainEvents: make([]event.DomainEvent, 0),
+		ID:            id,
+		TenantID:      tenantID,
+		Title:         title,
+		CreatorID:     creatorID,
+		ProjectID:     projectID,
+		SpaceID:       spaceID,
+		Status:        valueobject.TaskStatusOpen,
+		Priority:      valueobject.TaskPriorityNormal,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+		AssigneeIDs:   []string{},
+		WatcherIDs:    []string{},
+		Tags:          []string{},
+		DependencyIDs: []string{},
+		CustomFields:  make(map[string]string),
+		Comments:      make([]*entity.Comment, 0),
+		domainEvents:  make([]event.DomainEvent, 0),
 	}
 
 	// Raise domain event
-	task.addDomainEvent(event.NewTaskCreatedEvent(id, title, projectID, now))
+	task.AddDomainEvent(event.NewTaskCreatedEvent(id, title, projectID, now))
 
 	return task, nil
 }
 
-// Assign assigns the task to a user
-func (t *Task) Assign(assigneeID string) error {
-	if assigneeID == "" {
-		return errors.New("assignee ID cannot be empty")
+// UpdateStatus changes the task status
+func (t *Task) UpdateStatus(newStatus valueobject.TaskStatus) error {
+	if !newStatus.IsValid() {
+		return errors.New("invalid task status")
 	}
 
-	oldAssigneeID := t.AssigneeID
-	t.AssigneeID = assigneeID
+	t.Status = newStatus
 	t.UpdatedAt = time.Now()
 
+	if newStatus == valueobject.TaskStatusComplete || newStatus == valueobject.TaskStatusClosed {
+		now := time.Now()
+		t.CompletedAt = &now
+	}
+
+	// Raise domain event (could create a StatusChanged event)
+	// For now using TaskUpdated or similar
+	return nil
+}
+
+// UpdatePriority changes the task priority
+func (t *Task) UpdatePriority(newPriority valueobject.TaskPriority) error {
+	if !newPriority.IsValid() {
+		return errors.New("invalid task priority")
+	}
+
+	t.Priority = newPriority
+	t.UpdatedAt = time.Now()
+	return nil
+}
+
+// Assign assigns the task to users
+func (t *Task) Assign(assigneeIDs []string) {
+	t.AssigneeIDs = assigneeIDs
+	t.UpdatedAt = time.Now()
 	// Raise domain event
-	t.addDomainEvent(event.NewTaskAssignedEvent(t.ID, oldAssigneeID, assigneeID, time.Now()))
-
-	return nil
 }
 
-// Complete marks the task as completed
-func (t *Task) Complete() error {
-	if t.Status == valueobject.TaskStatusDone {
-		return errors.New("task already completed")
+// AddWatcher adds a watcher to the task
+func (t *Task) AddWatcher(watcherID string) {
+	for _, id := range t.WatcherIDs {
+		if id == watcherID {
+			return
+		}
 	}
-
-	t.Status = valueobject.TaskStatusDone
-	t.UpdatedAt = time.Now()
-
-	// Raise domain event
-	t.addDomainEvent(event.NewTaskCompletedEvent(t.ID, time.Now()))
-
-	return nil
-}
-
-// StartProgress moves task to in progress
-func (t *Task) StartProgress() error {
-	if t.Status != valueobject.TaskStatusTodo {
-		return errors.New("task can only be started from todo status")
-	}
-
-	t.Status = valueobject.TaskStatusInProgress
-	t.UpdatedAt = time.Now()
-	return nil
-}
-
-// UpdatePriority updates task priority
-func (t *Task) UpdatePriority(priority valueobject.Priority) {
-	t.Priority = priority
+	t.WatcherIDs = append(t.WatcherIDs, watcherID)
 	t.UpdatedAt = time.Now()
 }
 
@@ -117,25 +150,15 @@ func (t *Task) AddComment(comment *entity.Comment) {
 	t.UpdatedAt = time.Now()
 }
 
-// IsOverdue checks if task is past due date
-func (t *Task) IsOverdue() bool {
-	if t.DueDate == nil {
-		return false
-	}
-	return time.Now().After(*t.DueDate) && t.Status != valueobject.TaskStatusDone
-}
-
 // Domain Events Management
-func (t *Task) addDomainEvent(evt event.DomainEvent) {
+func (t *Task) AddDomainEvent(evt event.DomainEvent) {
 	t.domainEvents = append(t.domainEvents, evt)
 }
 
-// DomainEvents returns all unpublished domain events
 func (t *Task) DomainEvents() []event.DomainEvent {
 	return t.domainEvents
 }
 
-// ClearDomainEvents clears all domain events (after publishing)
 func (t *Task) ClearDomainEvents() {
 	t.domainEvents = make([]event.DomainEvent, 0)
 }

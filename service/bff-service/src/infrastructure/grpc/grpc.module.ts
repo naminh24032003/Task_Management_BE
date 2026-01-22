@@ -21,6 +21,7 @@ import { TaskGrpcClient } from './clients/task.client';
             ],
             url: configService.get<string>('grpc.userService.url'),
             loader: {
+              keepCase: true,
               includeDirs: [join(process.cwd(), 'proto')],
             },
           },
@@ -39,6 +40,7 @@ import { TaskGrpcClient } from './clients/task.client';
             ],
             url: configService.get<string>('grpc.taskService.url'),
             loader: {
+              keepCase: true,
               includeDirs: [join(process.cwd(), 'proto')],
             },
           },

@@ -7,17 +7,19 @@ import { TypeOrmRepositoriesModule } from './database/typeorm/repositories/repos
 import { MultiTenancyModule } from './multi-tenancy/multi-tenancy.module';
 import { HealthModule } from './health/health.module';
 import { RedisModule } from './redis/redis.module';
+import { KafkaModule } from './kafka/kafka.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
 import redisConfig from './config/redis.config';
 import oauthConfig from './config/oauth.config';
+import kafkaConfig from './config/kafka.config';
 
 @Global()
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, appConfig, redisConfig, oauthConfig],
+      load: [databaseConfig, appConfig, redisConfig, oauthConfig, kafkaConfig],
       envFilePath: ['.env.local', '.env'],
       cache: true,
     }),
@@ -27,6 +29,7 @@ import oauthConfig from './config/oauth.config';
     TypeOrmConfigModule,
     TypeOrmRepositoriesModule,
     RedisModule,
+    KafkaModule,
     HealthModule,
   ],
   exports: [
@@ -36,6 +39,7 @@ import oauthConfig from './config/oauth.config';
     TypeOrmRepositoriesModule,
     MultiTenancyModule,
     RedisModule,
+    KafkaModule,
   ],
 })
 export class InfrastructureModule { }

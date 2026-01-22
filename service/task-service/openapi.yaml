@@ -3,8 +3,654 @@
 
 openapi: 3.0.3
 info:
-    title: ""
+    title: TaskService API
     version: 0.0.1
-paths: {}
+paths:
+    /v1/projects/{projectId}/tasks:
+        get:
+            tags:
+                - TaskService
+            operationId: TaskService_GetTasksByProject
+            parameters:
+                - name: projectId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: tenantId
+                  in: query
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: statuses
+                  in: query
+                  schema:
+                    type: array
+                    items:
+                        type: integer
+                        format: enum
+                - name: sortBy
+                  in: query
+                  schema:
+                    type: string
+                - name: sortDesc
+                  in: query
+                  schema:
+                    type: boolean
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/task.v1.ListTasksResponse'
+    /v1/tasks:
+        get:
+            tags:
+                - TaskService
+            operationId: TaskService_ListTasks
+            parameters:
+                - name: tenantId
+                  in: query
+                  schema:
+                    type: string
+                - name: page
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: projectId
+                  in: query
+                  description: Filters
+                  schema:
+                    type: string
+                - name: spaceId
+                  in: query
+                  schema:
+                    type: string
+                - name: assigneeIds
+                  in: query
+                  schema:
+                    type: array
+                    items:
+                        type: string
+                - name: statuses
+                  in: query
+                  schema:
+                    type: array
+                    items:
+                        type: integer
+                        format: enum
+                - name: priorities
+                  in: query
+                  schema:
+                    type: array
+                    items:
+                        type: integer
+                        format: enum
+                - name: tags
+                  in: query
+                  schema:
+                    type: array
+                    items:
+                        type: string
+                - name: searchQuery
+                  in: query
+                  schema:
+                    type: string
+                - name: dueDateFrom
+                  in: query
+                  schema:
+                    type: string
+                - name: dueDateTo
+                  in: query
+                  schema:
+                    type: string
+                - name: sortBy
+                  in: query
+                  description: Sorting
+                  schema:
+                    type: string
+                - name: sortDesc
+                  in: query
+                  schema:
+                    type: boolean
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/task.v1.ListTasksResponse'
+        post:
+            tags:
+                - TaskService
+            description: ========== CREATE ==========
+            operationId: TaskService_CreateTask
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/task.v1.CreateTaskRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/task.v1.CreateTaskResponse'
+    /v1/tasks/bulk/assign:
+        post:
+            tags:
+                - TaskService
+            operationId: TaskService_BulkAssign
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/task.v1.BulkAssignRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/task.v1.BulkAssignResponse'
+    /v1/tasks/bulk/status:
+        post:
+            tags:
+                - TaskService
+            description: ========== BULK OPERATIONS ==========
+            operationId: TaskService_BulkUpdateStatus
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/task.v1.BulkUpdateStatusRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/task.v1.BulkUpdateStatusResponse'
+    /v1/tasks/hello:
+        get:
+            tags:
+                - TaskService
+            description: ========== LEGACY/HELLO (for testing) ==========
+            operationId: TaskService_Hello
+            parameters:
+                - name: name
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/task.v1.HelloResponse'
+    /v1/tasks/{id}:
+        get:
+            tags:
+                - TaskService
+            description: ========== READ ==========
+            operationId: TaskService_GetTask
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: tenantId
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/task.v1.GetTaskResponse'
+        put:
+            tags:
+                - TaskService
+            description: ========== UPDATE ==========
+            operationId: TaskService_UpdateTask
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/task.v1.UpdateTaskRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/task.v1.UpdateTaskResponse'
+        delete:
+            tags:
+                - TaskService
+            description: ========== DELETE ==========
+            operationId: TaskService_DeleteTask
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: tenantId
+                  in: query
+                  schema:
+                    type: string
+                - name: deletedBy
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/task.v1.DeleteTaskResponse'
+    /v1/tasks/{id}/assign:
+        patch:
+            tags:
+                - TaskService
+            operationId: TaskService_AssignTask
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/task.v1.AssignTaskRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/task.v1.UpdateTaskResponse'
+    /v1/tasks/{id}/priority:
+        patch:
+            tags:
+                - TaskService
+            operationId: TaskService_UpdateTaskPriority
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/task.v1.UpdateTaskPriorityRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/task.v1.UpdateTaskResponse'
+    /v1/tasks/{id}/status:
+        patch:
+            tags:
+                - TaskService
+            operationId: TaskService_UpdateTaskStatus
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/task.v1.UpdateTaskStatusRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/task.v1.UpdateTaskResponse'
 components:
-    schemas: {}
+    schemas:
+        task.v1.AssignTaskRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                tenantId:
+                    type: string
+                assigneeIds:
+                    type: array
+                    items:
+                        type: string
+                assignedBy:
+                    type: string
+            description: Assign Task
+        task.v1.BulkAssignRequest:
+            type: object
+            properties:
+                tenantId:
+                    type: string
+                taskIds:
+                    type: array
+                    items:
+                        type: string
+                assigneeIds:
+                    type: array
+                    items:
+                        type: string
+                assignedBy:
+                    type: string
+            description: Bulk Assign
+        task.v1.BulkAssignResponse:
+            type: object
+            properties:
+                updatedCount:
+                    type: integer
+                    format: int32
+                failedTaskIds:
+                    type: array
+                    items:
+                        type: string
+                success:
+                    type: boolean
+                message:
+                    type: string
+        task.v1.BulkUpdateStatusRequest:
+            type: object
+            properties:
+                tenantId:
+                    type: string
+                taskIds:
+                    type: array
+                    items:
+                        type: string
+                status:
+                    type: integer
+                    format: enum
+                updatedBy:
+                    type: string
+            description: Bulk Update Status
+        task.v1.BulkUpdateStatusResponse:
+            type: object
+            properties:
+                updatedCount:
+                    type: integer
+                    format: int32
+                failedTaskIds:
+                    type: array
+                    items:
+                        type: string
+                success:
+                    type: boolean
+                message:
+                    type: string
+        task.v1.CreateTaskRequest:
+            type: object
+            properties:
+                tenantId:
+                    type: string
+                title:
+                    type: string
+                description:
+                    type: string
+                priority:
+                    type: integer
+                    format: enum
+                projectId:
+                    type: string
+                spaceId:
+                    type: string
+                creatorId:
+                    type: string
+                assigneeIds:
+                    type: array
+                    items:
+                        type: string
+                dueDate:
+                    type: string
+                startDate:
+                    type: string
+                timeEstimateMinutes:
+                    type: integer
+                    format: int32
+                tags:
+                    type: array
+                    items:
+                        type: string
+                parentTaskId:
+                    type: string
+                customFields:
+                    type: object
+                    additionalProperties:
+                        type: string
+            description: Create Task
+        task.v1.CreateTaskResponse:
+            type: object
+            properties:
+                task:
+                    $ref: '#/components/schemas/task.v1.Task'
+                success:
+                    type: boolean
+                message:
+                    type: string
+        task.v1.DeleteTaskResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                message:
+                    type: string
+        task.v1.GetTaskResponse:
+            type: object
+            properties:
+                task:
+                    $ref: '#/components/schemas/task.v1.Task'
+        task.v1.HelloResponse:
+            type: object
+            properties:
+                message:
+                    type: string
+        task.v1.ListTasksResponse:
+            type: object
+            properties:
+                tasks:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/task.v1.Task'
+                total:
+                    type: integer
+                    format: int32
+                page:
+                    type: integer
+                    format: int32
+                pageSize:
+                    type: integer
+                    format: int32
+                totalPages:
+                    type: integer
+                    format: int32
+        task.v1.Task:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Identity
+                tenantId:
+                    type: string
+                title:
+                    type: string
+                    description: Core Fields
+                description:
+                    type: string
+                status:
+                    type: integer
+                    description: Status & Priority
+                    format: enum
+                priority:
+                    type: integer
+                    format: enum
+                assigneeIds:
+                    type: array
+                    items:
+                        type: string
+                    description: People
+                watcherIds:
+                    type: array
+                    items:
+                        type: string
+                creatorId:
+                    type: string
+                projectId:
+                    type: string
+                    description: Organization
+                spaceId:
+                    type: string
+                parentTaskId:
+                    type: string
+                createdAt:
+                    type: string
+                    description: Timestamps
+                updatedAt:
+                    type: string
+                dueDate:
+                    type: string
+                startDate:
+                    type: string
+                completedAt:
+                    type: string
+                timeEstimateMinutes:
+                    type: integer
+                    description: Time Tracking
+                    format: int32
+                timeTrackedMinutes:
+                    type: integer
+                    format: int32
+                tags:
+                    type: array
+                    items:
+                        type: string
+                    description: Additional Metadata
+                dependencyIds:
+                    type: array
+                    items:
+                        type: string
+                orderIndex:
+                    type: integer
+                    format: int32
+                customFields:
+                    type: object
+                    additionalProperties:
+                        type: string
+            description: Task represents a complete task entity (ClickUp-inspired)
+        task.v1.UpdateTaskPriorityRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                tenantId:
+                    type: string
+                priority:
+                    type: integer
+                    format: enum
+                updatedBy:
+                    type: string
+            description: Update Task Priority
+        task.v1.UpdateTaskRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                tenantId:
+                    type: string
+                title:
+                    type: string
+                    description: Fields to update (use oneof or optional for partial updates)
+                description:
+                    type: string
+                timeEstimateMinutes:
+                    type: integer
+                    format: int32
+                dueDate:
+                    type: string
+                startDate:
+                    type: string
+                tags:
+                    type: array
+                    items:
+                        type: string
+                parentTaskId:
+                    type: string
+                customFields:
+                    type: object
+                    additionalProperties:
+                        type: string
+            description: Update Task
+        task.v1.UpdateTaskResponse:
+            type: object
+            properties:
+                task:
+                    $ref: '#/components/schemas/task.v1.Task'
+                success:
+                    type: boolean
+                message:
+                    type: string
+        task.v1.UpdateTaskStatusRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                tenantId:
+                    type: string
+                status:
+                    type: integer
+                    format: enum
+                updatedBy:
+                    type: string
+            description: Update Task Status
+tags:
+    - name: TaskService

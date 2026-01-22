@@ -29,12 +29,23 @@ fi
 echo -e "${GREEN}✅ Found Kafka pod: $KAFKA_POD${NC}"
 echo ""
 
+# Get Kafka password from Kubernetes secret
+echo "🔑 Retrieving Kafka credentials from secret..."
+KAFKA_PASSWORD=$(kubectl get secret -n $NAMESPACE kafka-user-passwords -o jsonpath='{.data.client-passwords}' | base64 -d)
+
+if [ -z "$KAFKA_PASSWORD" ]; then
+    echo -e "${RED}❌ Failed to get Kafka password from secret!${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✅ Kafka credentials retrieved${NC}"
+echo ""
+
 # Create client config
 echo "🔐 Creating Kafka client configuration..."
-kubectl exec -n $NAMESPACE $KAFKA_POD -- bash -c "cat > /tmp/client.properties << 'EOF'
+kubectl exec -n $NAMESPACE $KAFKA_POD -- bash -c "cat > /tmp/client.properties << EOF
 security.protocol=SASL_PLAINTEXT
 sasl.mechanism=SCRAM-SHA-256
-sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username=\"kafka-user\" password=\"kafka-secret-password\";
+sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username=\"kafka-user\" password=\"${KAFKA_PASSWORD}\";
 EOF"
 echo -e "${GREEN}✅ Client config created${NC}"
 echo ""

@@ -6,12 +6,17 @@ import { Metadata } from '@grpc/grpc-js';
 // gRPC service interfaces (based on task.proto)
 interface TaskServiceGrpc {
   Hello(data: { name: string }, metadata?: Metadata): Observable<any>;
-  // Add more methods as task-service implements them
-  // CreateTask(data: any, metadata?: Metadata): Observable<any>;
-  // GetTask(data: { task_id: string }, metadata?: Metadata): Observable<any>;
-  // ListTasks(data: any, metadata?: Metadata): Observable<any>;
-  // UpdateTask(data: any, metadata?: Metadata): Observable<any>;
-  // DeleteTask(data: { task_id: string }, metadata?: Metadata): Observable<any>;
+  CreateTask(data: any, metadata?: Metadata): Observable<any>;
+  GetTask(data: { id: string }, metadata?: Metadata): Observable<any>;
+  ListTasks(data: any, metadata?: Metadata): Observable<any>;
+  UpdateTask(data: any, metadata?: Metadata): Observable<any>;
+  DeleteTask(data: { id: string }, metadata?: Metadata): Observable<any>;
+  UpdateTaskStatus(data: any, metadata?: Metadata): Observable<any>;
+  AssignTask(data: any, metadata?: Metadata): Observable<any>;
+  BulkUpdateStatus(data: any, metadata?: Metadata): Observable<any>;
+  BulkAssign(data: any, metadata?: Metadata): Observable<any>;
+  AddComment(data: any, metadata?: Metadata): Observable<any>;
+  ListComments(data: { task_id: string }, metadata?: Metadata): Observable<any>;
 }
 
 @Injectable()
@@ -20,7 +25,7 @@ export class TaskGrpcClient implements OnModuleInit {
   private taskService: TaskServiceGrpc;
   private readonly TIMEOUT_MS = 10000;
 
-  constructor(@Inject('TASK_SERVICE') private client: ClientGrpc) {}
+  constructor(@Inject('TASK_SERVICE') private client: ClientGrpc) { }
 
   onModuleInit() {
     this.taskService = this.client.getService<TaskServiceGrpc>('TaskService');
@@ -64,45 +69,58 @@ export class TaskGrpcClient implements OnModuleInit {
     return this.executeGrpcCall(this.taskService.Hello({ name }), 'hello');
   }
 
-  // Placeholder methods for future task operations
-  // Uncomment and implement when task-service adds these features
+  async createTask(data: any, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
+    const metadata = this.createMetadata(context);
+    return this.executeGrpcCall(this.taskService.CreateTask(data, metadata), 'createTask');
+  }
 
-  // async createTask(data: any, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
-  //   const metadata = this.createMetadata(context);
-  //   return this.executeGrpcCall(this.taskService.CreateTask(data, metadata), 'createTask');
-  // }
+  async getTask(id: string, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
+    const metadata = this.createMetadata(context);
+    return this.executeGrpcCall(this.taskService.GetTask({ id }, metadata), 'getTask');
+  }
 
-  // async getTask(taskId: string, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
-  //   const metadata = this.createMetadata(context);
-  //   return this.executeGrpcCall(
-  //     this.taskService.GetTask({ task_id: taskId }, metadata),
-  //     'getTask',
-  //   );
-  // }
+  async listTasks(data: any, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
+    const metadata = this.createMetadata(context);
+    return this.executeGrpcCall(this.taskService.ListTasks(data, metadata), 'listTasks');
+  }
 
-  // async listTasks(
-  //   page: number,
-  //   pageSize: number,
-  //   filters?: any,
-  //   context?: { userId?: string; tenantId?: string; roles?: string[] },
-  // ) {
-  //   const metadata = this.createMetadata(context);
-  //   return this.executeGrpcCall(
-  //     this.taskService.ListTasks({ page, page_size: pageSize, ...filters }, metadata),
-  //     'listTasks',
-  //   );
-  // }
+  async updateTask(data: any, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
+    const metadata = this.createMetadata(context);
+    return this.executeGrpcCall(this.taskService.UpdateTask(data, metadata), 'updateTask');
+  }
 
-  // async updateTask(data: any, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
-  //   const metadata = this.createMetadata(context);
-  //   return this.executeGrpcCall(this.taskService.UpdateTask(data, metadata), 'updateTask');
-  // }
+  async deleteTask(id: string, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
+    const metadata = this.createMetadata(context);
+    return this.executeGrpcCall(this.taskService.DeleteTask({ id }, metadata), 'deleteTask');
+  }
 
-  // async deleteTask(taskId: string, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
-  //   const metadata = this.createMetadata(context);
-  //   return this.executeGrpcCall(
-  //     this.taskService.DeleteTask({ task_id: taskId }, metadata),
-  //     'deleteTask',
-  //   );
-  // }
+  async updateTaskStatus(data: any, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
+    const metadata = this.createMetadata(context);
+    return this.executeGrpcCall(this.taskService.UpdateTaskStatus(data, metadata), 'updateTaskStatus');
+  }
+
+  async assignTask(data: any, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
+    const metadata = this.createMetadata(context);
+    return this.executeGrpcCall(this.taskService.AssignTask(data, metadata), 'assignTask');
+  }
+
+  async bulkUpdateStatus(data: any, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
+    const metadata = this.createMetadata(context);
+    return this.executeGrpcCall(this.taskService.BulkUpdateStatus(data, metadata), 'bulkUpdateStatus');
+  }
+
+  async bulkAssign(data: any, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
+    const metadata = this.createMetadata(context);
+    return this.executeGrpcCall(this.taskService.BulkAssign(data, metadata), 'bulkAssign');
+  }
+
+  async addComment(data: any, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
+    const metadata = this.createMetadata(context);
+    return this.executeGrpcCall(this.taskService.AddComment(data, metadata), 'addComment');
+  }
+
+  async listComments(taskId: string, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
+    const metadata = this.createMetadata(context);
+    return this.executeGrpcCall(this.taskService.ListComments({ task_id: taskId }, metadata), 'listComments');
+  }
 }

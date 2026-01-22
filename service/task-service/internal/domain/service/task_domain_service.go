@@ -23,32 +23,26 @@ func NewTaskDomainService(taskRepo repository.TaskRepository) *TaskDomainService
 
 // CanAssignTask checks if a task can be assigned
 func (s *TaskDomainService) CanAssignTask(ctx context.Context, task *aggregate.Task, assigneeID string) error {
-	if task.Status == valueobject.TaskStatusDone {
-		return errors.New("cannot assign completed task")
+	if task.Status == valueobject.TaskStatusComplete || task.Status == valueobject.TaskStatusClosed {
+		return errors.New("cannot assign completed or closed task")
 	}
 
 	if task.Status == valueobject.TaskStatusCancelled {
 		return errors.New("cannot assign cancelled task")
 	}
 
-	// Add more business rules here
-	// e.g., check if assignee has capacity, check project membership, etc.
-
 	return nil
 }
 
 // CanCompleteTask checks if a task can be completed
 func (s *TaskDomainService) CanCompleteTask(ctx context.Context, task *aggregate.Task) error {
-	if task.Status == valueobject.TaskStatusDone {
-		return errors.New("task is already completed")
+	if task.Status == valueobject.TaskStatusComplete || task.Status == valueobject.TaskStatusClosed {
+		return errors.New("task is already completed or closed")
 	}
 
 	if task.Status == valueobject.TaskStatusCancelled {
 		return errors.New("cannot complete cancelled task")
 	}
-
-	// Add more business rules here
-	// e.g., check if all subtasks are completed, check required fields, etc.
 
 	return nil
 }
@@ -62,9 +56,6 @@ func (s *TaskDomainService) ValidateTaskCreation(ctx context.Context, title, pro
 	if projectID == "" {
 		return errors.New("project ID cannot be empty")
 	}
-
-	// Add more validation rules
-	// e.g., check if project exists, check user permissions, etc.
 
 	return nil
 }

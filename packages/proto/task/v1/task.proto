@@ -6,7 +6,328 @@ option go_package = "task-service/api/task/v1;taskv1";
 
 import "google/api/annotations.proto";
 
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+// TaskStatus represents the workflow status of a task (ClickUp-style)
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_OPEN = 1;          // Initial state / To Do
+  TASK_STATUS_IN_PROGRESS = 2;   // Actively being worked on
+  TASK_STATUS_BLOCKED = 3;       // Blocked by dependencies or issues
+  TASK_STATUS_REVIEW = 4;        // Ready for review
+  TASK_STATUS_COMPLETE = 5;      // Done/Completed
+  TASK_STATUS_CLOSED = 6;        // Archived/Closed
+  TASK_STATUS_CANCELLED = 7;     // Cancelled before completion
+}
+
+// TaskPriority represents the urgency level of a task
+enum TaskPriority {
+  TASK_PRIORITY_UNSPECIFIED = 0;
+  TASK_PRIORITY_LOW = 1;
+  TASK_PRIORITY_NORMAL = 2;
+  TASK_PRIORITY_HIGH = 3;
+  TASK_PRIORITY_URGENT = 4;
+}
+
+// ============================================================================
+// CORE ENTITIES
+// ============================================================================
+
+// Task represents a complete task entity (ClickUp-inspired)
+message Task {
+  // Identity
+  string id = 1;
+  string tenant_id = 2;
+  
+  // Core Fields
+  string title = 3;
+  string description = 4;
+  
+  // Status & Priority
+  TaskStatus status = 5;
+  TaskPriority priority = 6;
+  
+  // People
+  repeated string assignee_ids = 7;
+  repeated string watcher_ids = 8;
+  string creator_id = 9;
+  
+  // Organization
+  string project_id = 10;
+  string space_id = 11;
+  string parent_task_id = 12;
+  
+  // Timestamps
+  string created_at = 13;
+  string updated_at = 14;
+  string due_date = 15;
+  string start_date = 16;
+  string completed_at = 17;
+  
+  // Time Tracking
+  int32 time_estimate_minutes = 18;
+  int32 time_tracked_minutes = 19;
+  
+  // Additional Metadata
+  repeated string tags = 20;
+  repeated string dependency_ids = 21;
+  int32 order_index = 22;
+  map<string, string> custom_fields = 23;
+}
+
+// ============================================================================
+// REQUEST/RESPONSE MESSAGES
+// ============================================================================
+
+// Create Task
+message CreateTaskRequest {
+  string tenant_id = 1;
+  string title = 2;
+  string description = 3;
+  TaskPriority priority = 4;
+  string project_id = 5;
+  string space_id = 6;
+  string creator_id = 7;
+  repeated string assignee_ids = 8;
+  string due_date = 9;
+  string start_date = 10;
+  int32 time_estimate_minutes = 11;
+  repeated string tags = 12;
+  string parent_task_id = 13;
+  map<string, string> custom_fields = 14;
+}
+
+message CreateTaskResponse {
+  Task task = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+// Get Task
+message GetTaskRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message GetTaskResponse {
+  Task task = 1;
+}
+
+// List Tasks
+message ListTasksRequest {
+  string tenant_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  
+  // Filters
+  string project_id = 4;
+  string space_id = 5;
+  repeated string assignee_ids = 6;
+  repeated TaskStatus statuses = 7;
+  repeated TaskPriority priorities = 8;
+  repeated string tags = 9;
+  string search_query = 10;
+  string due_date_from = 11;
+  string due_date_to = 12;
+  
+  // Sorting
+  string sort_by = 13;  // e.g., "created_at", "due_date", "priority", "order_index"
+  bool sort_desc = 14;
+}
+
+message ListTasksResponse {
+  repeated Task tasks = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+// Get Tasks by Project
+message GetTasksByProjectRequest {
+  string tenant_id = 1;
+  string project_id = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  repeated TaskStatus statuses = 5;
+  string sort_by = 6;
+  bool sort_desc = 7;
+}
+
+// Update Task
+message UpdateTaskRequest {
+  string id = 1;
+  string tenant_id = 2;
+  
+  // Fields to update (use oneof or optional for partial updates)
+  optional string title = 3;
+  optional string description = 4;
+  optional int32 time_estimate_minutes = 5;
+  optional string due_date = 6;
+  optional string start_date = 7;
+  repeated string tags = 8;
+  optional string parent_task_id = 9;
+  map<string, string> custom_fields = 10;
+}
+
+message UpdateTaskResponse {
+  Task task = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+// Update Task Status
+message UpdateTaskStatusRequest {
+  string id = 1;
+  string tenant_id = 2;
+  TaskStatus status = 3;
+  string updated_by = 4;
+}
+
+// Assign Task
+message AssignTaskRequest {
+  string id = 1;
+  string tenant_id = 2;
+  repeated string assignee_ids = 3;
+  string assigned_by = 4;
+}
+
+// Update Task Priority
+message UpdateTaskPriorityRequest {
+  string id = 1;
+  string tenant_id = 2;
+  TaskPriority priority = 3;
+  string updated_by = 4;
+}
+
+// Delete Task
+message DeleteTaskRequest {
+  string id = 1;
+  string tenant_id = 2;
+  string deleted_by = 3;
+}
+
+message DeleteTaskResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Bulk Update Status
+message BulkUpdateStatusRequest {
+  string tenant_id = 1;
+  repeated string task_ids = 2;
+  TaskStatus status = 3;
+  string updated_by = 4;
+}
+
+message BulkUpdateStatusResponse {
+  int32 updated_count = 1;
+  repeated string failed_task_ids = 2;
+  bool success = 3;
+  string message = 4;
+}
+
+// Bulk Assign
+message BulkAssignRequest {
+  string tenant_id = 1;
+  repeated string task_ids = 2;
+  repeated string assignee_ids = 3;
+  string assigned_by = 4;
+}
+
+message BulkAssignResponse {
+  int32 updated_count = 1;
+  repeated string failed_task_ids = 2;
+  bool success = 3;
+  string message = 4;
+}
+
+// ============================================================================
+// SERVICE DEFINITION
+// ============================================================================
+
 service TaskService {
+  // ========== CREATE ==========
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse) {
+    option (google.api.http) = {
+      post: "/v1/tasks"
+      body: "*"
+    };
+  }
+  
+  // ========== READ ==========
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse) {
+    option (google.api.http) = {
+      get: "/v1/tasks/{id}"
+    };
+  }
+  
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse) {
+    option (google.api.http) = {
+      get: "/v1/tasks"
+    };
+  }
+  
+  rpc GetTasksByProject(GetTasksByProjectRequest) returns (ListTasksResponse) {
+    option (google.api.http) = {
+      get: "/v1/projects/{project_id}/tasks"
+    };
+  }
+  
+  // ========== UPDATE ==========
+  rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse) {
+    option (google.api.http) = {
+      put: "/v1/tasks/{id}"
+      body: "*"
+    };
+  }
+  
+  rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (UpdateTaskResponse) {
+    option (google.api.http) = {
+      patch: "/v1/tasks/{id}/status"
+      body: "*"
+    };
+  }
+  
+  rpc AssignTask(AssignTaskRequest) returns (UpdateTaskResponse) {
+    option (google.api.http) = {
+      patch: "/v1/tasks/{id}/assign"
+      body: "*"
+    };
+  }
+  
+  rpc UpdateTaskPriority(UpdateTaskPriorityRequest) returns (UpdateTaskResponse) {
+    option (google.api.http) = {
+      patch: "/v1/tasks/{id}/priority"
+      body: "*"
+    };
+  }
+  
+  // ========== DELETE ==========
+  rpc DeleteTask(DeleteTaskRequest) returns (DeleteTaskResponse) {
+    option (google.api.http) = {
+      delete: "/v1/tasks/{id}"
+    };
+  }
+  
+  // ========== BULK OPERATIONS ==========
+  rpc BulkUpdateStatus(BulkUpdateStatusRequest) returns (BulkUpdateStatusResponse) {
+    option (google.api.http) = {
+      post: "/v1/tasks/bulk/status"
+      body: "*"
+    };
+  }
+  
+  rpc BulkAssign(BulkAssignRequest) returns (BulkAssignResponse) {
+    option (google.api.http) = {
+      post: "/v1/tasks/bulk/assign"
+      body: "*"
+    };
+  }
+  
+  // ========== LEGACY/HELLO (for testing) ==========
   rpc Hello(HelloRequest) returns (HelloResponse) {
     option (google.api.http) = {
       get: "/v1/tasks/hello"
@@ -14,75 +335,7 @@ service TaskService {
   }
 }
 
-// Task represents a task entity
-// message Task {
-//   string id = 1;
-//   string title = 2;
-//   string description = 3;
-//   string status = 4;
-//   string priority = 5;
-//   string assignee_id = 6;
-//   string project_id = 7;
-//   string created_at = 8;
-//   string updated_at = 9;
-//   string due_date = 10;
-// }
-
-// CreateTaskRequest
-// message CreateTaskRequest {
-//   string title = 1;
-//   string description = 2;
-//   string priority = 3;
-//   string project_id = 4;
-//   string due_date = 5;
-// }
-
-// message CreateTaskResponse {
-//   Task task = 1;
-// }
-
-// GetTaskRequest
-// message GetTaskRequest {
-//   string id = 1;
-// }
-
-// message GetTaskResponse {
-//   Task task = 1;
-// }
-
-// ListTasksRequest
-// message ListTasksRequest {
-//   int32 page = 1;
-//   int32 page_size = 2;
-//   string project_id = 3;
-//   string assignee_id = 4;
-//   string status = 5;
-// }
-
-// message ListTasksResponse {
-//   repeated Task tasks = 1;
-//   int32 total = 2;
-// }
-
-// AssignTaskRequest
-// message AssignTaskRequest {
-//   string task_id = 1;
-//   string assignee_id = 2;
-// }
-
-// message AssignTaskResponse {
-//   Task task = 1;
-// }
-
-// CompleteTaskRequest
-// message CompleteTaskRequest {
-//   string task_id = 1;
-// }
-
-// message CompleteTaskResponse {
-//   Task task = 1;
-// }
-
+// Hello messages (for testing)
 message HelloRequest {
   string name = 1;
 }

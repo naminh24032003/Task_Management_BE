@@ -1,4 +1,33 @@
-import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { ObjectType, Field, ID, Int, registerEnumType } from '@nestjs/graphql';
+
+export enum TaskStatus {
+  UNSPECIFIED = 'TASK_STATUS_UNSPECIFIED',
+  OPEN = 'TASK_STATUS_OPEN',
+  IN_PROGRESS = 'TASK_STATUS_IN_PROGRESS',
+  BLOCKED = 'TASK_STATUS_BLOCKED',
+  REVIEW = 'TASK_STATUS_REVIEW',
+  COMPLETE = 'TASK_STATUS_COMPLETE',
+  CLOSED = 'TASK_STATUS_CLOSED',
+  CANCELLED = 'TASK_STATUS_CANCELLED',
+}
+
+registerEnumType(TaskStatus, {
+  name: 'TaskStatus',
+  description: 'The status of the task',
+});
+
+export enum TaskPriority {
+  UNSPECIFIED = 'TASK_PRIORITY_UNSPECIFIED',
+  LOW = 'TASK_PRIORITY_LOW',
+  NORMAL = 'TASK_PRIORITY_NORMAL',
+  HIGH = 'TASK_PRIORITY_HIGH',
+  URGENT = 'TASK_PRIORITY_URGENT',
+}
+
+registerEnumType(TaskPriority, {
+  name: 'TaskPriority',
+  description: 'The priority of the task',
+});
 
 @ObjectType({ description: 'Task service hello response' })
 export class HelloResponse {
@@ -6,70 +35,95 @@ export class HelloResponse {
   message: string;
 }
 
-// Placeholder types for future task service implementation
-// Uncomment and extend when task-service adds full CRUD operations
+@ObjectType({ description: 'Task entity' })
+export class Task {
+  @Field(() => ID)
+  id: string;
 
-// export enum TaskStatus {
-//   TODO = 'TODO',
-//   IN_PROGRESS = 'IN_PROGRESS',
-//   DONE = 'DONE',
-//   CANCELLED = 'CANCELLED',
-// }
+  @Field()
+  tenantId: string;
 
-// export enum TaskPriority {
-//   LOW = 'LOW',
-//   MEDIUM = 'MEDIUM',
-//   HIGH = 'HIGH',
-//   URGENT = 'URGENT',
-// }
+  @Field()
+  title: string;
 
-// @ObjectType({ description: 'Task entity' })
-// export class Task {
-//   @Field(() => ID, { description: 'Task unique identifier' })
-//   id: string;
+  @Field({ nullable: true })
+  description?: string;
 
-//   @Field({ description: 'Tenant identifier' })
-//   tenantId: string;
+  @Field(() => TaskStatus)
+  status: TaskStatus;
 
-//   @Field({ description: 'Task title' })
-//   title: string;
+  @Field(() => TaskPriority)
+  priority: TaskPriority;
 
-//   @Field({ nullable: true, description: 'Task description' })
-//   description?: string;
+  @Field(() => [String], { defaultValue: [] })
+  assigneeIds: string[];
 
-//   @Field(() => TaskStatus, { description: 'Task status' })
-//   status: TaskStatus;
+  @Field(() => [String], { defaultValue: [] })
+  watcherIds: string[];
 
-//   @Field(() => TaskPriority, { description: 'Task priority' })
-//   priority: TaskPriority;
+  @Field()
+  creatorId: string;
 
-//   @Field({ nullable: true, description: 'Assigned user ID' })
-//   assigneeId?: string;
+  @Field({ nullable: true })
+  projectId?: string;
 
-//   @Field({ nullable: true, description: 'Due date' })
-//   dueDate?: string;
+  @Field({ nullable: true })
+  spaceId?: string;
 
-//   @Field({ description: 'Creator user ID' })
-//   createdBy: string;
+  @Field({ nullable: true })
+  parentTaskId?: string;
 
-//   @Field({ description: 'Creation timestamp' })
-//   createdAt: string;
+  @Field()
+  createdAt: string;
 
-//   @Field({ description: 'Last update timestamp' })
-//   updatedAt: string;
-// }
+  @Field()
+  updatedAt: string;
 
-// @ObjectType({ description: 'Paginated task list response' })
-// export class TaskConnection {
-//   @Field(() => [Task], { description: 'List of tasks' })
-//   tasks: Task[];
+  @Field({ nullable: true })
+  dueDate?: string;
 
-//   @Field(() => Int, { description: 'Total count of tasks' })
-//   total: number;
+  @Field({ nullable: true })
+  startDate?: string;
 
-//   @Field(() => Int, { description: 'Current page number' })
-//   page: number;
+  @Field({ nullable: true })
+  completedAt?: string;
 
-//   @Field(() => Int, { description: 'Page size' })
-//   pageSize: number;
-// }
+  @Field(() => Int, { nullable: true })
+  timeEstimateMinutes?: number;
+
+  @Field(() => Int, { defaultValue: 0 })
+  timeTrackedMinutes: number;
+
+  @Field(() => [String], { defaultValue: [] })
+  tags: string[];
+
+  @Field(() => [String], { defaultValue: [] })
+  dependencyIds: string[];
+
+  @Field(() => Int, { defaultValue: 0 })
+  orderIndex: number;
+}
+
+@ObjectType()
+export class TaskConnection {
+  @Field(() => [Task])
+  tasks: Task[];
+
+  @Field(() => Int)
+  total: number;
+
+  @Field(() => Int)
+  page: number;
+
+  @Field(() => Int)
+  pageSize: number;
+}
+
+@ObjectType()
+export class TaskOperationResponse {
+  @Field()
+  success: boolean;
+
+  @Field({ nullable: true })
+  message?: string;
+}
