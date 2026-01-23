@@ -1,0 +1,15 @@
+# Root .dockerignore
+node_modules
+**/node_modules
+dist
+**/dist
+npm-debug.log
+.git
+.gitignore
+.env
+.env.*
+.terraform
+*.tfstate
+*.tfstate.backup
+build
+out

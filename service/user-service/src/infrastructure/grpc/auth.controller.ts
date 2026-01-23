@@ -30,23 +30,39 @@ import { User } from '../../domain/aggregates/user.aggregate';
 
 @Controller()
 @AuthServiceControllerMethods()
+@SkipTenantCheck()
 export class AuthController implements AuthServiceController {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly authService: UserAuthenticationService, // For refresh/validate/logout
   ) { }
 
+  @SkipTenantCheck()
   @GrpcMethod('AuthService', 'Register')
-  async register(request: RegisterRequest): Promise<RegisterResponse> {
+  async register(request: any): Promise<RegisterResponse> {
     try {
+      const tenantId = request.tenantId || request.tenant_id;
+      const email = request.email;
+      const password = request.password;
+      const firstName = request.firstName || request.first_name;
+      const lastName = request.lastName || request.last_name;
+      const displayName = request.displayName || request.display_name;
+
+      if (!firstName || !lastName) {
+        throw new RpcException({
+          code: 3, // INVALID_ARGUMENT
+          message: `Missing required fields: firstName=${!!firstName}, lastName=${!!lastName}`,
+        });
+      }
+
       const result = await this.commandBus.execute<RegisterUserCommand, RegisterUserResult>(
         new RegisterUserCommand(
-          request.tenantId,
-          request.email,
-          request.password,
-          request.firstName,
-          request.lastName,
-          request.displayName,
+          tenantId,
+          email,
+          password,
+          firstName,
+          lastName,
+          displayName,
         ),
       );
 
@@ -63,11 +79,15 @@ export class AuthController implements AuthServiceController {
     }
   }
 
+  @SkipTenantCheck()
   @GrpcMethod('AuthService', 'GoogleLogin')
-  async googleLogin(request: GoogleLoginRequest): Promise<GoogleLoginResponse> {
+  async googleLogin(request: any): Promise<GoogleLoginResponse> {
     try {
+      const tenantId = request.tenantId || request.tenant_id;
+      const idToken = request.idToken || request.id_token;
+
       const result = await this.commandBus.execute<GoogleLoginCommand, GoogleLoginResult>(
-        new GoogleLoginCommand(request.tenantId, request.idToken),
+        new GoogleLoginCommand(tenantId, idToken),
       );
 
       // Generate tokens for the user
@@ -90,11 +110,16 @@ export class AuthController implements AuthServiceController {
     }
   }
 
+  @SkipTenantCheck()
   @GrpcMethod('AuthService', 'Login')
-  async login(request: LoginRequest): Promise<LoginResponse> {
+  async login(request: any): Promise<LoginResponse> {
     try {
+      const tenantId = request.tenantId || request.tenant_id;
+      const email = request.email;
+      const password = request.password;
+
       const result = await this.commandBus.execute<LoginCommand, LoginResult>(
-        new LoginCommand(request.tenantId, request.email, request.password),
+        new LoginCommand(tenantId, email, password),
       );
 
       return {

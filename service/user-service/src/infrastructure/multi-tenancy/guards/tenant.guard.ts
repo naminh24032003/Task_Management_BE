@@ -3,6 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
@@ -15,7 +16,9 @@ export const SKIP_TENANT_CHECK = 'skipTenantCheck';
  */
 @Injectable()
 export class TenantGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  private readonly logger = new Logger(TenantGuard.name);
+
+  constructor(private readonly reflector: Reflector) { }
 
   canActivate(context: ExecutionContext): boolean {
     const skipTenantCheck = this.reflector.getAllAndOverride<boolean>(
@@ -24,6 +27,7 @@ export class TenantGuard implements CanActivate {
     );
 
     if (skipTenantCheck) {
+      this.logger.log('Skipping tenant check');
       return true;
     }
 
@@ -43,9 +47,12 @@ export class TenantGuard implements CanActivate {
       const metadata = rpcContext.getContext();
 
       // Try to get from gRPC metadata headers
-      if (metadata?.get) {
+      if (metadata && typeof metadata.get === 'function') {
         const metaTenantId = metadata.get('x-tenant-id');
         tenantId = metaTenantId?.[0]?.toString();
+      } else if (metadata) {
+        // Support plain object metadata
+        tenantId = metadata['x-tenant-id'] || metadata['tenant-id'] || metadata['tenantid'];
       }
 
       // If not in metadata, try to get from request body (for Auth endpoints)
@@ -56,10 +63,14 @@ export class TenantGuard implements CanActivate {
     }
 
     if (!tenantId) {
+      const data = contextType === 'rpc' ? context.switchToRpc().getData() : {};
+      this.logger.error(`Tenant ID not found. Context: ${contextType}, Data keys: ${Object.keys(data || {})}`);
       throw new BadRequestException(
         'Tenant ID is required (x-tenant-id header or tenant_id in request)',
       );
     }
+
+    this.logger.log(`Tenant ID found: ${tenantId}`);
 
     return true;
   }

@@ -99,5 +99,11 @@ USER app
 EXPOSE 50051
 EXPOSE 9090
 
+# OpenTelemetry environment variables
+ENV OTEL_SERVICE_NAME=user-service
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.tracing.svc.cluster.local:4317
+ENV OTEL_TRACES_SAMPLER=always_on
+
 ENTRYPOINT ["dumb-init", "--"]
+# Load OpenTelemetry instrumentation before main.js (Temporarily disabled for troubleshooting)
 CMD ["node", "dist/main.js"]

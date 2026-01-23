@@ -1,0 +1,74 @@
+# =============================================================================
+# Tempo Helm Values Template
+# =============================================================================
+
+# Tempo configuration
+tempo:
+  # Multitenancy
+  multitenancyEnabled: false
+  
+  # Receivers configuration
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:${otlp_grpc_port}"
+        http:
+          endpoint: "0.0.0.0:${otlp_http_port}"
+
+  # Storage configuration  
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+      wal:
+        path: /var/tempo/wal
+      block: {}
+
+  # Compactor
+  compactor:
+    compaction:
+      block_retention: ${retention}
+
+  # Query frontend
+  queryFrontend:
+    search:
+      duration_slo: 5s
+      throughput_bytes_slo: 1.073741824e+09
+
+  # Metrics generator (for service graphs)
+  metricsGenerator:
+    enabled: true
+    ringKVStore:
+      store: inmemory
+    remoteWrite:
+    - url: http://monitoring-kube-prometheus-prometheus.monitoring:9090/api/v1/write
+      send_exemplars: true
+
+# Persistence
+persistence:
+  enabled: ${storage_enabled}
+  size: ${storage_size}
+%{ if storage_class != "" ~}
+  storageClassName: ${storage_class}
+%{ endif ~}
+
+# Resources
+resources:
+  requests:
+    cpu: ${request_cpu}
+    memory: ${request_memory}
+  limits:
+    cpu: ${limit_cpu}
+    memory: ${limit_memory}
+
+# Service configuration
+service:
+  type: ClusterIP
+
+# Pod annotations for Prometheus scraping
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "3200"
+  prometheus.io/path: "/metrics"

@@ -74,6 +74,7 @@ output "mongodb_task_service_connection_string" {
   value       = var.mongodb_enabled ? module.mongodb_task_service[0].connection_string : null
   sensitive   = true
 }
+
 # -----------------------------------------------------------------------------
 # Kafka
 # -----------------------------------------------------------------------------
@@ -115,6 +116,27 @@ output "redis_connection" {
 }
 
 # -----------------------------------------------------------------------------
+# Tracing
+# -----------------------------------------------------------------------------
+
+output "tracing" {
+  description = "Distributed tracing information"
+  value = var.tracing_enabled ? {
+    namespace                    = module.tracing[0].namespace
+    tempo_endpoint               = module.tracing[0].tempo_endpoint
+    tempo_query_url              = module.tracing[0].tempo_query_url
+    otel_collector_grpc_endpoint = module.tracing[0].otel_collector_grpc_endpoint
+    otel_collector_http_endpoint = module.tracing[0].otel_collector_http_endpoint
+    kong_plugin_name             = module.tracing[0].kong_plugin_name
+  } : null
+}
+
+output "tracing_service_env_vars" {
+  description = "Environment variables to add to services for tracing"
+  value       = var.tracing_enabled ? module.tracing[0].service_environment_variables : {}
+}
+
+# -----------------------------------------------------------------------------
 # Access Commands
 # -----------------------------------------------------------------------------
 
@@ -132,6 +154,11 @@ output "access_commands" {
     # Port-forward Alertmanager:
     kubectl port-forward -n monitoring svc/monitoring-kube-prometheus-alertmanager 9093:9093
     # Open: http://localhost:9093
+
+    # Port-forward Tempo (Tracing):
+    kubectl port-forward -n tracing svc/tempo 3200:3200
+    # Open: http://localhost:3200
+    # View traces in Grafana -> Explore -> Tempo datasource
     
     # Port-forward MongoDB:
     kubectl port-forward -n mongodb svc/mongodb-sharded 27017:27017

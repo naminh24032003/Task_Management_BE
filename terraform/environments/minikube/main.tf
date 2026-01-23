@@ -395,3 +395,52 @@ module "bff_service" {
 
   depends_on = [module.redis]
 }
+
+# -----------------------------------------------------------------------------
+# Tracing Module (Tempo + OpenTelemetry Collector)
+# -----------------------------------------------------------------------------
+
+module "tracing" {
+  source = "../../modules/platform/tracing"
+  count  = var.tracing_enabled ? 1 : 0
+
+  environment      = var.environment
+  namespace        = "tracing"
+  create_namespace = true
+
+  # Tempo configuration
+  tempo_enabled       = true
+  tempo_chart_version = "1.7.2"
+  tempo_retention     = "48h"
+  tempo_storage_enabled = false  # No PV for minikube
+  tempo_resources = {
+    requests = { cpu = "50m", memory = "128Mi" }
+    limits   = { cpu = "300m", memory = "256Mi" }
+  }
+
+  # OTEL Collector configuration
+  otel_collector_enabled   = true
+  otel_collector_image     = "otel/opentelemetry-collector-contrib"
+  otel_collector_image_tag = "0.91.0"
+  otel_collector_replicas  = 1
+  otel_collector_resources = {
+    requests = { cpu = "25m", memory = "64Mi" }
+    limits   = { cpu = "150m", memory = "128Mi" }
+  }
+
+  # Kong OpenTelemetry Plugin
+  kong_plugin_enabled = true
+  kong_plugin_global  = true
+  kong_namespace      = "kong"
+
+  # Grafana integration
+  grafana_datasource_enabled = true
+  grafana_namespace          = "monitoring"
+
+  # Sampling (100% for dev)
+  sampling_rate     = var.tracing_sampling_rate
+  batch_span_count  = 200
+  batch_flush_delay = 3
+
+  depends_on = [module.monitoring]
+}

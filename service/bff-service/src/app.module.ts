@@ -20,6 +20,7 @@ import {
   redisConfig,
   authConfig,
 } from './infrastructure/config';
+import { TracingModule } from './infrastructure/tracing/tracing.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import {
       load: [appConfig, graphqlConfig, grpcConfig, redisConfig, authConfig],
       envFilePath: ['.env.local', '.env'],
     }),
+    TracingModule,
 
     // GraphQL with Apollo Server
     GraphQLModule.forRootAsync<ApolloDriverConfig>({

@@ -9,6 +9,9 @@ kong:
     log_level: debug
     # Enable pre-function/post-function plugins with custom Lua code
     untrusted_lua: "on"
+    # OpenTelemetry configuration
+    tracing_instrumentations: all
+    tracing_sampling_rate: "1.0"
 
   # Bật Ingress Controller để dùng Kubernetes Ingress
   ingressController:
@@ -37,3 +40,30 @@ kong:
   deployment:
     kong:
       enabled: true
+
+  # Custom plugins for OpenTelemetry
+  plugins:
+    configMaps: []
+
+# Custom plugin configuration via KongPlugin CRD
+# Apply after installation
+customResources:
+  opentelemetryPlugin: |
+    apiVersion: configuration.konghq.com/v1
+    kind: KongClusterPlugin
+    metadata:
+      name: opentelemetry-tracing
+      annotations:
+        kubernetes.io/ingress.class: kong
+      labels:
+        global: "true"
+    config:
+      endpoint: "http://otel-collector.tracing.svc.cluster.local:4318/v1/traces"
+      resource_attributes:
+        service.name: kong-gateway
+      headers:
+        X-Auth-Token: ""
+      header_type: "w3c"
+      batch_span_count: 200
+      batch_flush_delay: 3
+    plugin: opentelemetry

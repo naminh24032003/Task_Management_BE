@@ -12,7 +12,7 @@ import { ApplicationModule } from './application/application.module';
     SharedModule.forRoot({
       serviceName: 'user-service',
       enableLogging: true,
-      enableTracing: true,
+      enableTracing: false,
       enableTimeout: true,
       enableExceptionFilter: true,
       timeoutMs: 30000,
@@ -28,4 +28,4 @@ import { ApplicationModule } from './application/application.module';
   controllers: [AuthController, UserController],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }

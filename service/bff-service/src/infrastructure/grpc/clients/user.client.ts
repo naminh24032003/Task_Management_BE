@@ -26,6 +26,15 @@ interface AuthServiceGrpc {
   Logout(data: { refreshToken: string }, metadata?: Metadata): Observable<any>;
 }
 
+interface GrpcCallMetrics {
+  operation: string;
+  startTime: number;
+  endTime?: number;
+  durationMs?: number;
+  status: 'success' | 'error';
+  errorType?: string;
+}
+
 @Injectable()
 export class UserGrpcClient implements OnModuleInit {
   private readonly logger = new Logger(UserGrpcClient.name);
@@ -43,6 +52,11 @@ export class UserGrpcClient implements OnModuleInit {
 
   private createMetadata(context?: { userId?: string; tenantId?: string; roles?: string[] }): Metadata {
     const metadata = new Metadata();
+
+    // Add trace ID for distributed tracing
+    const traceId = `bff-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`;
+    metadata.set('x-trace-id', traceId);
+
     if (context?.userId) {
       metadata.set('x-user-id', context.userId);
     }
@@ -55,9 +69,28 @@ export class UserGrpcClient implements OnModuleInit {
     return metadata;
   }
 
+  private logGrpcCall(metrics: GrpcCallMetrics): void {
+    this.logger.log(JSON.stringify({
+      event: 'grpc_call',
+      service: 'bff-service',
+      layer: 'grpc_client',
+      ...metrics,
+      timestamp: new Date().toISOString(),
+    }));
+  }
+
   private async executeGrpcCall<T>(call: Observable<T>, operation: string): Promise<T> {
+    const startTime = Date.now();
+
+    this.logger.log(JSON.stringify({
+      event: 'grpc_call_started',
+      operation,
+      layer: 'grpc_client',
+      timestamp: new Date().toISOString(),
+    }));
+
     try {
-      return await lastValueFrom(
+      const result = await lastValueFrom(
         call.pipe(
           timeout(this.TIMEOUT_MS),
           catchError((error) => {
@@ -66,8 +99,43 @@ export class UserGrpcClient implements OnModuleInit {
           }),
         ),
       );
-    } catch (error) {
-      this.logger.error(`Failed to execute ${operation}`, error);
+
+      const durationMs = Date.now() - startTime;
+
+      this.logGrpcCall({
+        operation,
+        startTime,
+        endTime: Date.now(),
+        durationMs,
+        status: 'success',
+      });
+
+      return result;
+    } catch (error: any) {
+      const durationMs = Date.now() - startTime;
+
+      this.logGrpcCall({
+        operation,
+        startTime,
+        endTime: Date.now(),
+        durationMs,
+        status: 'error',
+        errorType: error.name || 'UnknownError',
+      });
+
+      this.logger.error(JSON.stringify({
+        event: 'grpc_call_error',
+        operation,
+        layer: 'grpc_client',
+        durationMs,
+        error: {
+          name: error.name,
+          message: error.message,
+          code: error.code,
+        },
+        timestamp: new Date().toISOString(),
+      }));
+
       throw error;
     }
   }
@@ -80,16 +148,83 @@ export class UserGrpcClient implements OnModuleInit {
     password: string;
     firstName: string;
     lastName: string;
+    displayName?: string;
   }) {
-    return this.executeGrpcCall(this.authService.Register(data), 'register');
+    const traceId = `reg-${Date.now().toString(36)}`;
+    const metadata = this.createMetadata({ tenantId: data.tenantId });
+
+    this.logger.log(JSON.stringify({
+      event: 'register_bff_started',
+      traceId,
+      layer: 'bff',
+      tenantId: data.tenantId,
+      email: data.email.replace(/(.{3}).*@/, '$1***@'),
+      timestamp: new Date().toISOString(),
+    }));
+
+    const startTime = Date.now();
+
+    try {
+      const grpcData = {
+        tenant_id: data.tenantId,
+        email: data.email,
+        password: data.password,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        display_name: data.displayName,
+      };
+
+      const result = await this.executeGrpcCall(this.authService.Register(grpcData, metadata), 'register');
+
+      const totalDuration = Date.now() - startTime;
+
+      this.logger.log(JSON.stringify({
+        event: 'register_bff_completed',
+        traceId,
+        layer: 'bff',
+        status: 'success',
+        totalDurationMs: totalDuration,
+        timestamp: new Date().toISOString(),
+      }));
+
+      return result;
+    } catch (error: any) {
+      const totalDuration = Date.now() - startTime;
+
+      this.logger.error(JSON.stringify({
+        event: 'register_bff_failed',
+        traceId,
+        layer: 'bff',
+        status: 'error',
+        totalDurationMs: totalDuration,
+        error: {
+          name: error.name,
+          message: error.message,
+        },
+        timestamp: new Date().toISOString(),
+      }));
+
+      throw error;
+    }
   }
 
   async login(data: { tenantId: string; email: string; password: string }) {
-    return this.executeGrpcCall(this.authService.Login(data), 'login');
+    const metadata = this.createMetadata({ tenantId: data.tenantId });
+    const grpcData = {
+      tenant_id: data.tenantId,
+      email: data.email,
+      password: data.password,
+    };
+    return this.executeGrpcCall(this.authService.Login(grpcData, metadata), 'login');
   }
 
   async googleLogin(data: { tenantId: string; idToken: string }) {
-    return this.executeGrpcCall(this.authService.GoogleLogin(data), 'googleLogin');
+    const metadata = this.createMetadata({ tenantId: data.tenantId });
+    const grpcData = {
+      tenant_id: data.tenantId,
+      id_token: data.idToken,
+    };
+    return this.executeGrpcCall(this.authService.GoogleLogin(grpcData, metadata), 'googleLogin');
   }
 
   async refreshToken(refreshToken: string) {

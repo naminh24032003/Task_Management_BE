@@ -1,0 +1,82 @@
+# =============================================================================
+# OpenTelemetry Collector Configuration
+# =============================================================================
+# Central collector for receiving traces from all services
+# =============================================================================
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:${otlp_grpc_port}
+      http:
+        endpoint: 0.0.0.0:${otlp_http_port}
+        cors:
+          allowed_origins:
+            - "*"
+
+processors:
+  # Batch processor for efficiency
+  batch:
+    timeout: ${batch_flush_delay}s
+    send_batch_size: ${batch_span_count}
+    send_batch_max_size: 1000
+
+  # Memory limiter to prevent OOM
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 200
+    spike_limit_mib: 50
+
+  # Add resource attributes
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: minikube
+        action: upsert
+
+  # Probabilistic sampling (if needed)
+  # probabilistic_sampler:
+  #   sampling_percentage: 100
+
+exporters:
+  # Export to Tempo
+  otlp/tempo:
+    endpoint: ${tempo_endpoint}
+    tls:
+      insecure: true
+
+  # Debug logging (set verbosity: detailed for troubleshooting)
+  logging:
+    verbosity: normal
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+extensions:
+  # Health check endpoint
+  health_check:
+    endpoint: 0.0.0.0:13133
+    path: "/health"
+
+  # pprof for debugging
+  pprof:
+    endpoint: 0.0.0.0:1888
+
+  # zPages for debugging
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+service:
+  extensions: [health_check, pprof, zpages]
+  
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp/tempo, logging]
+
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: 0.0.0.0:8888

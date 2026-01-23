@@ -133,3 +133,18 @@ variable "bff_redis_password" {
   default     = "Redis@Cluster2024Secure!"
   sensitive   = true
 }
+
+# =========================
+# Tracing Configuration
+# =========================
+variable "tracing_enabled" {
+  type        = bool
+  description = "Enable distributed tracing (Tempo + OTEL Collector)"
+  default     = true
+}
+
+variable "tracing_sampling_rate" {
+  type        = number
+  description = "Trace sampling rate (0.0 to 1.0)"
+  default     = 1.0
+}

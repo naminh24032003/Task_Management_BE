@@ -84,11 +84,16 @@ EXPOSE 4000
 # Metrics endpoint
 EXPOSE 9092
 
+# OpenTelemetry environment variables
+ENV OTEL_SERVICE_NAME=bff-service
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.tracing.svc.cluster.local:4317
+ENV OTEL_TRACES_SAMPLER=always_on
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:9092/health || exit 1
 
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the application
-CMD ["node", "dist/main.js"]
+# Load OpenTelemetry instrumentation before main.js
+CMD ["node", "-r", "./dist/instrumentation.js", "dist/main.js"]
