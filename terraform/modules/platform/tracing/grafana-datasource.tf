@@ -24,7 +24,7 @@ resource "kubernetes_config_map" "grafana_tempo_datasource" {
           name      = "Tempo"
           type      = "tempo"
           access    = "proxy"
-          url       = "http://${local.tempo_endpoint}:3200"
+          url       = "http://${local.tempo_endpoint}:3100"
           isDefault = false
           editable  = true
           jsonData = {

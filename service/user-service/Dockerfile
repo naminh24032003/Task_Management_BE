@@ -105,5 +105,5 @@ ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.tracing.svc.cluster.local:
 ENV OTEL_TRACES_SAMPLER=always_on
 
 ENTRYPOINT ["dumb-init", "--"]
-# Load OpenTelemetry instrumentation before main.js (Temporarily disabled for troubleshooting)
-CMD ["node", "dist/main.js"]
+# Load OpenTelemetry instrumentation before main.js
+CMD ["node", "-r", "./dist/instrumentation.js", "dist/main.js"]

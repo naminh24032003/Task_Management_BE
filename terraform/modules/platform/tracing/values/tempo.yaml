@@ -70,5 +70,5 @@ service:
 # Pod annotations for Prometheus scraping
 podAnnotations:
   prometheus.io/scrape: "true"
-  prometheus.io/port: "3200"
+  prometheus.io/port: "3100"
   prometheus.io/path: "/metrics"

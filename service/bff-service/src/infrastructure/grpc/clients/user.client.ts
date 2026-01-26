@@ -53,9 +53,8 @@ export class UserGrpcClient implements OnModuleInit {
   private createMetadata(context?: { userId?: string; tenantId?: string; roles?: string[] }): Metadata {
     const metadata = new Metadata();
 
-    // Add trace ID for distributed tracing
-    const traceId = `bff-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`;
-    metadata.set('x-trace-id', traceId);
+    // Add trace ID for distributed tracing (OpenTelemetry handles this automatically)
+    // We can still add metadata if needed, but standard tracing uses Headers
 
     if (context?.userId) {
       metadata.set('x-user-id', context.userId);

@@ -8,6 +8,7 @@ import { MultiTenancyModule } from './multi-tenancy/multi-tenancy.module';
 import { HealthModule } from './health/health.module';
 import { RedisModule } from './redis/redis.module';
 import { KafkaModule } from './kafka/kafka.module';
+import { TracingModule } from './tracing/tracing.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
 import redisConfig from './config/redis.config';
@@ -30,6 +31,7 @@ import kafkaConfig from './config/kafka.config';
     TypeOrmRepositoriesModule,
     RedisModule,
     KafkaModule,
+    TracingModule,
     HealthModule,
   ],
   exports: [

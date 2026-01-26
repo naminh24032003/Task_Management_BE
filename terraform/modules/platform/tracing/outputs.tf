@@ -14,7 +14,7 @@ output "tempo_endpoint" {
 
 output "tempo_query_url" {
   description = "Tempo query URL for Grafana"
-  value       = var.tempo_enabled ? "http://${local.tempo_endpoint}:3200" : null
+  value       = var.tempo_enabled ? "http://${local.tempo_endpoint}:3100" : null
 }
 
 output "otel_collector_grpc_endpoint" {

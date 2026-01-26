@@ -10,8 +10,7 @@ import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentation
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { GrpcInstrumentation } from '@opentelemetry/instrumentation-grpc';
-import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
+import { W3CTraceContextPropagator } from '@opentelemetry/core';
 import { GraphQLInstrumentation } from '@opentelemetry/instrumentation-graphql';
 import { IORedisInstrumentation } from '@opentelemetry/instrumentation-ioredis';
 import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
@@ -44,24 +43,19 @@ const traceExporter = new OTLPTraceExporter({
 const sdk = new NodeSDK({
     resource,
     traceExporter,
+    textMapPropagator: new W3CTraceContextPropagator(),
     instrumentations: [
         // Auto-instrument common Node.js libraries
         getNodeAutoInstrumentations({
-            // Disable fs instrumentation to reduce noise
-            '@opentelemetry/instrumentation-fs': {
-                enabled: false,
+            // Disable problematic instrumentations
+            '@opentelemetry/instrumentation-fs': { enabled: false },
+            '@opentelemetry/instrumentation-dns': { enabled: false },
+            '@opentelemetry/instrumentation-net': { enabled: false },
+            '@opentelemetry/instrumentation-http': { enabled: true },
+            '@opentelemetry/instrumentation-grpc': {
+                enabled: true,
+                ignoreGrpcMethods: ['Check', 'Watch'],
             },
-            '@opentelemetry/instrumentation-dns': {
-                enabled: false,
-            },
-        }),
-        // gRPC instrumentation for calls to user-service
-        new GrpcInstrumentation({
-            ignoreGrpcMethods: ['Check', 'Watch'],
-        }),
-        // HTTP instrumentation for incoming requests from Kong
-        new HttpInstrumentation({
-            ignoreIncomingPaths: ['/metrics', '/health', '/ready', '/.well-known/apollo/server-health'],
         }),
         // GraphQL instrumentation
         new GraphQLInstrumentation({

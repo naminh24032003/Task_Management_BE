@@ -10,7 +10,7 @@ microservice:
   # =========================================================
   image:
     repository: user-service
-    tag: v9
+    tag: v10
     pullPolicy: IfNotPresent
 
   # =========================================================
@@ -37,6 +37,12 @@ microservice:
     REDIS_CONNECT_TIMEOUT: "10000"
     REDIS_COMMAND_TIMEOUT: "5000"
     REDIS_MAX_RETRIES: "3"
+    # Kafka Configuration
+    KAFKA_BROKERS: "kafka.kafka.svc.cluster.local:9092"
+    KAFKA_USERNAME: "kafka-user"
+    KAFKA_CLIENT_ID: "user-service"
+    KAFKA_GROUP_ID: "user-service-group"
+    KAFKA_SASL_MECHANISM: "scram-sha-256"
 
   # =========================================================
   # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
@@ -139,4 +145,5 @@ secrets:
   googleClientSecret: "your-google-client-secret"
 
   # Additional secrets can be added here
-  extra: {}
+  extra:
+    KAFKA_PASSWORD: "Kafka@SASL2024Secure!"

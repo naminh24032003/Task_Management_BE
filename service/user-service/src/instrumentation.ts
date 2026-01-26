@@ -10,10 +10,7 @@ import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentation
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { MongoDBInstrumentation } from '@opentelemetry/instrumentation-mongodb';
-import { GrpcInstrumentation } from '@opentelemetry/instrumentation-grpc';
-import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
-import { IORedisInstrumentation } from '@opentelemetry/instrumentation-ioredis';
+import { W3CTraceContextPropagator } from '@opentelemetry/core';
 import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
 
 // Enable debug logging (optional, for troubleshooting)
@@ -44,15 +41,17 @@ const traceExporter = new OTLPTraceExporter({
 const sdk = new NodeSDK({
     resource,
     traceExporter,
+    textMapPropagator: new W3CTraceContextPropagator(),
     instrumentations: [
-        // Auto-instrument common Node.js libraries
         getNodeAutoInstrumentations({
             // Disable problematic instrumentations
             '@opentelemetry/instrumentation-fs': { enabled: false },
             '@opentelemetry/instrumentation-dns': { enabled: false },
             '@opentelemetry/instrumentation-net': { enabled: false },
+            '@opentelemetry/instrumentation-mongodb': { enabled: true },
             '@opentelemetry/instrumentation-http': { enabled: true },
             '@opentelemetry/instrumentation-grpc': { enabled: true },
+            '@opentelemetry/instrumentation-ioredis': { enabled: true },
         }),
     ],
 });

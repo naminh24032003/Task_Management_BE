@@ -156,8 +156,8 @@ output "access_commands" {
     # Open: http://localhost:9093
 
     # Port-forward Tempo (Tracing):
-    kubectl port-forward -n tracing svc/tempo 3200:3200
-    # Open: http://localhost:3200
+    kubectl port-forward -n tracing svc/tempo 3100:3100
+    # Open: http://localhost:3100
     # View traces in Grafana -> Explore -> Tempo datasource
     
     # Port-forward MongoDB:
