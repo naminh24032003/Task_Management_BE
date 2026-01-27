@@ -25,7 +25,7 @@ import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 export class KongAuthGuard implements CanActivate {
   private readonly logger = new Logger(KongAuthGuard.name);
 
-  constructor(private reflector: Reflector) {}
+  constructor(private reflector: Reflector) { }
 
   canActivate(context: ExecutionContext): boolean {
     // Check if route is public
@@ -46,7 +46,7 @@ export class KongAuthGuard implements CanActivate {
     const tenantId = req.headers['x-tenant-id'];
     const email = req.headers['x-email'];
     const rolesHeader = req.headers['x-roles'];
-    const permissionsHeader = req.headers['x-permissions'];
+    const scopesHeader = req.headers['x-scopes'];
 
     // If Kong didn't inject user ID, request is not authenticated
     if (!userId) {
@@ -56,7 +56,7 @@ export class KongAuthGuard implements CanActivate {
 
     // Parse roles and permissions from comma-separated strings
     const roles = rolesHeader ? rolesHeader.split(',').map((r: string) => r.trim()).filter(Boolean) : [];
-    const permissions = permissionsHeader ? permissionsHeader.split(',').map((p: string) => p.trim()).filter(Boolean) : [];
+    const scopes = scopesHeader ? scopesHeader.split(',').map((p: string) => p.trim()).filter(Boolean) : [];
 
     // Attach user to request
     req.user = {
@@ -64,7 +64,7 @@ export class KongAuthGuard implements CanActivate {
       tenantId: tenantId || '',
       email: email || '',
       roles,
-      permissions,
+      scopes,
     };
 
     this.logger.debug(`Authenticated user: ${userId} with roles: ${roles.join(', ')}`);

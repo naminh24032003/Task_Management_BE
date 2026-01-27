@@ -10,8 +10,13 @@ microservice:
   # =========================================================
   image:
     repository: task-service
-    tag: v2
+    tag: v9
     pullPolicy: IfNotPresent
+
+  # Override default CMD to load only minikube config
+  args:
+    - "-conf"
+    - "./configs/config-minikube.yaml"
 
   # =========================================================
   # ENVIRONMENT VARIABLES (ConfigMap)
@@ -21,12 +26,21 @@ microservice:
     # Redis Configuration - non-sensitive settings
     REDIS_HOST: "redis-cluster-master.redis.svc.cluster.local"
     REDIS_PORT: "6379"
+    # MongoDB Configuration
+    MONGODB_URI: "mongodb://root:MongoDB%40Root2024Secure%21@task-mongodb-mongodb-sharded.mongodb-task.svc.cluster.local:27017/task-service?authSource=admin"
+    MONGODB_DATABASE: "task-service"
+    # OpenTelemetry Configuration
+    OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector.tracing.svc.cluster.local:4317"
+    OTEL_SERVICE_NAME: "task-service"
+    # Kafka Configuration - non-sensitive settings
+    KAFKA_USERNAME: "kafka-user"
 
   # =========================================================
   # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
   # =========================================================
   envVarsSecret:
     REDIS_PASSWORD: "Redis@Cluster2024Secure!"
+    KAFKA_PASSWORD: "Kafka@SASL2024Secure!"
 
   # =========================================================
   # CONTAINER PORTS

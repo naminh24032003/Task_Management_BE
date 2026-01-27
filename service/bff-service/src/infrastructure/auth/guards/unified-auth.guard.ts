@@ -65,7 +65,7 @@ export class UnifiedAuthGuard implements CanActivate {
     const tenantId = req.headers['x-tenant-id'];
     const email = req.headers['x-email'];
     const rolesHeader = req.headers['x-roles'];
-    const permissionsHeader = req.headers['x-permissions'];
+    const scopesHeader = req.headers['x-scopes'];
 
     if (!userId) {
       this.logger.warn('Request without x-user-id header');
@@ -75,8 +75,8 @@ export class UnifiedAuthGuard implements CanActivate {
     const roles = rolesHeader
       ? rolesHeader.split(',').map((r: string) => r.trim()).filter(Boolean)
       : [];
-    const permissions = permissionsHeader
-      ? permissionsHeader.split(',').map((p: string) => p.trim()).filter(Boolean)
+    const scopes = scopesHeader
+      ? scopesHeader.split(',').map((p: string) => p.trim()).filter(Boolean)
       : [];
 
     req.user = {
@@ -84,7 +84,7 @@ export class UnifiedAuthGuard implements CanActivate {
       tenantId: tenantId || '',
       email: email || '',
       roles,
-      permissions,
+      scopes,
     };
 
     return true;
@@ -123,7 +123,7 @@ export class UnifiedAuthGuard implements CanActivate {
         tenantId: decoded.tenantId,
         email: decoded.email,
         roles: decoded.roles || [],
-        permissions: decoded.permissions || [],
+        scopes: decoded.scopes || [],
       };
 
       return true;

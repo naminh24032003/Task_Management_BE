@@ -9,12 +9,15 @@ import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../ports/user-repository.port';
+import { IRoleRepository, ROLE_REPOSITORY } from '../ports/role-repository.port';
+import { IPermissionRepository, PERMISSION_REPOSITORY } from '../ports/permission-repository.port';
 
 export interface TokenPayload {
   sub: string; // user ID
   tenantId: string;
   email: string;
-  permissions: string[];
+  roles: string[];
+  scopes: string[];
   type: 'access' | 'refresh';
 }
 
@@ -34,7 +37,8 @@ export interface ValidateTokenResult {
   valid: boolean;
   userId?: string;
   tenantId?: string;
-  permissions?: string[];
+  roles?: string[];
+  scopes?: string[];
 }
 
 /**
@@ -52,13 +56,17 @@ export class UserAuthenticationService {
   constructor(
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    @Inject(ROLE_REPOSITORY)
+    private readonly roleRepository: IRoleRepository,
+    @Inject(PERMISSION_REPOSITORY)
+    private readonly permissionRepository: IPermissionRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {
     this.accessTokenExpiresIn = Number(this.configService.get<number>(
       'JWT_ACCESS_EXPIRES_IN',
-      3600,
-    )); // 1 hour
+      900,
+    )); // 15 minutes
     this.refreshTokenExpiresIn = Number(this.configService.get<number>(
       'JWT_REFRESH_EXPIRES_IN',
       604800,
@@ -100,11 +108,21 @@ export class UserAuthenticationService {
    * Generate access and refresh tokens
    */
   async generateTokens(user: User): Promise<TokenPair> {
+    // Load roles
+    const roles = await this.roleRepository.findByIds(user.tenantId, user.roleIds);
+    const roleNames = roles.map(r => r.name);
+
+    // Load permissions for roles
+    const allPermissionIds = [...new Set(roles.flatMap(r => r.permissionIds))];
+    const permissions = await this.permissionRepository.findByIds(user.tenantId, allPermissionIds);
+    const scopes = permissions.map(p => `${p.resource}:${p.action}`);
+
     const payload: Omit<TokenPayload, 'type'> = {
       sub: user.id.toString(),
       tenantId: user.tenantId,
       email: user.email.toString(),
-      permissions: [], // TODO: Load permissions from roles
+      roles: roleNames,
+      scopes: scopes,
     };
 
     const accessToken = this.jwtService.sign(
@@ -184,7 +202,8 @@ export class UserAuthenticationService {
         valid: true,
         userId: payload.sub,
         tenantId: payload.tenantId,
-        permissions: payload.permissions,
+        roles: payload.roles,
+        scopes: payload.scopes,
       };
     } catch {
       return { valid: false };

@@ -13,17 +13,18 @@ import (
 type EndpointAuthConfig struct {
 	RequireAuth   bool
 	RequireRoles  []string
-	RequirePerms  []string
+	RequireScopes []string
 	AllowPublic   bool // Skip auth completely
 }
 
 // AuthSelector creates a selector middleware based on endpoint configurations
 // Usage:
-//   authSelector := auth.NewAuthSelector(map[string]auth.EndpointAuthConfig{
-//       "/task.v1.TaskService/CreateTask": {RequireAuth: true, RequireRoles: []string{"admin", "manager"}},
-//       "/task.v1.TaskService/GetTask":    {RequireAuth: true},
-//       "/task.v1.TaskService/Hello":      {AllowPublic: true},
-//   })
+//
+//	authSelector := auth.NewAuthSelector(map[string]auth.EndpointAuthConfig{
+//	    "/task.v1.TaskService/CreateTask": {RequireAuth: true, RequireRoles: []string{"admin", "manager"}},
+//	    "/task.v1.TaskService/GetTask":    {RequireAuth: true},
+//	    "/task.v1.TaskService/Hello":      {AllowPublic: true},
+//	})
 type AuthSelector struct {
 	configs map[string]EndpointAuthConfig
 }
@@ -69,9 +70,9 @@ func (s *AuthSelector) Middleware() middleware.Middleware {
 				return nil, errors.Forbidden("PERMISSION_DENIED", "access denied, required roles: "+joinStrings(config.RequireRoles))
 			}
 
-			// Check permissions
-			if len(config.RequirePerms) > 0 && !identity.HasAllPermissions(config.RequirePerms...) {
-				return nil, errors.Forbidden("PERMISSION_DENIED", "access denied, required permissions: "+joinStrings(config.RequirePerms))
+			// Check scopes
+			if len(config.RequireScopes) > 0 && !identity.HasAllScopes(config.RequireScopes...) {
+				return nil, errors.Forbidden("PERMISSION_DENIED", "access denied, required scopes: "+joinStrings(config.RequireScopes))
 			}
 
 			return handler(ctx, req)

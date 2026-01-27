@@ -2,10 +2,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 
-	"task-service/internal/pkg/logger"
+	"github.com/task-management/go-shared/logger"
+	"github.com/task-management/go-shared/tracing"
 
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/config"
@@ -76,6 +78,15 @@ func main() {
 
 	if err := c.Load(); err != nil {
 		panic(err)
+	}
+
+	// Initialize OpenTelemetry tracing BEFORE wireApp so MongoDB picks up global tracer
+	tracingShutdown, err := tracing.InitTracing(Name, Version)
+	if err != nil {
+		fmt.Printf("Failed to initialize tracing: %v\n", err)
+		// Continue without tracing - non-fatal
+	} else {
+		defer tracingShutdown()
 	}
 
 	// Initialize application with wire

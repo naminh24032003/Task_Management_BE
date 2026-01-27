@@ -18,11 +18,11 @@ const (
 // UserIdentity represents the authenticated user's identity
 // These values are extracted from gRPC metadata headers injected by Kong
 type UserIdentity struct {
-	UserID      string
-	TenantID    string
-	Email       string
-	Roles       []string
-	Permissions []string
+	UserID   string
+	TenantID string
+	Email    string
+	Roles    []string
+	Scopes   []string
 }
 
 // ExtractIdentityFromContext extracts user identity from gRPC metadata in context
@@ -60,9 +60,9 @@ func ExtractIdentityFromContext(ctx context.Context) *UserIdentity {
 		identity.Roles = strings.Split(values[0], ",")
 	}
 
-	// Extract x-permissions (comma-separated)
-	if values := md.Get("x-permissions"); len(values) > 0 && values[0] != "" {
-		identity.Permissions = strings.Split(values[0], ",")
+	// Extract x-scopes (comma-separated)
+	if values := md.Get("x-scopes"); len(values) > 0 && values[0] != "" {
+		identity.Scopes = strings.Split(values[0], ",")
 	}
 
 	return identity
@@ -110,15 +110,15 @@ func (u *UserIdentity) HasAllRoles(roles ...string) bool {
 	return true
 }
 
-// HasPermission checks if the user has at least one of the specified permissions
-func (u *UserIdentity) HasPermission(permissions ...string) bool {
-	if u == nil || len(u.Permissions) == 0 {
+// HasScope checks if the user has at least one of the specified scopes
+func (u *UserIdentity) HasScope(scopes ...string) bool {
+	if u == nil || len(u.Scopes) == 0 {
 		return false
 	}
 
-	for _, requiredPerm := range permissions {
-		for _, userPerm := range u.Permissions {
-			if userPerm == requiredPerm {
+	for _, requiredScope := range scopes {
+		for _, userScope := range u.Scopes {
+			if userScope == requiredScope {
 				return true
 			}
 		}
@@ -126,16 +126,16 @@ func (u *UserIdentity) HasPermission(permissions ...string) bool {
 	return false
 }
 
-// HasAllPermissions checks if the user has all of the specified permissions
-func (u *UserIdentity) HasAllPermissions(permissions ...string) bool {
-	if u == nil || len(u.Permissions) == 0 {
+// HasAllScopes checks if the user has all of the specified scopes
+func (u *UserIdentity) HasAllScopes(scopes ...string) bool {
+	if u == nil || len(u.Scopes) == 0 {
 		return false
 	}
 
-	for _, requiredPerm := range permissions {
+	for _, requiredScope := range scopes {
 		found := false
-		for _, userPerm := range u.Permissions {
-			if userPerm == requiredPerm {
+		for _, userScope := range u.Scopes {
+			if userScope == requiredScope {
 				found = true
 				break
 			}

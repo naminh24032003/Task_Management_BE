@@ -7,6 +7,7 @@ import (
 	"task-service/internal/domain/aggregate"
 	"task-service/internal/domain/repository"
 	"task-service/internal/domain/valueobject"
+	"task-service/internal/pkg/auth"
 )
 
 // TaskDomainService contains domain logic that doesn't fit into a single aggregate
@@ -55,6 +56,41 @@ func (s *TaskDomainService) ValidateTaskCreation(ctx context.Context, title, pro
 
 	if projectID == "" {
 		return errors.New("project ID cannot be empty")
+	}
+
+	return nil
+}
+
+// AuthorizeWriteTask implements the fine-grained AuthZ rules (Phase E2)
+// Rule: owner / assignee / admin, status != DONE (except admin)
+func (s *TaskDomainService) AuthorizeWriteTask(ctx context.Context, identity *auth.UserIdentity, task *aggregate.Task) error {
+	// 1. Admin bypass
+	if identity.HasRole("admin") {
+		return nil
+	}
+
+	// 2. Scope check (redundant but safe)
+	if !identity.HasScope("task:write") {
+		return errors.New("access denied: missing task:write scope")
+	}
+
+	// 3. Status check: non-admins cannot edit DONE tasks
+	if task.Status == valueobject.TaskStatusComplete || task.Status == valueobject.TaskStatusClosed {
+		return errors.New("access denied: cannot modify task in DONE status")
+	}
+
+	// 4. Ownership/Assignee check
+	isOwner := task.CreatorID == identity.UserID
+	isAssignee := false
+	for _, id := range task.AssigneeIDs {
+		if id == identity.UserID {
+			isAssignee = true
+			break
+		}
+	}
+
+	if !isOwner && !isAssignee {
+		return errors.New("access denied: must be owner or assignee to modify task")
 	}
 
 	return nil

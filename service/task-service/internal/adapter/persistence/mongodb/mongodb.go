@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readconcern"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
+	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 )
 
 // Config represents MongoDB configuration
@@ -42,7 +43,8 @@ func NewDatabase(cfg *Config) (*mongo.Database, func(), error) {
 		SetServerSelectionTimeout(cfg.ServerSelectionTimeout).
 		SetSocketTimeout(cfg.SocketTimeout).
 		SetRetryWrites(true).
-		SetRetryReads(true)
+		SetRetryReads(true).
+		SetMonitor(otelmongo.NewMonitor())
 
 	// Read Preference
 	switch cfg.ReadPreference {

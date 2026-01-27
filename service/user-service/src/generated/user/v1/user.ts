@@ -94,7 +94,8 @@ export interface ValidateTokenResponse {
   valid: boolean;
   userId?: string | undefined;
   tenantId?: string | undefined;
-  permissions: string[];
+  roles: string[];
+  scopes: string[];
 }
 
 export interface LogoutRequest {
@@ -866,7 +867,7 @@ export const ValidateTokenRequest: MessageFns<ValidateTokenRequest> = {
 };
 
 function createBaseValidateTokenResponse(): ValidateTokenResponse {
-  return { valid: false, permissions: [] };
+  return { valid: false, roles: [], scopes: [] };
 }
 
 export const ValidateTokenResponse: MessageFns<ValidateTokenResponse> = {
@@ -880,8 +881,11 @@ export const ValidateTokenResponse: MessageFns<ValidateTokenResponse> = {
     if (message.tenantId !== undefined) {
       writer.uint32(26).string(message.tenantId);
     }
-    for (const v of message.permissions) {
+    for (const v of message.roles) {
       writer.uint32(34).string(v!);
+    }
+    for (const v of message.scopes) {
+      writer.uint32(42).string(v!);
     }
     return writer;
   },
@@ -922,7 +926,15 @@ export const ValidateTokenResponse: MessageFns<ValidateTokenResponse> = {
             break;
           }
 
-          message.permissions.push(reader.string());
+          message.roles.push(reader.string());
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.scopes.push(reader.string());
           continue;
         }
       }

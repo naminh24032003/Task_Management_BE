@@ -35,6 +35,16 @@ data:
     connect_timeout: 10s
     max_retries: 3
 
+  kafka:
+    brokers:
+      - kafka.kafka.svc.cluster.local:9092
+    topic_tasks: tasks
+    sasl:
+      enabled: true
+      mechanism: SCRAM-SHA-256
+      username: ${KAFKA_USERNAME}
+      password: ${KAFKA_PASSWORD}
+
 logging:
   level: debug
   format: json

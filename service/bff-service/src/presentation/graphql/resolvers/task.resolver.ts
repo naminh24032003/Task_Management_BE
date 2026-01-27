@@ -1,7 +1,9 @@
 import { Resolver, Query, Mutation, Args, ID } from '@nestjs/graphql';
 import { UseGuards, Logger } from '@nestjs/common';
 import { UnifiedAuthGuard } from '../../../infrastructure/auth/guards/unified-auth.guard';
+import { ScopesGuard } from '../../../infrastructure/auth/guards/scopes.guard';
 import { Public } from '../../../infrastructure/auth/decorators/public.decorator';
+import { Scopes } from '../../../infrastructure/auth/decorators/scopes.decorator';
 import { CurrentUser, CurrentUserPayload } from '../../../infrastructure/auth/decorators/current-user.decorator';
 import {
   HelloResponse,
@@ -28,7 +30,7 @@ import { BulkUpdateStatusUseCase } from '../../../application/task/bulk-update-s
 import { TaskGrpcClient } from '../../../infrastructure/grpc/clients/task.client';
 
 @Resolver(() => Task)
-@UseGuards(UnifiedAuthGuard)
+@UseGuards(UnifiedAuthGuard, ScopesGuard)
 export class TaskResolver {
   private readonly logger = new Logger(TaskResolver.name);
 
@@ -60,6 +62,7 @@ export class TaskResolver {
     return 'pong';
   }
 
+  @Scopes('task:write')
   @Mutation(() => Task, { description: 'Create a new task' })
   async createTask(
     @Args('input', { type: () => CreateTaskInput }) input: CreateTaskInput,
@@ -73,6 +76,7 @@ export class TaskResolver {
     return this.mapTask(result);
   }
 
+  @Scopes('task:read')
   @Query(() => Task, { description: 'Get task by ID', name: 'task' })
   async getTask(
     @Args('id', { type: () => ID }) id: string,
@@ -86,6 +90,7 @@ export class TaskResolver {
     return this.mapTask(task);
   }
 
+  @Scopes('task:read')
   @Query(() => TaskConnection, { description: 'List tasks with pagination and filters', name: 'tasks' })
   async listTasks(
     @Args('input', { type: () => ListTasksInput }) input: ListTasksInput,
@@ -104,6 +109,7 @@ export class TaskResolver {
     };
   }
 
+  @Scopes('task:write')
   @Mutation(() => Task, { description: 'Update an existing task' })
   async updateTask(
     @Args('id', { type: () => ID }) id: string,
@@ -118,6 +124,7 @@ export class TaskResolver {
     return this.mapTask(task);
   }
 
+  @Scopes('task:write')
   @Mutation(() => TaskOperationResponse, { description: 'Delete a task' })
   async deleteTask(
     @Args('id', { type: () => ID }) id: string,
@@ -134,6 +141,7 @@ export class TaskResolver {
     };
   }
 
+  @Scopes('task:write')
   @Mutation(() => Task, { description: 'Update task status' })
   async updateTaskStatus(
     @Args('id', { type: () => ID }) id: string,
@@ -148,6 +156,7 @@ export class TaskResolver {
     return this.mapTask(task);
   }
 
+  @Scopes('task:write')
   @Mutation(() => Task, { description: 'Assign users to a task' })
   async assignTask(
     @Args('id', { type: () => ID }) id: string,

@@ -62,6 +62,7 @@ config:
       -- Main function
       local function process_jwt()
         local path = kong.request.get_path()
+        local method = kong.request.get_method()
 
         -- Skip auth for public paths
         if PUBLIC_PATHS[path] then
@@ -114,6 +115,37 @@ config:
           return kong.response.exit(401, { message = "Invalid token type" })
         end
 
+        -- Coarse Authorization Check (Phase B2)
+        local REQUIRED_SCOPES = {
+          { method = "POST", path = "/tasks", scope = "task:write" },
+          { method = "PUT", path = "/tasks", scope = "task:write" },
+          { method = "PATCH", path = "/tasks", scope = "task:write" },
+          { method = "DELETE", path = "/tasks", scope = "task:write" },
+          { method = "GET", path = "/tasks", scope = "task:read" },
+        }
+
+        local function check_coarse_authz(method, path, user_scopes)
+          for _, rule in ipairs(REQUIRED_SCOPES) do
+            if method == rule.method and string.find(path, "^" .. rule.path) then
+               local found = false
+               if user_scopes then
+                 for _, s in ipairs(user_scopes) do
+                   if s == rule.scope then found = true break end
+                 end
+               end
+               if not found then
+                 return false, rule.scope
+               end
+            end
+          end
+          return true
+        end
+
+        local ok, required = check_coarse_authz(method, path, payload.scopes)
+        if not ok then
+          return kong.response.exit(403, { message = "Forbidden: missing required scope " .. required })
+        end
+
         -- Inject identity headers
         if payload.sub then
           kong.service.request.set_header("x-user-id", tostring(payload.sub))
@@ -131,8 +163,8 @@ config:
           kong.service.request.set_header("x-roles", table.concat(payload.roles, ","))
         end
 
-        if payload.permissions and type(payload.permissions) == "table" then
-          kong.service.request.set_header("x-permissions", table.concat(payload.permissions, ","))
+        if payload.scopes and type(payload.scopes) == "table" then
+          kong.service.request.set_header("x-scopes", table.concat(payload.scopes, ","))
         end
       end
 

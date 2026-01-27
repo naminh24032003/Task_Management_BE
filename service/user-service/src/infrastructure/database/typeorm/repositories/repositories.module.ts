@@ -10,6 +10,8 @@ import { PermissionRepository } from './permission.repository';
 import { TenantRepository } from './tenant.repository';
 import { UserDomainRepository } from './user-domain.repository';
 import { USER_REPOSITORY } from '../../../../application/ports/user-repository.port';
+import { ROLE_REPOSITORY } from '../../../../application/ports/role-repository.port';
+import { PERMISSION_REPOSITORY } from '../../../../application/ports/permission-repository.port';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User, Role, Permission, Tenant])],
@@ -23,6 +25,14 @@ import { USER_REPOSITORY } from '../../../../application/ports/user-repository.p
       provide: USER_REPOSITORY,
       useClass: UserDomainRepository,
     },
+    {
+      provide: ROLE_REPOSITORY,
+      useClass: RoleRepository,
+    },
+    {
+      provide: PERMISSION_REPOSITORY,
+      useClass: PermissionRepository,
+    },
   ],
   exports: [
     UserRepository,
@@ -31,6 +41,8 @@ import { USER_REPOSITORY } from '../../../../application/ports/user-repository.p
     TenantRepository,
     UserDomainRepository,
     USER_REPOSITORY,
+    ROLE_REPOSITORY,
+    PERMISSION_REPOSITORY,
   ],
 })
-export class TypeOrmRepositoriesModule {}
+export class TypeOrmRepositoriesModule { }

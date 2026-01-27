@@ -16,8 +16,8 @@ services:
   task-service:
     container_name: task-service-build
     build:
-      context: ./service/task-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: service/task-service/Dockerfile
       args:
         - GO_VERSION=1.23
     image: task-service:latest

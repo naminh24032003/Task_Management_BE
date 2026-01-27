@@ -11,6 +11,7 @@ import (
 	"task-service/internal/domain/repository"
 	"task-service/internal/domain/service"
 	"task-service/internal/domain/valueobject"
+	"task-service/internal/pkg/auth"
 )
 
 // CommandHandler handles all write operations (Commands)
@@ -81,8 +82,9 @@ func (h *CommandHandler) HandleUpdateTaskStatus(ctx context.Context, cmd *comman
 		return fmt.Errorf("task not found: %w", err)
 	}
 
-	if err := h.domainService.CanCompleteTask(ctx, task); err != nil {
-		// Only check if completing/closing, but for now simple check
+	identity := auth.GetIdentityFromContext(ctx)
+	if err := h.domainService.AuthorizeWriteTask(ctx, identity, task); err != nil {
+		return err
 	}
 
 	if err := task.UpdateStatus(valueobject.TaskStatus(cmd.Status)); err != nil {
@@ -104,6 +106,11 @@ func (h *CommandHandler) HandleAssignTask(ctx context.Context, cmd *command.Assi
 		return fmt.Errorf("task not found: %w", err)
 	}
 
+	identity := auth.GetIdentityFromContext(ctx)
+	if err := h.domainService.AuthorizeWriteTask(ctx, identity, task); err != nil {
+		return err
+	}
+
 	task.Assign(cmd.AssigneeIDs)
 
 	if err := h.taskRepo.Update(ctx, task); err != nil {
@@ -116,6 +123,16 @@ func (h *CommandHandler) HandleAssignTask(ctx context.Context, cmd *command.Assi
 
 // HandleDeleteTask handles delete task command
 func (h *CommandHandler) HandleDeleteTask(ctx context.Context, cmd *command.DeleteTaskCommand) error {
+	task, err := h.taskRepo.FindByID(ctx, cmd.TenantID, cmd.ID)
+	if err != nil {
+		return fmt.Errorf("task not found: %w", err)
+	}
+
+	identity := auth.GetIdentityFromContext(ctx)
+	if err := h.domainService.AuthorizeWriteTask(ctx, identity, task); err != nil {
+		return err
+	}
+
 	if err := h.taskRepo.Delete(ctx, cmd.TenantID, cmd.ID); err != nil {
 		return fmt.Errorf("failed to delete task: %w", err)
 	}

@@ -6,7 +6,7 @@ export interface CurrentUserPayload {
   tenantId: string;
   email: string;
   roles: string[];
-  permissions: string[];
+  scopes: string[];
 }
 
 export const CurrentUser = createParamDecorator(

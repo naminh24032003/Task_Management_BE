@@ -62,9 +62,9 @@ func RequireRolesMiddleware(roles ...string) middleware.Middleware {
 	}
 }
 
-// RequirePermissionsMiddleware requires user to have all of the specified permissions
+// RequireScopesMiddleware requires user to have all of the specified scopes
 // Returns PERMISSION_DENIED error if not authorized
-func RequirePermissionsMiddleware(permissions ...string) middleware.Middleware {
+func RequireScopesMiddleware(scopes ...string) middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (interface{}, error) {
 			identity := GetIdentityFromContext(ctx)
@@ -73,8 +73,8 @@ func RequirePermissionsMiddleware(permissions ...string) middleware.Middleware {
 				return nil, errors.Unauthorized("UNAUTHENTICATED", "user not authenticated")
 			}
 
-			if !identity.HasAllPermissions(permissions...) {
-				return nil, errors.Forbidden("PERMISSION_DENIED", "access denied, required permissions: "+joinStrings(permissions))
+			if !identity.HasAllScopes(scopes...) {
+				return nil, errors.Forbidden("PERMISSION_DENIED", "access denied, required scopes: "+joinStrings(scopes))
 			}
 
 			return handler(ctx, req)

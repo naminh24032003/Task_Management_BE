@@ -168,7 +168,8 @@ export class AuthController implements AuthServiceController {
       valid: result.valid,
       userId: result.userId,
       tenantId: result.tenantId,
-      permissions: result.permissions || [],
+      roles: result.roles || [],
+      scopes: result.scopes || [],
     };
   }
 

@@ -20,12 +20,21 @@ import { GoogleOAuthService } from './services/google-oauth.service';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET', 'your-super-secret-jwt-key-change-in-production'),
-        signOptions: {
-          expiresIn: configService.get<number>('JWT_EXPIRES_IN', 3600),
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const privateKey = configService.get<string>('JWT_PRIVATE_KEY');
+        const publicKey = configService.get<string>('JWT_PUBLIC_KEY');
+
+        // Use keys from env if available, otherwise would fail in production
+        // For development, we might fall back but here we follow specific requirements
+        return {
+          privateKey: privateKey ? privateKey.replace(/\\n/g, '\n') : undefined,
+          publicKey: publicKey ? publicKey.replace(/\\n/g, '\n') : undefined,
+          signOptions: {
+            algorithm: 'RS256',
+            expiresIn: configService.get<number>('JWT_ACCESS_EXPIRES_IN', 900),
+          },
+        };
+      },
     }),
   ],
   providers: [
@@ -48,4 +57,4 @@ import { GoogleOAuthService } from './services/google-oauth.service';
     GoogleOAuthService,
   ],
 })
-export class ApplicationModule {}
+export class ApplicationModule { }
