@@ -87,6 +87,14 @@ resource "helm_release" "kafka" {
 
       # Node selector
       is_minikube = var.is_minikube
+
+      # Performance & Stability (especially for Minikube)
+      heap_opts                                = "-Xmx1024m -Xms1024m"
+      default_replication_factor               = 1
+      min_insync_replicas                      = 1
+      offsets_topic_replication_factor          = 1
+      transaction_state_log_replication_factor = 1
+      transaction_state_log_min_isr            = 1
     })
   ]
 

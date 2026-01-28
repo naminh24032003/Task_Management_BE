@@ -1,0 +1,99 @@
+# =========================================================
+# GLOBAL SETTINGS
+# =========================================================
+microservice:
+  nameOverride: notification-service
+  replicaCount: 1
+
+  # =========================================================
+  # CONTAINER IMAGE SETTINGS
+  # =========================================================
+  image:
+    repository: notification-service
+    tag: v1
+    pullPolicy: IfNotPresent
+
+  # Override default CMD to load only minikube config
+  args:
+    - "-conf"
+    - "./configs/config-minikube.yaml"
+
+  # =========================================================
+  # ENVIRONMENT VARIABLES (ConfigMap)
+  # =========================================================
+  envVarsCM:
+    GO_ENV: development
+    # Redis Configuration - non-sensitive settings
+    REDIS_HOST: "redis-cluster-master.redis.svc.cluster.local"
+    REDIS_PORT: "6379"
+    # OpenTelemetry Configuration
+    OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector.tracing.svc.cluster.local:4317"
+    OTEL_SERVICE_NAME: "notification-service"
+    # Kafka Configuration - non-sensitive settings
+    KAFKA_BROKERS: "kafka.kafka.svc.cluster.local:9092"
+    KAFKA_USERNAME: "kafka-user"
+    KAFKA_CONSUMER_TOPIC: "tasks"
+    KAFKA_PRODUCER_TOPIC: "notification.events.v1"
+    KAFKA_CONSUMER_GROUP: "notification-service"
+
+  # =========================================================
+  # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
+  # =========================================================
+  envVarsSecret:
+    REDIS_PASSWORD: "Redis@Cluster2024Secure!"
+    KAFKA_PASSWORD: "Kafka@SASL2024Secure!"
+
+  # =========================================================
+  # CONTAINER PORTS
+  # =========================================================
+  containerPorts:
+    http-metrics:
+      port: 9093
+
+  # =========================================================
+  # SERVICE CONFIGURATION
+  # =========================================================
+  service:
+    type: ClusterIP
+    ports:
+      http-metrics:
+        port: 9093
+        targetPort: http-metrics
+
+  # =========================================================
+  # RESOURCE REQUESTS & LIMITS
+  # =========================================================
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+  # =========================================================
+  # HEALTH PROBES
+  # =========================================================
+  livenessProbe: null
+  readinessProbe: null
+
+  # =========================================================
+  # MONITORING & ERROR TRACKING
+  # =========================================================
+  sentry:
+    enabled: false
+    dsn: ""
+    environment: development
+    tracesSampleRate: 1.0
+
+  metrics:
+    enabled: true
+    port: http-metrics
+    path: /metrics
+    interval: 30s
+    serviceMonitor:
+      labels:
+        release: monitoring
+
+  extraVolumes: []
+  extraVolumeMounts: []

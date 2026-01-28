@@ -236,11 +236,11 @@ module "kafka" {
   sasl_user     = "kafka-user"
   sasl_password = var.kafka_sasl_password
 
-  # Controller (KRaft mode - minimal for minikube)
+  # Controller (KRaft mode - optimized for stability)
   controller_replica_count = 1
   controller_resources = {
-    requests = { cpu = "100m", memory = "256Mi" }
-    limits   = { cpu = "500m", memory = "512Mi" }
+    requests = { cpu = "200m", memory = "1Gi" }
+    limits   = { cpu = "1000m", memory = "2Gi" }
   }
   controller_persistence_size     = "2Gi"
   controller_log_persistence_size = "1Gi"

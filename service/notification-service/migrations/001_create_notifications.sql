@@ -1,0 +1,41 @@
+-- MongoDB doesn't use SQL migrations, but this file documents the expected collection structure
+-- Use this as reference for MongoDB collection setup
+
+-- Collection: notifications
+-- Indexes:
+--   - idx_user_id_created_at: { user_id: 1, created_at: -1 }
+--   - idx_user_id_status: { user_id: 1, status: 1 }
+--   - idx_source: { source_event: 1, source_id: 1 }
+--   - idx_ttl: { created_at: 1 }, expireAfterSeconds: 2592000 (30 days)
+
+-- Document structure:
+-- {
+--   "_id": "uuid",
+--   "user_id": "string",
+--   "type": "string",
+--   "title": "string",
+--   "body": "string",
+--   "channel": "in_app|email|push|sms",
+--   "status": "pending|sent|failed|read",
+--   "priority": "low|normal|high|urgent",
+--   "metadata": {
+--     "task_id": "string",
+--     "project_id": "string",
+--     ...
+--   },
+--   "source_event": "string",
+--   "source_id": "string",
+--   "read_at": "datetime|null",
+--   "sent_at": "datetime|null",
+--   "failed_at": "datetime|null",
+--   "failed_reason": "string|null",
+--   "created_at": "datetime",
+--   "updated_at": "datetime"
+-- }
+
+-- MongoDB Shell commands to create indexes:
+-- use notification_db
+-- db.notifications.createIndex({ "user_id": 1, "created_at": -1 }, { name: "idx_user_id_created_at" })
+-- db.notifications.createIndex({ "user_id": 1, "status": 1 }, { name: "idx_user_id_status" })
+-- db.notifications.createIndex({ "source_event": 1, "source_id": 1 }, { name: "idx_source" })
+-- db.notifications.createIndex({ "created_at": 1 }, { expireAfterSeconds: 2592000, name: "idx_ttl" })

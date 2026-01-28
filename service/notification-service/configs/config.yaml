@@ -1,0 +1,31 @@
+server:
+  http:
+    addr: 0.0.0.0:9093
+    timeout: 10s
+
+data:
+  database:
+    source: ${MONGODB_URI:mongodb://localhost:27017/notification_db}
+    name: ${MONGODB_DATABASE:notification_db}
+
+  redis:
+    addr: ${REDIS_ADDR:localhost:6379}
+    password: ${REDIS_PASSWORD:}
+    db: 0
+
+  kafka:
+    brokers:
+      - ${KAFKA_BROKERS:localhost:9092}
+    consumer_topic: ${KAFKA_CONSUMER_TOPIC:tasks}
+    producer_topic: ${KAFKA_PRODUCER_TOPIC:notification.events.v1}
+    consumer_group: ${KAFKA_CONSUMER_GROUP:notification-service}
+    sasl:
+      enabled: ${KAFKA_SASL_ENABLED:false}
+      mechanism: ${KAFKA_SASL_MECHANISM:SCRAM-SHA-256}
+      username: ${KAFKA_SASL_USERNAME:}
+      password: ${KAFKA_SASL_PASSWORD:}
+
+logging:
+  level: ${LOG_LEVEL:info}
+  format: ${LOG_FORMAT:console}
+  output: stdout

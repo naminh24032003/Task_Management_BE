@@ -1,0 +1,128 @@
+# =========================================================
+# GLOBAL SETTINGS
+# =========================================================
+microservice:
+  nameOverride: notification-service
+  replicaCount: 1
+
+  # =========================================================
+  # CONTAINER IMAGE SETTINGS
+  # =========================================================
+  image:
+    repository: notification-service
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  # Override default CMD to load config
+  args:
+    - "-config"
+    - "/app/configs/config.yaml"
+
+  # =========================================================
+  # ENVIRONMENT VARIABLES (ConfigMap)
+  # =========================================================
+  envVarsCM:
+    GO_ENV: production
+    # Server Configuration
+    SERVER_PORT: "8080"
+    SERVER_HOST: "0.0.0.0"
+    # Kafka Configuration
+    KAFKA_BROKERS: "kafka:9092"
+    KAFKA_CONSUMER_TOPIC: "task.events.v1"
+    KAFKA_PRODUCER_TOPIC: "notification.events.v1"
+    KAFKA_CONSUMER_GROUP: "notification-service"
+    KAFKA_SASL_ENABLED: "true"
+    KAFKA_SASL_MECHANISM: "SCRAM-SHA-256"
+    # MongoDB Configuration
+    MONGODB_URI: "mongodb://mongodb:27017"
+    MONGODB_DATABASE: "notification_db"
+    # Redis Configuration
+    REDIS_ADDR: "redis:6379"
+    REDIS_DB: "0"
+    # Logging
+    LOG_LEVEL: "info"
+    # Email (disabled by default)
+    EMAIL_ENABLED: "false"
+    # Push (disabled by default)
+    PUSH_ENABLED: "false"
+
+  # =========================================================
+  # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
+  # =========================================================
+  envVarsSecret:
+    KAFKA_SASL_USERNAME: "kafka-user"
+    KAFKA_SASL_PASSWORD: ""
+    REDIS_PASSWORD: ""
+    EMAIL_USERNAME: ""
+    EMAIL_PASSWORD: ""
+    PUSH_FCM_SERVER_KEY: ""
+
+  # =========================================================
+  # CONTAINER PORTS
+  # =========================================================
+  containerPorts:
+    http:
+      port: 8080
+
+  # =========================================================
+  # SERVICE CONFIGURATION
+  # =========================================================
+  service:
+    type: ClusterIP
+    ports:
+      http:
+        port: 8080
+        targetPort: http
+
+  # =========================================================
+  # RESOURCE REQUESTS & LIMITS
+  # =========================================================
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # =========================================================
+  # HEALTH PROBES
+  # =========================================================
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  # =========================================================
+  # MONITORING & ERROR TRACKING
+  # =========================================================
+  sentry:
+    enabled: false
+    dsn: ""
+    environment: production
+    tracesSampleRate: 0.1
+
+  metrics:
+    enabled: true
+    port: http
+    path: /metrics
+    interval: 30s
+    serviceMonitor:
+      labels:
+        release: monitoring
+
+  extraVolumes: []
+  extraVolumeMounts: []

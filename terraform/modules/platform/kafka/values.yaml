@@ -148,11 +148,11 @@ logRetentionBytes: 1073741824
 logSegmentBytes: 1073741824
 
 # Replication
-defaultReplicationFactor: 1
-minInsyncReplicas: 1
-offsetsTopicReplicationFactor: 1
-transactionStateLogReplicationFactor: 1
-transactionStateLogMinIsr: 1
+defaultReplicationFactor: ${default_replication_factor}
+minInsyncReplicas: ${min_insync_replicas}
+offsetsTopicReplicationFactor: ${offsets_topic_replication_factor}
+transactionStateLogReplicationFactor: ${transaction_state_log_replication_factor}
+transactionStateLogMinIsr: ${transaction_state_log_min_isr}
 
 # Auto create topics
 autoCreateTopicsEnable: true
@@ -163,10 +163,18 @@ deleteTopicEnable: true
 # Compression
 compressionType: producer
 
+# Extra Configuration
+extraConfig: |
+  offsets.topic.replication.factor=${offsets_topic_replication_factor}
+  transaction.state.log.replication.factor=${transaction_state_log_replication_factor}
+  transaction.state.log.min.isr=${transaction_state_log_min_isr}
+  default.replication.factor=${default_replication_factor}
+  min.insync.replicas=${min_insync_replicas}
+
 # -----------------------------------------------------------------------------
 # JVM Configuration (Optimized for low resource environments)
 # -----------------------------------------------------------------------------
-heapOpts: "-Xmx512m -Xms512m"
+heapOpts: "${heap_opts}"
 
 # -----------------------------------------------------------------------------
 # Metrics - Prometheus

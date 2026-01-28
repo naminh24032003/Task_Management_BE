@@ -1,0 +1,32 @@
+server:
+  http:
+    addr: 0.0.0.0:9093
+    timeout: 10s
+
+data:
+  database:
+    # MongoDB Connection String for Task MongoDB Cluster in Minikube
+    source: mongodb://root:MongoDB%40Root2024Secure%21@task-mongodb-mongodb-sharded.mongodb-task.svc.cluster.local:27017/notification_db?authSource=admin
+    name: notification_db
+
+  redis:
+    addr: ${REDIS_HOST:redis-cluster-master.redis.svc.cluster.local}:${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD}
+    db: 0
+
+  kafka:
+    brokers:
+      - kafka.kafka.svc.cluster.local:9092
+    consumer_topic: ${KAFKA_CONSUMER_TOPIC:tasks}
+    producer_topic: ${KAFKA_PRODUCER_TOPIC:notification.events.v1}
+    consumer_group: notification-service
+    sasl:
+      enabled: true
+      mechanism: SCRAM-SHA-256
+      username: ${KAFKA_USERNAME:kafka-user}
+      password: ${KAFKA_PASSWORD}
+
+logging:
+  level: debug
+  format: console
+  output: stdout
