@@ -7,7 +7,7 @@ export class DeleteTaskUseCase {
 
     constructor(private readonly taskClient: TaskGrpcClient) { }
 
-    async execute(id: string, context: { userId: string; tenantId: string; roles: string[] }) {
+    async execute(id: string, context: { userId: string; tenantId: string; roles: string[]; scopes: string[] }) {
         this.logger.log(`Executing DeleteTaskUseCase for id: ${id} in tenant: ${context.tenantId}`);
 
         const result = await this.taskClient.deleteTask(id, context);

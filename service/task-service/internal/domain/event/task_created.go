@@ -11,32 +11,32 @@ type DomainEvent interface {
 
 // TaskCreatedEvent raised when a new task is created
 type TaskCreatedEvent struct {
-	eventType   string
-	occurredOn  time.Time
-	aggregateID string
-	Title       string
-	ProjectID   string
+	Type       string    `json:"event_type"`
+	OccurredAt time.Time `json:"occurred_at"`
+	TaskID     string    `json:"aggregate_id"`
+	Title      string    `json:"title"`
+	ProjectID  string    `json:"project_id"`
 }
 
 // NewTaskCreatedEvent creates a new TaskCreatedEvent
 func NewTaskCreatedEvent(taskID, title, projectID string, occurredOn time.Time) *TaskCreatedEvent {
 	return &TaskCreatedEvent{
-		eventType:   "task.created",
-		occurredOn:  occurredOn,
-		aggregateID: taskID,
-		Title:       title,
-		ProjectID:   projectID,
+		Type:       "task.created",
+		OccurredAt: occurredOn,
+		TaskID:     taskID,
+		Title:      title,
+		ProjectID:  projectID,
 	}
 }
 
 func (e *TaskCreatedEvent) EventType() string {
-	return e.eventType
+	return e.Type
 }
 
 func (e *TaskCreatedEvent) OccurredOn() time.Time {
-	return e.occurredOn
+	return e.OccurredAt
 }
 
 func (e *TaskCreatedEvent) AggregateID() string {
-	return e.aggregateID
+	return e.TaskID
 }

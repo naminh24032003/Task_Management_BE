@@ -8,7 +8,7 @@ export class CreateTaskUseCase {
 
     constructor(private readonly taskClient: TaskGrpcClient) { }
 
-    async execute(input: CreateTaskInput, context: { userId: string; tenantId: string; roles: string[] }) {
+    async execute(input: CreateTaskInput, context: { userId: string; tenantId: string; roles: string[]; scopes: string[] }) {
         this.logger.log(`Executing CreateTaskUseCase for tenant: ${context.tenantId} by user: ${context.userId}`);
 
         const payload = {

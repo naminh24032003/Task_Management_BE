@@ -8,7 +8,7 @@ export class ListTasksUseCase {
 
     constructor(private readonly taskClient: TaskGrpcClient) { }
 
-    async execute(input: ListTasksInput, context: { userId: string; tenantId: string; roles: string[] }) {
+    async execute(input: ListTasksInput, context: { userId: string; tenantId: string; roles: string[]; scopes: string[] }) {
         this.logger.log(`Executing ListTasksUseCase for tenant: ${context.tenantId}`);
 
         // Convert filter keys to match gRPC request if necessary

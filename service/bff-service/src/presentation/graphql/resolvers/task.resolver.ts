@@ -72,6 +72,7 @@ export class TaskResolver {
       userId: user.sub,
       tenantId: user.tenantId,
       roles: user.roles,
+      scopes: user.scopes,
     });
     return this.mapTask(result);
   }
@@ -86,6 +87,7 @@ export class TaskResolver {
       userId: user.sub,
       tenantId: user.tenantId,
       roles: user.roles,
+      scopes: user.scopes,
     });
     return this.mapTask(task);
   }
@@ -100,6 +102,7 @@ export class TaskResolver {
       userId: user.sub,
       tenantId: user.tenantId,
       roles: user.roles,
+      scopes: user.scopes,
     });
     return {
       tasks: (result.tasks || []).map((t: any) => this.mapTask(t)),
@@ -120,6 +123,7 @@ export class TaskResolver {
       userId: user.sub,
       tenantId: user.tenantId,
       roles: user.roles,
+      scopes: user.scopes,
     });
     return this.mapTask(task);
   }
@@ -134,6 +138,7 @@ export class TaskResolver {
       userId: user.sub,
       tenantId: user.tenantId,
       roles: user.roles,
+      scopes: user.scopes,
     });
     return {
       success: result.success,
@@ -152,6 +157,7 @@ export class TaskResolver {
       userId: user.sub,
       tenantId: user.tenantId,
       roles: user.roles,
+      scopes: user.scopes,
     });
     return this.mapTask(task);
   }
@@ -167,6 +173,7 @@ export class TaskResolver {
       userId: user.sub,
       tenantId: user.tenantId,
       roles: user.roles,
+      scopes: user.scopes,
     });
     return this.mapTask(task);
   }
@@ -180,6 +187,7 @@ export class TaskResolver {
       userId: user.sub,
       tenantId: user.tenantId,
       roles: user.roles,
+      scopes: user.scopes,
     });
     return {
       success: result.success,

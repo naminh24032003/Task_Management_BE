@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"task-service/internal/application/handler"
+	"task-service/internal/domain/event"
 )
 
 // TaskEventPublisher implements handler.EventPublisher for Kafka
@@ -21,13 +22,19 @@ func NewTaskEventPublisher(producer *Producer) handler.EventPublisher {
 // Publish publishes domain events to Kafka
 func (p *TaskEventPublisher) Publish(ctx context.Context, events []interface{}) error {
 	for _, evt := range events {
-		// In a real app, you might want to switch based on event type
-		// to determine the key or topic
-		key := "" // Could be task ID
+		key := extractEventKey(evt)
 
 		if err := p.producer.PublishEvent(ctx, key, evt); err != nil {
 			return fmt.Errorf("failed to publish event to kafka: %w", err)
 		}
 	}
 	return nil
+}
+
+// extractEventKey returns the aggregate ID as partition key for ordering guarantees
+func extractEventKey(evt interface{}) string {
+	if de, ok := evt.(event.DomainEvent); ok {
+		return de.AggregateID()
+	}
+	return ""
 }

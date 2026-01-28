@@ -7,7 +7,7 @@ export class AssignTaskUseCase {
 
     constructor(private readonly taskClient: TaskGrpcClient) { }
 
-    async execute(id: string, assigneeIds: string[], context: { userId: string; tenantId: string; roles: string[] }) {
+    async execute(id: string, assigneeIds: string[], context: { userId: string; tenantId: string; roles: string[]; scopes: string[] }) {
         this.logger.log(`Executing AssignTaskUseCase for id: ${id} with ${assigneeIds.length} assignees`);
 
         const result = await this.taskClient.assignTask({

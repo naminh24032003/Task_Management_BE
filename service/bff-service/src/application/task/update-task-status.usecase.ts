@@ -8,7 +8,7 @@ export class UpdateTaskStatusUseCase {
 
     constructor(private readonly taskClient: TaskGrpcClient) { }
 
-    async execute(id: string, status: TaskStatus, context: { userId: string; tenantId: string; roles: string[] }) {
+    async execute(id: string, status: TaskStatus, context: { userId: string; tenantId: string; roles: string[]; scopes: string[] }) {
         this.logger.log(`Executing UpdateTaskStatusUseCase for id: ${id} to status: ${status}`);
 
         const result = await this.taskClient.updateTaskStatus({

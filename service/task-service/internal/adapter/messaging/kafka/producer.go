@@ -8,13 +8,16 @@ import (
 
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl/scram"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // ProducerConfig holds configuration for Kafka producer
 type ProducerConfig struct {
-	Brokers  []string
-	Topic    string
-	SASL     *SASLConfig
+	Brokers []string
+	Topic   string
+	SASL    *SASLConfig
 }
 
 // SASLConfig holds SASL authentication configuration
@@ -61,24 +64,69 @@ func NewProducer(config ProducerConfig) (*Producer, error) {
 	}, nil
 }
 
-// PublishEvent publishes a single event to Kafka
+// PublishEvent publishes a single event to Kafka with tracing
 func (p *Producer) PublishEvent(ctx context.Context, key string, event interface{}) error {
+	tracer := otel.Tracer("kafka")
+	ctx, span := tracer.Start(ctx, fmt.Sprintf("kafka.publish %s", p.config.Topic),
+		trace.WithSpanKind(trace.SpanKindProducer),
+		trace.WithAttributes(
+			attribute.String("messaging.system", "kafka"),
+			attribute.String("messaging.destination", p.config.Topic),
+			attribute.String("messaging.kafka.message_key", key),
+		),
+	)
+	defer span.End()
+
 	data, err := json.Marshal(event)
 	if err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 
+	headers := []kafka.Header{}
+	otel.GetTextMapPropagator().Inject(ctx, &kafkaHeaderCarrier{headers: &headers})
+
 	msg := kafka.Message{
-		Key:   []byte(key),
-		Value: data,
-		Time:  time.Now(),
+		Key:     []byte(key),
+		Value:   data,
+		Headers: headers,
+		Time:    time.Now(),
 	}
 
 	if err := p.writer.WriteMessages(ctx, msg); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("failed to write message: %w", err)
 	}
 
 	return nil
+}
+
+type kafkaHeaderCarrier struct {
+	headers *[]kafka.Header
+}
+
+func (c *kafkaHeaderCarrier) Get(key string) string {
+	for _, h := range *c.headers {
+		if h.Key == key {
+			return string(h.Value)
+		}
+	}
+	return ""
+}
+
+func (c *kafkaHeaderCarrier) Set(key string, value string) {
+	*c.headers = append(*c.headers, kafka.Header{
+		Key:   key,
+		Value: []byte(value),
+	})
+}
+
+func (c *kafkaHeaderCarrier) Keys() []string {
+	keys := make([]string, len(*c.headers))
+	for i, h := range *c.headers {
+		keys[i] = h.Key
+	}
+	return keys
 }
 
 // Publish publishes multiple events to Kafka

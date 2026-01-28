@@ -33,6 +33,7 @@ microservice:
     OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector.tracing.svc.cluster.local:4317"
     OTEL_SERVICE_NAME: "task-service"
     # Kafka Configuration - non-sensitive settings
+    KAFKA_BROKERS: "kafka.kafka.svc.cluster.local:9092"
     KAFKA_USERNAME: "kafka-user"
 
   # =========================================================

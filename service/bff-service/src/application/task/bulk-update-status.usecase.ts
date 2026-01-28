@@ -8,7 +8,7 @@ export class BulkUpdateStatusUseCase {
 
     constructor(private readonly taskClient: TaskGrpcClient) { }
 
-    async execute(input: BulkUpdateStatusInput, context: { userId: string; tenantId: string; roles: string[] }) {
+    async execute(input: BulkUpdateStatusInput, context: { userId: string; tenantId: string; roles: string[]; scopes: string[] }) {
         this.logger.log(`Executing BulkUpdateStatusUseCase for ${input.taskIds.length} tasks`);
 
         const result = await this.taskClient.bulkUpdateStatus({

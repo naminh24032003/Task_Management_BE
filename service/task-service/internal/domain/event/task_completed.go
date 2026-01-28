@@ -4,28 +4,28 @@ import "time"
 
 // TaskCompletedEvent raised when a task is completed
 type TaskCompletedEvent struct {
-	eventType   string
-	occurredOn  time.Time
-	aggregateID string
+	Type       string    `json:"event_type"`
+	OccurredAt time.Time `json:"occurred_at"`
+	TaskID     string    `json:"aggregate_id"`
 }
 
 // NewTaskCompletedEvent creates a new TaskCompletedEvent
 func NewTaskCompletedEvent(taskID string, occurredOn time.Time) *TaskCompletedEvent {
 	return &TaskCompletedEvent{
-		eventType:   "task.completed",
-		occurredOn:  occurredOn,
-		aggregateID: taskID,
+		Type:       "task.completed",
+		OccurredAt: occurredOn,
+		TaskID:     taskID,
 	}
 }
 
 func (e *TaskCompletedEvent) EventType() string {
-	return e.eventType
+	return e.Type
 }
 
 func (e *TaskCompletedEvent) OccurredOn() time.Time {
-	return e.occurredOn
+	return e.OccurredAt
 }
 
 func (e *TaskCompletedEvent) AggregateID() string {
-	return e.aggregateID
+	return e.TaskID
 }
