@@ -1,0 +1,381 @@
+{
+  "info": {
+    "name": "Task Service API",
+    "description": "Task Management Service API - ClickUp Style\n\nBase URL: http://localhost:9091\n\n## Task Status Values:\n- 0: UNSPECIFIED\n- 1: OPEN (To Do)\n- 2: IN_PROGRESS\n- 3: BLOCKED\n- 4: REVIEW\n- 5: COMPLETE\n- 6: CLOSED\n- 7: CANCELLED\n\n## Task Priority Values:\n- 0: UNSPECIFIED\n- 1: LOW\n- 2: NORMAL\n- 3: HIGH\n- 4: URGENT",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9091"
+    },
+    {
+      "key": "tenantId",
+      "value": "tenant-001"
+    },
+    {
+      "key": "taskId",
+      "value": ""
+    },
+    {
+      "key": "projectId",
+      "value": "project-001"
+    },
+    {
+      "key": "spaceId",
+      "value": "space-001"
+    },
+    {
+      "key": "userId",
+      "value": "user-001"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Hello",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/tasks/hello?name=World",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tasks", "hello"],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "World"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tasks CRUD",
+      "item": [
+        {
+          "name": "Create Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.task && jsonData.task.id) {",
+                  "    pm.collectionVariables.set('taskId', jsonData.task.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"title\": \"Implement user authentication\",\n  \"description\": \"Add JWT-based authentication to the API\",\n  \"priority\": 3,\n  \"project_id\": \"{{projectId}}\",\n  \"space_id\": \"{{spaceId}}\",\n  \"creator_id\": \"{{userId}}\",\n  \"assignee_ids\": [\"{{userId}}\"],\n  \"due_date\": \"2026-02-15T10:00:00Z\",\n  \"start_date\": \"2026-01-30T09:00:00Z\",\n  \"time_estimate_minutes\": 480,\n  \"tags\": [\"backend\", \"security\", \"priority\"],\n  \"parent_task_id\": \"\",\n  \"custom_fields\": {\n    \"sprint\": \"Sprint 5\",\n    \"story_points\": \"8\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tasks"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/tasks/{{taskId}}?tenant_id={{tenantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tasks", "{{taskId}}"],
+              "query": [
+                {
+                  "key": "tenant_id",
+                  "value": "{{tenantId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/tasks?tenant_id={{tenantId}}&page=1&page_size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tasks"],
+              "query": [
+                {
+                  "key": "tenant_id",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "10"
+                },
+                {
+                  "key": "project_id",
+                  "value": "{{projectId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "space_id",
+                  "value": "{{spaceId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "statuses",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "assignee_ids",
+                  "value": "{{userId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "search_query",
+                  "value": "authentication",
+                  "disabled": true
+                },
+                {
+                  "key": "sort_by",
+                  "value": "created_at",
+                  "disabled": true
+                },
+                {
+                  "key": "sort_desc",
+                  "value": "true",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tasks by Project",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/projects/{{projectId}}/tasks?tenant_id={{tenantId}}&page=1&page_size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "projects", "{{projectId}}", "tasks"],
+              "query": [
+                {
+                  "key": "tenant_id",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20"
+                },
+                {
+                  "key": "statuses",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "sort_by",
+                  "value": "order_index",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"title\": \"Implement user authentication - Updated\",\n  \"description\": \"Add JWT-based authentication with refresh tokens\",\n  \"time_estimate_minutes\": 600,\n  \"due_date\": \"2026-02-20T10:00:00Z\",\n  \"tags\": [\"backend\", \"security\", \"priority\", \"jwt\"],\n  \"custom_fields\": {\n    \"sprint\": \"Sprint 6\",\n    \"story_points\": \"13\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/tasks/{{taskId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tasks", "{{taskId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/tasks/{{taskId}}?tenant_id={{tenantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tasks", "{{taskId}}"],
+              "query": [
+                {
+                  "key": "tenant_id",
+                  "value": "{{tenantId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Task Status & Assignment",
+      "item": [
+        {
+          "name": "Update Task Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"status\": 2,\n  \"updated_by\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/tasks/{{taskId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tasks", "{{taskId}}", "status"]
+            },
+            "description": "Status values:\n- 1: OPEN\n- 2: IN_PROGRESS\n- 3: BLOCKED\n- 4: REVIEW\n- 5: COMPLETE\n- 6: CLOSED\n- 7: CANCELLED"
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Task",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"assignee_ids\": [\"user-001\", \"user-002\"],\n  \"assigned_by\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/tasks/{{taskId}}/assign",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tasks", "{{taskId}}", "assign"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Task Priority",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"priority\": 4,\n  \"updated_by\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/tasks/{{taskId}}/priority",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tasks", "{{taskId}}", "priority"]
+            },
+            "description": "Priority values:\n- 1: LOW\n- 2: NORMAL\n- 3: HIGH\n- 4: URGENT"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Bulk Operations",
+      "item": [
+        {
+          "name": "Bulk Update Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"task_ids\": [\"task-id-1\", \"task-id-2\", \"task-id-3\"],\n  \"status\": 5,\n  \"updated_by\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/tasks/bulk/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tasks", "bulk", "status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk Assign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"task_ids\": [\"task-id-1\", \"task-id-2\"],\n  \"assignee_ids\": [\"user-001\", \"user-002\"],\n  \"assigned_by\": \"{{userId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/tasks/bulk/assign",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "tasks", "bulk", "assign"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

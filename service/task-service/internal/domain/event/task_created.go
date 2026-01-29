@@ -5,6 +5,7 @@ import "time"
 // DomainEvent is the base interface for all domain events
 type DomainEvent interface {
 	EventType() string
+	EventName() string // Returns the event name for outbox pattern
 	OccurredOn() time.Time
 	AggregateID() string
 }
@@ -39,4 +40,8 @@ func (e *TaskCreatedEvent) OccurredOn() time.Time {
 
 func (e *TaskCreatedEvent) AggregateID() string {
 	return e.TaskID
+}
+
+func (e *TaskCreatedEvent) EventName() string {
+	return "TaskCreated"
 }

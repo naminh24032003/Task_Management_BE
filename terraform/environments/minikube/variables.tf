@@ -111,6 +111,12 @@ variable "redis_persistence_enabled" {
   default     = false
 }
 
+variable "redis_commander_enabled" {
+  type        = bool
+  description = "Enable Redis Commander web UI for viewing cache data"
+  default     = true
+}
+
 # =========================
 # BFF Configuration
 # =========================
@@ -147,4 +153,33 @@ variable "tracing_sampling_rate" {
   type        = number
   description = "Trace sampling rate (0.0 to 1.0)"
   default     = 1.0
+}
+
+# =========================
+# Kafka Connect / Debezium (CDC)
+# =========================
+variable "kafka_connect_enabled" {
+  type        = bool
+  description = "Enable Kafka Connect with Debezium for CDC/Outbox Pattern"
+  default     = false
+}
+
+variable "debezium_mongodb_uri" {
+  type        = string
+  description = "MongoDB connection string for Debezium"
+  default     = "mongodb://task-mongodb-mongos.mongodb-task.svc.cluster.local:27017"
+  sensitive   = true
+}
+
+variable "debezium_mongodb_user" {
+  type        = string
+  description = "MongoDB user for Debezium"
+  default     = "root"
+}
+
+variable "debezium_mongodb_password" {
+  type        = string
+  description = "MongoDB password for Debezium"
+  default     = ""
+  sensitive   = true
 }

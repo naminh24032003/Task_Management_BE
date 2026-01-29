@@ -275,6 +275,51 @@ module "kafka" {
 }
 
 # -----------------------------------------------------------------------------
+# Kafka Connect with Debezium (CDC for Outbox Pattern)
+# -----------------------------------------------------------------------------
+
+module "kafka_connect" {
+  source = "../../modules/platform/kafka_connect"
+  count  = var.kafka_connect_enabled && var.kafka_enabled ? 1 : 0
+
+  environment      = var.environment
+  namespace        = "kafka-connect"
+  create_namespace = true
+
+  # Debezium image
+  debezium_image = "debezium/connect:2.5"
+  replicas       = 1
+
+  # Kafka configuration
+  kafka_bootstrap_servers = "kafka.kafka.svc.cluster.local:9092"
+  kafka_sasl_username     = "kafka-user"
+  kafka_sasl_password     = var.kafka_sasl_password
+
+  # Kafka Connect topics
+  connect_group_id     = "task-service-connect"
+  config_storage_topic = "connect-configs"
+  offset_storage_topic = "connect-offsets"
+  status_storage_topic = "connect-status"
+
+  # MongoDB configuration for Debezium
+  mongodb_connection_string = var.debezium_mongodb_uri
+  mongodb_user              = var.debezium_mongodb_user
+  mongodb_password          = var.debezium_mongodb_password != "" ? var.debezium_mongodb_password : var.mongodb_root_password
+  mongodb_database          = "task-service"
+
+  # Resources (optimized for minikube)
+  resources = {
+    requests = { cpu = "200m", memory = "512Mi" }
+    limits   = { cpu = "500m", memory = "1Gi" }
+  }
+
+  # Platform
+  is_minikube = true
+
+  depends_on = [module.kafka, module.mongodb_task_service]
+}
+
+# -----------------------------------------------------------------------------
 # Redis Cluster Module
 # -----------------------------------------------------------------------------
 
@@ -314,6 +359,9 @@ module "redis" {
   # Redis configuration
   maxmemory_policy = "allkeys-lru"
   enable_metrics   = true
+
+  # Redis Commander UI (for viewing cache data)
+  enable_redis_commander = var.redis_commander_enabled
 }
 
 # -----------------------------------------------------------------------------

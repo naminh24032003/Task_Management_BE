@@ -3,6 +3,7 @@ import {
   Inject,
   UnauthorizedException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -11,6 +12,7 @@ import { User } from '../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../ports/user-repository.port';
 import { IRoleRepository, ROLE_REPOSITORY } from '../ports/role-repository.port';
 import { IPermissionRepository, PERMISSION_REPOSITORY } from '../ports/permission-repository.port';
+import { AuthCacheService } from '../../infrastructure/cache/auth-cache.service';
 
 export interface TokenPayload {
   sub: string; // user ID
@@ -44,14 +46,17 @@ export interface ValidateTokenResult {
 /**
  * User Authentication Service
  * Handles login, token generation and validation
+ *
+ * Uses Redis cache for:
+ * - Session caching (99%+ cache hit rate target)
+ * - Refresh token storage
+ * - Permissions caching
  */
 @Injectable()
 export class UserAuthenticationService {
+  private readonly logger = new Logger(UserAuthenticationService.name);
   private readonly accessTokenExpiresIn: number;
   private readonly refreshTokenExpiresIn: number;
-
-  // Simple in-memory store for refresh tokens (use Redis in production)
-  private refreshTokenStore = new Map<string, { userId: string; tenantId: string }>();
 
   constructor(
     @Inject(USER_REPOSITORY)
@@ -62,6 +67,7 @@ export class UserAuthenticationService {
     private readonly permissionRepository: IPermissionRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly authCache: AuthCacheService,
   ) {
     this.accessTokenExpiresIn = Number(this.configService.get<number>(
       'JWT_ACCESS_EXPIRES_IN',
@@ -136,11 +142,31 @@ export class UserAuthenticationService {
       { expiresIn: this.refreshTokenExpiresIn },
     );
 
-    // Store refresh token
-    this.refreshTokenStore.set(refreshTokenId, {
+    // Store refresh token in Redis cache
+    await this.authCache.storeRefreshToken(refreshTokenId, {
       userId: user.id.toString(),
       tenantId: user.tenantId,
+      createdAt: Date.now(),
+    }, this.refreshTokenExpiresIn);
+
+    // Cache session for fast token validation (99%+ cache hit target)
+    const exp = Math.floor(Date.now() / 1000) + this.accessTokenExpiresIn;
+    await this.authCache.cacheSession(accessToken, {
+      userId: user.id.toString(),
+      tenantId: user.tenantId,
+      email: user.email.toString(),
+      roles: roleNames,
+      scopes: scopes,
+      exp,
     });
+
+    // Cache permissions and roles for subsequent requests
+    await Promise.all([
+      this.authCache.cachePermissions(user.tenantId, user.id.toString(), scopes),
+      this.authCache.cacheRoles(user.tenantId, user.id.toString(), roleNames),
+    ]);
+
+    this.logger.debug(`Generated tokens for user ${user.id}, cached session and permissions`);
 
     return {
       accessToken,
@@ -162,8 +188,8 @@ export class UserAuthenticationService {
         throw new UnauthorizedException('Invalid token type');
       }
 
-      // Verify refresh token exists in store
-      const stored = this.refreshTokenStore.get(payload.jti);
+      // Verify refresh token exists in Redis cache
+      const stored = await this.authCache.getRefreshToken(payload.jti);
       if (!stored) {
         throw new UnauthorizedException('Refresh token has been revoked');
       }
@@ -174,8 +200,8 @@ export class UserAuthenticationService {
         throw new UnauthorizedException('User not found or inactive');
       }
 
-      // Remove old refresh token
-      this.refreshTokenStore.delete(payload.jti);
+      // Remove old refresh token from cache
+      await this.authCache.revokeRefreshToken(payload.jti);
 
       // Generate new tokens
       return this.generateTokens(user);
@@ -220,12 +246,103 @@ export class UserAuthenticationService {
       );
 
       if (payload.jti) {
-        this.refreshTokenStore.delete(payload.jti);
+        await this.authCache.revokeRefreshToken(payload.jti);
       }
 
+      this.logger.debug(`User ${payload.sub} logged out`);
       return true;
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Validate access token with cache-first strategy
+   * Cache hit rate should be 99%+ in production
+   */
+  async validateTokenWithCache(accessToken: string): Promise<ValidateTokenResult> {
+    // Try cache first (99%+ hit rate target)
+    const cached = await this.authCache.getSession(accessToken);
+    if (cached) {
+      // Check if token is still valid (not expired)
+      if (cached.exp > Math.floor(Date.now() / 1000)) {
+        return {
+          valid: true,
+          userId: cached.userId,
+          tenantId: cached.tenantId,
+          roles: cached.roles,
+          scopes: cached.scopes,
+        };
+      }
+      // Token expired, remove from cache
+      await this.authCache.invalidateSession(accessToken);
+    }
+
+    // Cache miss - validate JWT and cache result
+    return this.validateToken(accessToken);
+  }
+
+  /**
+   * Get user permissions with cache-first strategy
+   */
+  async getPermissionsWithCache(tenantId: string, userId: string): Promise<string[]> {
+    // Try cache first
+    const cached = await this.authCache.getPermissions(tenantId, userId);
+    if (cached) {
+      return cached;
+    }
+
+    // Cache miss - load from database
+    const user = await this.userRepository.findById(tenantId, userId);
+    if (!user) {
+      return [];
+    }
+
+    const roles = await this.roleRepository.findByIds(tenantId, user.roleIds);
+    const allPermissionIds = [...new Set(roles.flatMap(r => r.permissionIds))];
+    const permissions = await this.permissionRepository.findByIds(tenantId, allPermissionIds);
+    const scopes = permissions.map(p => `${p.resource}:${p.action}`);
+
+    // Cache for subsequent requests
+    await this.authCache.cachePermissions(tenantId, userId, scopes);
+
+    return scopes;
+  }
+
+  /**
+   * Get user roles with cache-first strategy
+   */
+  async getRolesWithCache(tenantId: string, userId: string): Promise<string[]> {
+    // Try cache first
+    const cached = await this.authCache.getRoles(tenantId, userId);
+    if (cached) {
+      return cached;
+    }
+
+    // Cache miss - load from database
+    const user = await this.userRepository.findById(tenantId, userId);
+    if (!user) {
+      return [];
+    }
+
+    const roles = await this.roleRepository.findByIds(tenantId, user.roleIds);
+    const roleNames = roles.map(r => r.name);
+
+    // Cache for subsequent requests
+    await this.authCache.cacheRoles(tenantId, userId, roleNames);
+
+    return roleNames;
+  }
+
+  /**
+   * Invalidate all cache for a user (role/permission change, logout all devices)
+   */
+  async invalidateUserCache(tenantId: string, userId: string): Promise<void> {
+    await Promise.all([
+      this.authCache.invalidatePermissions(tenantId, userId),
+      this.authCache.invalidateRoles(tenantId, userId),
+      this.authCache.revokeAllUserRefreshTokens(userId),
+    ]);
+    this.logger.log(`Invalidated all cache for user ${userId}`);
   }
 }

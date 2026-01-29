@@ -11,6 +11,9 @@ export * from './database/mongodb/repositories/repositories.module';
 export * from './config/database.config';
 export * from './config/app.config';
 
+// Cache
+export * from './cache';
+
 // Health
 export * from './health/health.controller';
 export * from './health/health.module';

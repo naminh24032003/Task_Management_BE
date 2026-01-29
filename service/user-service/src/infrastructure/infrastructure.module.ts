@@ -7,6 +7,7 @@ import { TypeOrmRepositoriesModule } from './database/typeorm/repositories/repos
 import { MultiTenancyModule } from './multi-tenancy/multi-tenancy.module';
 import { HealthModule } from './health/health.module';
 import { RedisModule } from './redis/redis.module';
+import { AuthCacheModule } from './cache/auth-cache.module';
 import { KafkaModule } from './kafka/kafka.module';
 import { TracingModule } from './tracing/tracing.module';
 import databaseConfig from './config/database.config';
@@ -30,6 +31,7 @@ import kafkaConfig from './config/kafka.config';
     TypeOrmConfigModule,
     TypeOrmRepositoriesModule,
     RedisModule,
+    AuthCacheModule,  // Auth caching for tokens, sessions, permissions
     KafkaModule,
     TracingModule,
     HealthModule,
@@ -41,6 +43,7 @@ import kafkaConfig from './config/kafka.config';
     TypeOrmRepositoriesModule,
     MultiTenancyModule,
     RedisModule,
+    AuthCacheModule,
     KafkaModule,
   ],
 })

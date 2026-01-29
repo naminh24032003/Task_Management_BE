@@ -29,3 +29,7 @@ func (e *TaskCompletedEvent) OccurredOn() time.Time {
 func (e *TaskCompletedEvent) AggregateID() string {
 	return e.TaskID
 }
+
+func (e *TaskCompletedEvent) EventName() string {
+	return "TaskCompleted"
+}

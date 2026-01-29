@@ -52,3 +52,21 @@ output "connection_info" {
   }
   sensitive = false
 }
+
+# -----------------------------------------------------------------------------
+# Redis Commander Outputs
+# -----------------------------------------------------------------------------
+output "redis_commander_enabled" {
+  description = "Whether Redis Commander UI is enabled"
+  value       = var.enable_redis_commander
+}
+
+output "redis_commander_url" {
+  description = "Redis Commander UI internal URL (use kubectl port-forward to access)"
+  value       = var.enable_redis_commander ? "http://redis-commander.${local.namespace}.svc.cluster.local:8081" : null
+}
+
+output "redis_commander_port_forward_command" {
+  description = "Command to port-forward Redis Commander UI"
+  value       = var.enable_redis_commander ? "kubectl port-forward svc/redis-commander -n ${local.namespace} 8081:8081" : null
+}

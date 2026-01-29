@@ -1,28 +1,46 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { UserRepository } from '../../database/typeorm/repositories/user.repository';
 import { RoleRepository } from '../../database/typeorm/repositories/role.repository';
 import { PermissionRepository } from '../../database/typeorm/repositories/permission.repository';
+import { AuthCacheService } from '../../cache/auth-cache.service';
 
 /**
  * Service to resolve user permissions based on roles
  * Used by authentication to attach permissions to user object
+ *
+ * Uses Redis cache for high performance:
+ * - 99%+ cache hit rate target
+ * - TTL: 10 minutes for permissions and roles
  */
 @Injectable()
 export class PermissionService {
+  private readonly logger = new Logger(PermissionService.name);
+
   constructor(
     private readonly userRepository: UserRepository,
     private readonly roleRepository: RoleRepository,
     private readonly permissionRepository: PermissionRepository,
+    private readonly authCache: AuthCacheService,
   ) {}
 
   /**
    * Get all permissions for a user based on their roles
+   * Uses cache-first strategy for 99%+ cache hit rate
    */
   async getUserPermissions(
     tenantId: string,
     userId: string,
   ): Promise<string[]> {
-    // Get user with roles
+    // Try cache first (99%+ hit rate target)
+    const cached = await this.authCache.getPermissions(tenantId, userId);
+    if (cached) {
+      this.logger.debug(`Permissions cache hit for user ${userId}`);
+      return cached;
+    }
+
+    this.logger.debug(`Permissions cache miss for user ${userId}, loading from DB`);
+
+    // Cache miss - load from database
     const user = await this.userRepository.findById(tenantId, userId);
     if (!user || !user.roleIds || user.roleIds.length === 0) {
       return [];
@@ -44,20 +62,40 @@ export class PermissionService {
     );
 
     // Return permission keys (e.g., "users:read", "tasks:write")
-    return permissions.map((p) => p.key);
+    const permissionKeys = permissions.map((p) => p.key);
+
+    // Cache for subsequent requests
+    await this.authCache.cachePermissions(tenantId, userId, permissionKeys);
+
+    return permissionKeys;
   }
 
   /**
    * Get all roles for a user
+   * Uses cache-first strategy for 99%+ cache hit rate
    */
   async getUserRoles(tenantId: string, userId: string): Promise<string[]> {
+    // Try cache first
+    const cached = await this.authCache.getRoles(tenantId, userId);
+    if (cached) {
+      this.logger.debug(`Roles cache hit for user ${userId}`);
+      return cached;
+    }
+
+    this.logger.debug(`Roles cache miss for user ${userId}, loading from DB`);
+
     const user = await this.userRepository.findById(tenantId, userId);
     if (!user || !user.roleIds || user.roleIds.length === 0) {
       return [];
     }
 
     const roles = await this.roleRepository.findByIds(tenantId, user.roleIds);
-    return roles.map((r) => r.name);
+    const roleNames = roles.map((r) => r.name);
+
+    // Cache for subsequent requests
+    await this.authCache.cacheRoles(tenantId, userId, roleNames);
+
+    return roleNames;
   }
 
   /**
@@ -118,5 +156,44 @@ export class PermissionService {
   ): Promise<boolean> {
     const roles = await this.getUserRoles(tenantId, userId);
     return requiredRoles.some((r) => roles.includes(r));
+  }
+
+  /**
+   * Invalidate user's permission cache
+   * Call this when user roles/permissions are updated
+   */
+  async invalidateUserPermissionCache(
+    tenantId: string,
+    userId: string,
+  ): Promise<void> {
+    await this.authCache.invalidatePermissions(tenantId, userId);
+    this.logger.log(`Invalidated permission cache for user ${userId}`);
+  }
+
+  /**
+   * Invalidate user's role cache
+   * Call this when user roles are updated
+   */
+  async invalidateUserRoleCache(
+    tenantId: string,
+    userId: string,
+  ): Promise<void> {
+    await this.authCache.invalidateRoles(tenantId, userId);
+    this.logger.log(`Invalidated role cache for user ${userId}`);
+  }
+
+  /**
+   * Invalidate all cache for a user (permissions + roles)
+   * Call this when user is updated, deleted, or roles changed
+   */
+  async invalidateAllUserCache(
+    tenantId: string,
+    userId: string,
+  ): Promise<void> {
+    await Promise.all([
+      this.authCache.invalidatePermissions(tenantId, userId),
+      this.authCache.invalidateRoles(tenantId, userId),
+    ]);
+    this.logger.log(`Invalidated all cache for user ${userId}`);
   }
 }

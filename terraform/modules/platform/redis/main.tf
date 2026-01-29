@@ -164,3 +164,130 @@ locals {
     port = 6379
   }
 }
+
+# -----------------------------------------------------------------------------
+# Redis Commander UI (Optional)
+# Web UI to view and manage Redis cache data
+# -----------------------------------------------------------------------------
+resource "kubernetes_deployment" "redis_commander" {
+  count = var.enable_redis_commander ? 1 : 0
+
+  metadata {
+    name      = "redis-commander"
+    namespace = local.namespace
+    labels = {
+      app         = "redis-commander"
+      environment = var.environment
+      managed-by  = "terraform"
+    }
+  }
+
+  spec {
+    replicas = 1
+
+    selector {
+      match_labels = {
+        app = "redis-commander"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "redis-commander"
+        }
+      }
+
+      spec {
+        container {
+          name  = "redis-commander"
+          image = "rediscommander/redis-commander:latest"
+
+          port {
+            container_port = 8081
+            name           = "http"
+          }
+
+          env {
+            name  = "REDIS_HOST"
+            value = local.redis_service.host
+          }
+
+          env {
+            name  = "REDIS_PORT"
+            value = tostring(local.redis_service.port)
+          }
+
+          env {
+            name = "REDIS_PASSWORD"
+            value_from {
+              secret_key_ref {
+                name = "${var.release_name}"
+                key  = "redis-password"
+              }
+            }
+          }
+
+          resources {
+            requests = {
+              cpu    = var.redis_commander_resources.requests.cpu
+              memory = var.redis_commander_resources.requests.memory
+            }
+            limits = {
+              cpu    = var.redis_commander_resources.limits.cpu
+              memory = var.redis_commander_resources.limits.memory
+            }
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/"
+              port = 8081
+            }
+            initial_delay_seconds = 10
+            period_seconds        = 30
+          }
+
+          readiness_probe {
+            http_get {
+              path = "/"
+              port = 8081
+            }
+            initial_delay_seconds = 5
+            period_seconds        = 10
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [helm_release.redis_cluster]
+}
+
+resource "kubernetes_service" "redis_commander" {
+  count = var.enable_redis_commander ? 1 : 0
+
+  metadata {
+    name      = "redis-commander"
+    namespace = local.namespace
+    labels = {
+      app         = "redis-commander"
+      environment = var.environment
+      managed-by  = "terraform"
+    }
+  }
+
+  spec {
+    type = "ClusterIP"
+
+    port {
+      port        = 8081
+      target_port = 8081
+      name        = "http"
+    }
+
+    selector = {
+      app = "redis-commander"
+    }
+  }
+}

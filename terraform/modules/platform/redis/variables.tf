@@ -144,3 +144,36 @@ variable "enable_metrics" {
   description = "Enable Prometheus metrics exporter"
   default     = true
 }
+
+# -----------------------------------------------------------------------------
+# Redis Commander UI
+# -----------------------------------------------------------------------------
+variable "enable_redis_commander" {
+  type        = bool
+  description = "Enable Redis Commander web UI for viewing cache data"
+  default     = false
+}
+
+variable "redis_commander_resources" {
+  type = object({
+    requests = object({
+      cpu    = string
+      memory = string
+    })
+    limits = object({
+      cpu    = string
+      memory = string
+    })
+  })
+  description = "Resource requests and limits for Redis Commander"
+  default = {
+    requests = {
+      cpu    = "50m"
+      memory = "64Mi"
+    }
+    limits = {
+      cpu    = "100m"
+      memory = "128Mi"
+    }
+  }
+}
