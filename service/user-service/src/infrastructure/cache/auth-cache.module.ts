@@ -1,6 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { AuthCacheService } from './auth-cache.service';
 import { RedisModule } from '../redis/redis.module';
+import { AUTH_CACHE_SERVICE } from '../../application/ports/auth-cache.port';
 
 /**
  * Auth Cache Module
@@ -17,7 +18,14 @@ import { RedisModule } from '../redis/redis.module';
 @Global()
 @Module({
   imports: [RedisModule],
-  providers: [AuthCacheService],
-  exports: [AuthCacheService],
+  providers: [
+    AuthCacheService,
+    {
+      provide: AUTH_CACHE_SERVICE,
+      useExisting: AuthCacheService,
+    },
+  ],
+  exports: [AuthCacheService, AUTH_CACHE_SERVICE],
 })
-export class AuthCacheModule {}
+export class AuthCacheModule { }
+

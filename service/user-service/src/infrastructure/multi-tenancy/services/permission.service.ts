@@ -1,8 +1,20 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { UserRepository } from '../../database/typeorm/repositories/user.repository';
-import { RoleRepository } from '../../database/typeorm/repositories/role.repository';
-import { PermissionRepository } from '../../database/typeorm/repositories/permission.repository';
-import { AuthCacheService } from '../../cache/auth-cache.service';
+import { Injectable, Inject, Logger } from '@nestjs/common';
+import {
+  IUserRepository,
+  USER_REPOSITORY,
+} from '../../../application/ports/user-repository.port';
+import {
+  IRoleRepository,
+  ROLE_REPOSITORY,
+} from '../../../application/ports/role-repository.port';
+import {
+  IPermissionRepository,
+  PERMISSION_REPOSITORY,
+} from '../../../application/ports/permission-repository.port';
+import {
+  IAuthCacheService,
+  AUTH_CACHE_SERVICE,
+} from '../../../application/ports/auth-cache.port';
 
 /**
  * Service to resolve user permissions based on roles
@@ -17,11 +29,15 @@ export class PermissionService {
   private readonly logger = new Logger(PermissionService.name);
 
   constructor(
-    private readonly userRepository: UserRepository,
-    private readonly roleRepository: RoleRepository,
-    private readonly permissionRepository: PermissionRepository,
-    private readonly authCache: AuthCacheService,
-  ) {}
+    @Inject(USER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+    @Inject(ROLE_REPOSITORY)
+    private readonly roleRepository: IRoleRepository,
+    @Inject(PERMISSION_REPOSITORY)
+    private readonly permissionRepository: IPermissionRepository,
+    @Inject(AUTH_CACHE_SERVICE)
+    private readonly authCache: IAuthCacheService,
+  ) { }
 
   /**
    * Get all permissions for a user based on their roles

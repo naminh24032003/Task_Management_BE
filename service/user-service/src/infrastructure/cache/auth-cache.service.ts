@@ -2,27 +2,11 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import * as crypto from 'crypto';
-
-/**
- * Cached user session data
- */
-export interface CachedSession {
-  userId: string;
-  tenantId: string;
-  email: string;
-  roles: string[];
-  scopes: string[];
-  exp: number;
-}
-
-/**
- * Cached refresh token data
- */
-export interface CachedRefreshToken {
-  userId: string;
-  tenantId: string;
-  createdAt: number;
-}
+import {
+  IAuthCacheService,
+  CachedSession,
+  CachedRefreshToken,
+} from '../../application/ports/auth-cache.port';
 
 /**
  * JWKS key data
@@ -69,7 +53,7 @@ const DEFAULT_TTL = {
 } as const;
 
 /**
- * Auth Cache Service
+ * Redis Implementation of Auth Cache Service
  *
  * Provides caching for authentication/authorization data:
  * - Access token sessions (TTL: token exp)
@@ -81,12 +65,12 @@ const DEFAULT_TTL = {
  * Cache hit rate should be 99%+ for auth requests in production.
  */
 @Injectable()
-export class AuthCacheService implements OnModuleInit {
+export class AuthCacheService implements IAuthCacheService, OnModuleInit {
   private readonly logger = new Logger(AuthCacheService.name);
 
   constructor(
     @InjectRedis() private readonly redis: Redis,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     try {

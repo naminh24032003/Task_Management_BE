@@ -15,6 +15,9 @@ export {
   UserPreferences,
 } from './entities/user-profile.entity';
 
+export { Role } from './entities/role.entity';
+export { Permission } from './entities/permission.entity';
+
 // Value Objects
 export { UserId } from './value-objects/user-id.vo';
 export { Email } from './value-objects/email.vo';

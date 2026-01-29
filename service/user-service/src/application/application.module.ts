@@ -21,16 +21,16 @@ import { GoogleOAuthService } from './services/google-oauth.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const privateKey = configService.get<string>('JWT_PRIVATE_KEY');
-        const publicKey = configService.get<string>('JWT_PUBLIC_KEY');
+        const secret = configService.get<string>('JWT_SECRET');
 
-        // Use keys from env if available, otherwise would fail in production
-        // For development, we might fall back but here we follow specific requirements
+        if (!secret) {
+          throw new Error('JWT_SECRET environment variable is required');
+        }
+
         return {
-          privateKey: privateKey ? privateKey.replace(/\\n/g, '\n') : undefined,
-          publicKey: publicKey ? publicKey.replace(/\\n/g, '\n') : undefined,
+          secret,
           signOptions: {
-            algorithm: 'RS256',
+            algorithm: 'HS256',
             expiresIn: configService.get<number>('JWT_ACCESS_EXPIRES_IN', 900),
           },
         };

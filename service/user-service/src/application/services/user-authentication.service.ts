@@ -12,7 +12,7 @@ import { User } from '../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../ports/user-repository.port';
 import { IRoleRepository, ROLE_REPOSITORY } from '../ports/role-repository.port';
 import { IPermissionRepository, PERMISSION_REPOSITORY } from '../ports/permission-repository.port';
-import { AuthCacheService } from '../../infrastructure/cache/auth-cache.service';
+import { IAuthCacheService, AUTH_CACHE_SERVICE } from '../ports/auth-cache.port';
 
 export interface TokenPayload {
   sub: string; // user ID
@@ -67,7 +67,8 @@ export class UserAuthenticationService {
     private readonly permissionRepository: IPermissionRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly authCache: AuthCacheService,
+    @Inject(AUTH_CACHE_SERVICE)
+    private readonly authCache: IAuthCacheService,
   ) {
     this.accessTokenExpiresIn = Number(this.configService.get<number>(
       'JWT_ACCESS_EXPIRES_IN',
