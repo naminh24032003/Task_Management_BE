@@ -3,17 +3,17 @@ package kafka
 import (
 	"context"
 	"fmt"
-	"task-service/internal/application/handler"
+	"task-service/internal/application/port"
 	"task-service/internal/domain/event"
 )
 
-// TaskEventPublisher implements handler.EventPublisher for Kafka
+// TaskEventPublisher implements port.EventPublisher for Kafka
 type TaskEventPublisher struct {
 	producer *Producer
 }
 
 // NewTaskEventPublisher creates a new Kafka task event publisher
-func NewTaskEventPublisher(producer *Producer) handler.EventPublisher {
+func NewTaskEventPublisher(producer *Producer) port.EventPublisher {
 	return &TaskEventPublisher{
 		producer: producer,
 	}

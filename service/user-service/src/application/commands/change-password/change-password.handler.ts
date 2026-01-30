@@ -3,10 +3,9 @@ import { Inject } from '@nestjs/common';
 import { ChangePasswordCommand } from './change-password.command';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
 import { UserNotFoundError } from '../../errors/user-not-found.error';
+import { ChangePasswordResult } from '../../types';
 
-export interface ChangePasswordResult {
-  success: boolean;
-}
+export { ChangePasswordResult };
 
 @CommandHandler(ChangePasswordCommand)
 export class ChangePasswordHandler implements ICommandHandler<ChangePasswordCommand> {

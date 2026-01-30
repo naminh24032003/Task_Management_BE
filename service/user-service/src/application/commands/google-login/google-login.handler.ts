@@ -7,11 +7,9 @@ import { User } from '../../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
 import { UserRegisteredEvent } from '../../integration-events/user-registered.event';
 import { IOAuthConfig } from '../../ports/oauth.port';
+import { GoogleLoginResult } from '../../types';
 
-export interface GoogleLoginResult {
-  user: User;
-  isNewUser: boolean;
-}
+export { GoogleLoginResult };
 
 @CommandHandler(GoogleLoginCommand)
 export class GoogleLoginHandler implements ICommandHandler<GoogleLoginCommand> {

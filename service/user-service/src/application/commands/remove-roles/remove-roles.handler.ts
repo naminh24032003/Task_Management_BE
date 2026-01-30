@@ -2,11 +2,9 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { RemoveRolesCommand } from './remove-roles.command';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
-import { User } from '../../../domain/aggregates/user.aggregate';
+import { RemoveRolesResult } from '../../types';
 
-export interface RemoveRolesResult {
-  user: User;
-}
+export { RemoveRolesResult };
 
 @CommandHandler(RemoveRolesCommand)
 export class RemoveRolesHandler implements ICommandHandler<RemoveRolesCommand> {

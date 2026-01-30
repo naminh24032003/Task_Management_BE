@@ -3,10 +3,9 @@ import { Inject } from '@nestjs/common';
 import { DeleteUserCommand } from './delete-user.command';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
 import { UserDeletedEvent } from '../../integration-events/user-deleted.event';
+import { DeleteUserResult } from '../../types';
 
-export interface DeleteUserResult {
-  success: boolean;
-}
+export { DeleteUserResult };
 
 @CommandHandler(DeleteUserCommand)
 export class DeleteUserHandler implements ICommandHandler<DeleteUserCommand> {

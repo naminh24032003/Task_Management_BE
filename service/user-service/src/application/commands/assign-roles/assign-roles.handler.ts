@@ -2,11 +2,9 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { AssignRolesCommand } from './assign-roles.command';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
-import { User } from '../../../domain/aggregates/user.aggregate';
+import { AssignRolesResult } from '../../types';
 
-export interface AssignRolesResult {
-  user: User;
-}
+export { AssignRolesResult };
 
 @CommandHandler(AssignRolesCommand)
 export class AssignRolesHandler implements ICommandHandler<AssignRolesCommand> {

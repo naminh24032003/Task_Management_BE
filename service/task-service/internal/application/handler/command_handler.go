@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"task-service/internal/application/command"
+	"task-service/internal/application/port"
 	"task-service/internal/domain/aggregate"
 	"task-service/internal/domain/repository"
 	"task-service/internal/domain/service"
@@ -18,19 +19,14 @@ import (
 type CommandHandler struct {
 	taskRepo       repository.TaskRepository
 	domainService  *service.TaskDomainService
-	eventPublisher EventPublisher
-}
-
-// EventPublisher interface for publishing domain events
-type EventPublisher interface {
-	Publish(ctx context.Context, events []interface{}) error
+	eventPublisher port.EventPublisher
 }
 
 // NewCommandHandler creates a new command handler
 func NewCommandHandler(
 	taskRepo repository.TaskRepository,
 	domainService *service.TaskDomainService,
-	eventPublisher EventPublisher,
+	eventPublisher port.EventPublisher,
 ) *CommandHandler {
 	return &CommandHandler{
 		taskRepo:       taskRepo,

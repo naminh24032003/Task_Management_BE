@@ -1,28 +1,24 @@
 /**
- * OpenTelemetry Instrumentation Entry Point
- * 
+ * OpenTelemetry Instrumentation Entry Point for User Service
+ *
+ * Traces request latency through: gRPC request → Service → MongoDB/Redis
+ *
  * IMPORTANT: This file MUST be loaded BEFORE any other imports!
  * Use: node -r ./dist/instrumentation.js dist/main.js
  */
 
 import { NodeSDK } from '@opentelemetry/sdk-node';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import { W3CTraceContextPropagator } from '@opentelemetry/core';
-import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
-
-// Enable debug logging (optional, for troubleshooting)
-if (process.env.OTEL_DEBUG === 'true') {
-    diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
-}
+import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
+import { GrpcInstrumentation } from '@opentelemetry/instrumentation-grpc';
+import { MongoDBInstrumentation } from '@opentelemetry/instrumentation-mongodb';
+import { IORedisInstrumentation } from '@opentelemetry/instrumentation-ioredis';
 
 const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || 'user-service';
 const OTEL_EXPORTER_OTLP_ENDPOINT = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://tempo:4317';
-
-console.log(`🔭 Initializing OpenTelemetry for ${SERVICE_NAME}`);
-console.log(`📤 OTLP Endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}`);
 
 // Create resource with service information
 const resource = new Resource({
@@ -37,40 +33,34 @@ const traceExporter = new OTLPTraceExporter({
     url: OTEL_EXPORTER_OTLP_ENDPOINT,
 });
 
-// Create SDK with auto-instrumentations
+// Create SDK with minimal instrumentations for latency tracing
 const sdk = new NodeSDK({
     resource,
     traceExporter,
     textMapPropagator: new W3CTraceContextPropagator(),
     instrumentations: [
-        getNodeAutoInstrumentations({
-            // Disable problematic instrumentations
-            '@opentelemetry/instrumentation-fs': { enabled: false },
-            '@opentelemetry/instrumentation-dns': { enabled: false },
-            '@opentelemetry/instrumentation-net': { enabled: false },
-            '@opentelemetry/instrumentation-mongodb': { enabled: true },
-            '@opentelemetry/instrumentation-http': { enabled: true },
-            '@opentelemetry/instrumentation-grpc': { enabled: true },
-            '@opentelemetry/instrumentation-ioredis': { enabled: true },
+        // HTTP: trace outgoing HTTP calls (if any)
+        new HttpInstrumentation({
+            ignoreIncomingRequestHook: (req) => {
+                return req.url === '/health' || req.url === '/ready';
+            },
         }),
+        // gRPC: trace incoming requests from BFF
+        new GrpcInstrumentation({
+            ignoreGrpcMethods: ['Check', 'Watch'],
+        }),
+        // MongoDB: trace database queries
+        new MongoDBInstrumentation(),
+        // Redis: trace cache operations
+        new IORedisInstrumentation(),
     ],
 });
 
 // Start the SDK
 sdk.start();
 
-console.log(`✅ OpenTelemetry initialized successfully`);
+console.log(`[OTEL] ${SERVICE_NAME} tracing enabled -> ${OTEL_EXPORTER_OTLP_ENDPOINT}`);
 
 // Graceful shutdown
-const shutdown = async () => {
-    console.log('🔄 Shutting down OpenTelemetry SDK...');
-    try {
-        await sdk.shutdown();
-        console.log('✅ OpenTelemetry SDK shut down successfully');
-    } catch (error) {
-        console.error('❌ Error shutting down OpenTelemetry SDK', error);
-    }
-};
-
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+process.on('SIGTERM', () => sdk.shutdown());
+process.on('SIGINT', () => sdk.shutdown());

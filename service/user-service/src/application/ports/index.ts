@@ -7,3 +7,6 @@ export * from './permission-repository.port';
 export * from './auth-cache.port';
 export * from './authentication.port';
 export * from './oauth.port';
+
+// Event Ports
+export * from './event-publisher.port';

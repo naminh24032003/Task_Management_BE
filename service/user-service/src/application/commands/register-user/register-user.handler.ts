@@ -5,12 +5,9 @@ import { User } from '../../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
 import { DuplicateEmailError } from '../../errors/duplicate-email.error';
 import { UserRegisteredEvent } from '../../integration-events/user-registered.event';
+import { RegisterUserResult } from '../../types';
 
-export interface RegisterUserResult {
-  user: User;
-  success: boolean;
-  message: string;
-}
+export { RegisterUserResult };
 
 @CommandHandler(RegisterUserCommand)
 export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand> {

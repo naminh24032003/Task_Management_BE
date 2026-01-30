@@ -3,12 +3,10 @@ import { Inject, UnauthorizedException, ForbiddenException } from '@nestjs/commo
 import { LoginCommand } from './login.command';
 import { User } from '../../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
-import { UserAuthenticationService, TokenPair } from '../../services/user-authentication.service';
+import { UserAuthenticationService } from '../../services/user-authentication.service';
+import { LoginResult } from '../../types';
 
-export interface LoginResult {
-  user: User;
-  tokens: TokenPair;
-}
+export { LoginResult };
 
 @CommandHandler(LoginCommand)
 export class LoginHandler implements ICommandHandler<LoginCommand> {

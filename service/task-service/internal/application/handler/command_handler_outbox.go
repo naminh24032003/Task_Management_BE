@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"task-service/internal/application/command"
+	"task-service/internal/application/port"
 	"task-service/internal/domain/aggregate"
 	"task-service/internal/domain/event"
 	"task-service/internal/domain/service"
@@ -14,30 +15,18 @@ import (
 	"task-service/internal/pkg/auth"
 )
 
-// UnitOfWork interface for transactional operations with outbox pattern
-type UnitOfWork interface {
-	CreateTaskWithEvents(ctx context.Context, task *aggregate.Task) error
-	UpdateTaskWithEvents(ctx context.Context, task *aggregate.Task) error
-	DeleteTaskWithEvents(ctx context.Context, tenantID, taskID string, deleteEvent event.DomainEvent) error
-}
-
-// TaskFinder interface for finding tasks (read-only)
-type TaskFinder interface {
-	FindByID(ctx context.Context, tenantID, id string) (*aggregate.Task, error)
-}
-
 // CommandHandlerOutbox handles all write operations using Outbox Pattern
 // This replaces the original CommandHandler to ensure transactional consistency
 type CommandHandlerOutbox struct {
-	unitOfWork    UnitOfWork
-	taskFinder    TaskFinder
+	unitOfWork    port.UnitOfWork
+	taskFinder    port.TaskFinder
 	domainService *service.TaskDomainService
 }
 
 // NewCommandHandlerOutbox creates a new command handler with outbox support
 func NewCommandHandlerOutbox(
-	unitOfWork UnitOfWork,
-	taskFinder TaskFinder,
+	unitOfWork port.UnitOfWork,
+	taskFinder port.TaskFinder,
 	domainService *service.TaskDomainService,
 ) *CommandHandlerOutbox {
 	return &CommandHandlerOutbox{

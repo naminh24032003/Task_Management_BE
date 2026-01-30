@@ -4,10 +4,9 @@ import { CreateUserCommand } from './create-user.command';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
 import { User, UserStatus } from '../../../domain/aggregates/user.aggregate';
 import { UserRegisteredEvent } from '../../integration-events/user-registered.event';
+import { CreateUserResult } from '../../types';
 
-export interface CreateUserResult {
-  user: User;
-}
+export { CreateUserResult };
 
 @CommandHandler(CreateUserCommand)
 export class CreateUserHandler implements ICommandHandler<CreateUserCommand> {

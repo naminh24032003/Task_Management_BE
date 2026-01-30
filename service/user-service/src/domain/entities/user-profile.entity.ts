@@ -1,36 +1,11 @@
-/**
- * UserProfile Entity
- * Extended profile information for a user
- * This is a separate entity from User aggregate for extended profile data
- */
-export interface UserProfileProps {
-  userId: string;
-  tenantId: string;
-  avatar?: string;
-  bio?: string;
-  phoneNumber?: string;
-  dateOfBirth?: Date;
-  timezone?: string;
-  locale?: string;
-  socialLinks?: SocialLinks;
-  preferences?: UserPreferences;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import {
+  UserProfileProps,
+  SocialLinks,
+  UserPreferences,
+} from '../types';
 
-export interface SocialLinks {
-  linkedin?: string;
-  twitter?: string;
-  github?: string;
-  website?: string;
-}
-
-export interface UserPreferences {
-  emailNotifications: boolean;
-  pushNotifications: boolean;
-  theme: 'light' | 'dark' | 'system';
-  language: string;
-}
+// Re-export types for backward compatibility
+export { UserProfileProps, SocialLinks, UserPreferences };
 
 /**
  * UserProfile Entity

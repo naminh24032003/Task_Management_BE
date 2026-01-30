@@ -1,15 +1,10 @@
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { ListUsersQuery } from './list-users.query';
-import { User } from '../../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
+import { ListUsersResult } from '../../types';
 
-export interface ListUsersResult {
-  users: User[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
+export { ListUsersResult };
 
 @QueryHandler(ListUsersQuery)
 export class ListUsersHandler implements IQueryHandler<ListUsersQuery> {

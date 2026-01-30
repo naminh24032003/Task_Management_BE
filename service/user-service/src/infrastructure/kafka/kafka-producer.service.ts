@@ -2,20 +2,17 @@ import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/commo
 import { ConfigService } from '@nestjs/config';
 import { Kafka, Producer, CompressionTypes, logLevel, SASLOptions } from 'kafkajs';
 import { KafkaConfig } from '../config/kafka.config';
+import {
+  IEventPublisher,
+  EventMessage,
+  PublishOptions,
+} from '../../application/ports/event-publisher.port';
 
-export interface KafkaMessage {
-  key?: string;
-  value: Record<string, unknown>;
-  headers?: Record<string, string>;
-}
-
-export interface PublishOptions {
-  topic: string;
-  messages: KafkaMessage[];
-}
+// Re-export types for backward compatibility
+export { EventMessage as KafkaMessage, PublishOptions };
 
 @Injectable()
-export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
+export class KafkaProducerService implements OnModuleInit, OnModuleDestroy, IEventPublisher {
   private readonly logger = new Logger(KafkaProducerService.name);
   private kafka: Kafka;
   private producer: Producer;
@@ -159,7 +156,7 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 
   async publishToDeadLetterQueue(
     originalTopic: string,
-    message: KafkaMessage,
+    message: EventMessage,
     error: Error,
   ): Promise<void> {
     await this.publish({

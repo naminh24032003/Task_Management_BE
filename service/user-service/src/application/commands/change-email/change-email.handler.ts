@@ -4,10 +4,9 @@ import { ChangeEmailCommand } from './change-email.command';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
 import { User } from '../../../domain/aggregates/user.aggregate';
 import { UserEmailChangedEvent } from '../../integration-events/user-email-changed.event';
+import { ChangeEmailResult } from '../../types';
 
-export interface ChangeEmailResult {
-  user: User;
-}
+export { ChangeEmailResult };
 
 @CommandHandler(ChangeEmailCommand)
 export class ChangeEmailHandler implements ICommandHandler<ChangeEmailCommand> {

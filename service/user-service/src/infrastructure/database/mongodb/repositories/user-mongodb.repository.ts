@@ -2,29 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, ClientSession } from 'mongoose';
 import { User, UserDocument } from '../schemas/user.schema';
+import {
+  UserFilter,
+  UserPaginationOptions,
+  PaginatedResult,
+} from '../../../types';
 
-export interface UserFilter {
-  userId?: string;
-  email?: string;
-  status?: string;
-  isEmailVerified?: boolean;
-  deletedAt?: Date | null;
-}
-
-export interface UserPaginationOptions {
-  page?: number;
-  limit?: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-}
-
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+// Re-export types for backward compatibility
+export { UserFilter, UserPaginationOptions, PaginatedResult };
 
 @Injectable()
 export class UserMongoDbRepository {

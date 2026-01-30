@@ -1,19 +1,14 @@
+// Types (centralized interfaces)
+export * from './types';
+
 // Aggregates
 export {
   User,
-  UserStatus,
   UserDomainEvent,
-  CreateUserProps,
-  UserProps,
 } from './aggregates/user.aggregate';
 
 // Entities
-export {
-  UserProfile,
-  UserProfileProps,
-  SocialLinks,
-  UserPreferences,
-} from './entities/user-profile.entity';
+export { UserProfile } from './entities/user-profile.entity';
 
 export { Role } from './entities/role.entity';
 export { Permission } from './entities/permission.entity';

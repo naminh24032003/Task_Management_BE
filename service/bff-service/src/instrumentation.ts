@@ -1,30 +1,24 @@
 /**
  * OpenTelemetry Instrumentation Entry Point for BFF Service
- * 
+ *
+ * Traces request latency through: Kong → BFF → gRPC Services → DB
+ *
  * IMPORTANT: This file MUST be loaded BEFORE any other imports!
  * Use: node -r ./dist/instrumentation.js dist/main.js
  */
 
 import { NodeSDK } from '@opentelemetry/sdk-node';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import { W3CTraceContextPropagator } from '@opentelemetry/core';
+import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
+import { GrpcInstrumentation } from '@opentelemetry/instrumentation-grpc';
 import { GraphQLInstrumentation } from '@opentelemetry/instrumentation-graphql';
 import { IORedisInstrumentation } from '@opentelemetry/instrumentation-ioredis';
-import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
-
-// Enable debug logging (optional, for troubleshooting)
-if (process.env.OTEL_DEBUG === 'true') {
-    diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
-}
 
 const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || 'bff-service';
 const OTEL_EXPORTER_OTLP_ENDPOINT = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://tempo:4317';
-
-console.log(`🔭 Initializing OpenTelemetry for ${SERVICE_NAME}`);
-console.log(`📤 OTLP Endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}`);
 
 // Create resource with service information
 const resource = new Resource({
@@ -39,31 +33,30 @@ const traceExporter = new OTLPTraceExporter({
     url: OTEL_EXPORTER_OTLP_ENDPOINT,
 });
 
-// Create SDK with auto-instrumentations
+// Create SDK with minimal instrumentations for latency tracing
 const sdk = new NodeSDK({
     resource,
     traceExporter,
     textMapPropagator: new W3CTraceContextPropagator(),
     instrumentations: [
-        // Auto-instrument common Node.js libraries
-        getNodeAutoInstrumentations({
-            // Disable problematic instrumentations
-            '@opentelemetry/instrumentation-fs': { enabled: false },
-            '@opentelemetry/instrumentation-dns': { enabled: false },
-            '@opentelemetry/instrumentation-net': { enabled: false },
-            '@opentelemetry/instrumentation-http': { enabled: true },
-            '@opentelemetry/instrumentation-grpc': {
-                enabled: true,
-                ignoreGrpcMethods: ['Check', 'Watch'],
+        // HTTP: trace incoming requests and outgoing calls
+        new HttpInstrumentation({
+            ignoreIncomingRequestHook: (req) => {
+                // Ignore health checks
+                return req.url === '/health' || req.url === '/ready';
             },
         }),
-        // GraphQL instrumentation
-        new GraphQLInstrumentation({
-            depth: 2,
-            mergeItems: true,
-            allowValues: true,
+        // gRPC: trace calls to user-service, task-service
+        new GrpcInstrumentation({
+            ignoreGrpcMethods: ['Check', 'Watch'],
         }),
-        // Redis instrumentation
+        // GraphQL: trace resolver execution time
+        new GraphQLInstrumentation({
+            depth: 1,
+            mergeItems: true,
+            allowValues: false,
+        }),
+        // Redis: trace cache operations
         new IORedisInstrumentation(),
     ],
 });
@@ -71,18 +64,8 @@ const sdk = new NodeSDK({
 // Start the SDK
 sdk.start();
 
-console.log(`✅ OpenTelemetry initialized successfully`);
+console.log(`[OTEL] ${SERVICE_NAME} tracing enabled -> ${OTEL_EXPORTER_OTLP_ENDPOINT}`);
 
 // Graceful shutdown
-const shutdown = async () => {
-    console.log('🔄 Shutting down OpenTelemetry SDK...');
-    try {
-        await sdk.shutdown();
-        console.log('✅ OpenTelemetry SDK shut down successfully');
-    } catch (error) {
-        console.error('❌ Error shutting down OpenTelemetry SDK', error);
-    }
-};
-
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+process.on('SIGTERM', () => sdk.shutdown());
+process.on('SIGINT', () => sdk.shutdown());

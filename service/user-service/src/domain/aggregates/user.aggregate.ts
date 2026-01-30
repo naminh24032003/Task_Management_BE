@@ -14,16 +14,16 @@ import { UserProfileUpdatedEvent } from '../events/user-profile-updated.event';
 import { UserLoggedInEvent } from '../events/user-logged-in.event';
 import { PasswordMismatchError } from '../errors/password-mismatch.error';
 import { InvalidStatusTransitionError } from '../errors/invalid-status-transition.error';
+import {
+  UserStatus,
+  OAuthProvider,
+  CreateUserProps,
+  CreateOAuthUserProps,
+  UserProps,
+} from '../types';
 
-/**
- * User status enum
- */
-export enum UserStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  SUSPENDED = 'suspended',
-  DELETED = 'deleted',
-}
+// Re-export types for backward compatibility
+export { UserStatus, OAuthProvider, CreateUserProps, CreateOAuthUserProps, UserProps };
 
 /**
  * Domain event type union
@@ -40,59 +40,6 @@ export type UserDomainEvent =
   | UserRoleRemovedEvent
   | UserProfileUpdatedEvent
   | UserLoggedInEvent;
-
-/**
- * OAuth Provider types
- */
-export type OAuthProvider = 'google' | 'facebook' | 'github';
-
-/**
- * Props for creating a new User
- */
-export interface CreateUserProps {
-  tenantId: string;
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  displayName?: string;
-  roleIds?: string[];
-}
-
-/**
- * Props for creating OAuth User
- */
-export interface CreateOAuthUserProps {
-  tenantId: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  displayName?: string;
-  provider: OAuthProvider;
-  providerId: string;
-  roleIds?: string[];
-}
-
-/**
- * Props for reconstituting User from persistence
- */
-export interface UserProps {
-  id: string;
-  tenantId: string;
-  email: string;
-  passwordHash: string;
-  passwordSalt: string;
-  firstName: string;
-  lastName: string;
-  displayName?: string;
-  status: UserStatus;
-  roleIds: string[];
-  createdAt: Date;
-  updatedAt: Date;
-  lastLoginAt?: Date;
-  provider?: OAuthProvider;
-  providerId?: string;
-}
 
 /**
  * User Aggregate Root

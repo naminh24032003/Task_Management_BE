@@ -3,10 +3,9 @@ import { Inject } from '@nestjs/common';
 import { UpdateUserCommand } from './update-user.command';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
 import { User, UserStatus } from '../../../domain/aggregates/user.aggregate';
+import { UpdateUserResult } from '../../types';
 
-export interface UpdateUserResult {
-  user: User;
-}
+export { UpdateUserResult };
 
 @CommandHandler(UpdateUserCommand)
 export class UpdateUserHandler implements ICommandHandler<UpdateUserCommand> {

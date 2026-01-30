@@ -17,6 +17,7 @@ import (
 	mongoRepo "task-service/internal/adapter/persistence/mongodb"
 	redisAdapter "task-service/internal/adapter/persistence/redis"
 	"task-service/internal/application/handler"
+	"task-service/internal/application/port"
 	"task-service/internal/domain/repository"
 	domainService "task-service/internal/domain/service"
 )
@@ -209,7 +210,7 @@ func NewTaskRepository(db *mongo.Database) repository.TaskRepository {
 	return mongoRepo.NewTaskRepository(db)
 }
 
-func NewTaskEventPublisher(producer *kafka.Producer) handler.EventPublisher {
+func NewTaskEventPublisher(producer *kafka.Producer) port.EventPublisher {
 	return kafka.NewTaskEventPublisher(producer)
 }
 
@@ -217,7 +218,7 @@ func NewTaskDomainService(repo repository.TaskRepository) *domainService.TaskDom
 	return domainService.NewTaskDomainService(repo)
 }
 
-func NewCommandHandler(repo repository.TaskRepository, ds *domainService.TaskDomainService, ep handler.EventPublisher) *handler.CommandHandler {
+func NewCommandHandler(repo repository.TaskRepository, ds *domainService.TaskDomainService, ep port.EventPublisher) *handler.CommandHandler {
 	return handler.NewCommandHandler(repo, ds, ep)
 }
 

@@ -1,13 +1,11 @@
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { GetUserByIdQuery } from './get-user-by-id.query';
-import { User } from '../../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
 import { UserNotFoundError } from '../../errors/user-not-found.error';
+import { GetUserByIdResult } from '../../types';
 
-export interface GetUserByIdResult {
-  user: User;
-}
+export { GetUserByIdResult };
 
 @QueryHandler(GetUserByIdQuery)
 export class GetUserByIdHandler implements IQueryHandler<GetUserByIdQuery> {

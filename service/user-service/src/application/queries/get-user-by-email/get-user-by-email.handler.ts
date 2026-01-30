@@ -1,12 +1,10 @@
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import { Inject } from '@nestjs/common';
 import { GetUserByEmailQuery } from './get-user-by-email.query';
-import { User } from '../../../domain/aggregates/user.aggregate';
 import { IUserRepository, USER_REPOSITORY } from '../../ports/user-repository.port';
+import { GetUserByEmailResult } from '../../types';
 
-export interface GetUserByEmailResult {
-  user: User | null;
-}
+export { GetUserByEmailResult };
 
 @QueryHandler(GetUserByEmailQuery)
 export class GetUserByEmailHandler implements IQueryHandler<GetUserByEmailQuery> {

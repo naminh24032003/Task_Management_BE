@@ -1,19 +1,22 @@
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
-import { Logger } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { UserEmailChangedEvent } from '../integration-events/user-email-changed.event';
-import { KafkaProducerService } from '../../infrastructure/kafka/kafka-producer.service';
+import { IEventPublisher, EVENT_PUBLISHER } from '../ports/event-publisher.port';
 
 @EventsHandler(UserEmailChangedEvent)
 export class UserEmailChangedHandler implements IEventHandler<UserEmailChangedEvent> {
   private readonly logger = new Logger(UserEmailChangedHandler.name);
 
-  constructor(private readonly kafkaProducer: KafkaProducerService) {}
+  constructor(
+    @Inject(EVENT_PUBLISHER)
+    private readonly eventPublisher: IEventPublisher,
+  ) {}
 
   async handle(event: UserEmailChangedEvent): Promise<void> {
     this.logger.log(`Handling UserEmailChangedEvent for user: ${event.userId}`);
 
     try {
-      await this.kafkaProducer.publishUserEvent('user.email_changed', {
+      await this.eventPublisher.publishUserEvent('user.email_changed', {
         userId: event.userId,
         tenantId: event.tenantId,
         oldEmail: event.oldEmail,
