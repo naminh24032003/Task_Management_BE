@@ -10,7 +10,7 @@ microservice:
   # =========================================================
   image:
     repository: task-service
-    tag: v9
+    tag: v10
     pullPolicy: IfNotPresent
 
   # Override default CMD to load only minikube config
