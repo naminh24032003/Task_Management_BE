@@ -14,7 +14,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     private readonly authService: UserAuthenticationService,
-  ) {}
+  ) { }
 
   async execute(command: LoginCommand): Promise<LoginResult> {
     // Find user
@@ -33,7 +33,8 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
       throw new UnauthorizedException('Please login with your OAuth provider');
     }
 
-    if (!user.verifyPassword(command.password)) {
+    // Verify password (async - non-blocking PBKDF2)
+    if (!(await user.verifyPassword(command.password))) {
       throw new UnauthorizedException('Invalid email or password');
     }
 

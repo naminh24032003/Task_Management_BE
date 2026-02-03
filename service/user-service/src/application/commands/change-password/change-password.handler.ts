@@ -21,8 +21,8 @@ export class ChangePasswordHandler implements ICommandHandler<ChangePasswordComm
       throw new UserNotFoundError(command.userId);
     }
 
-    // Domain method validates current password and updates
-    user.changePassword(command.currentPassword, command.newPassword);
+    // Domain method validates current password and updates (async - non-blocking PBKDF2)
+    await user.changePassword(command.currentPassword, command.newPassword);
 
     await this.userRepository.save(user);
     user.clearDomainEvents();

@@ -14,7 +14,7 @@ export class UserManagementService {
   constructor(
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-  ) {}
+  ) { }
 
   /**
    * Get user by ID
@@ -103,7 +103,7 @@ export class UserManagementService {
     newPassword: string,
   ): Promise<void> {
     const user = await this.getUserById(tenantId, userId);
-    user.changePassword(currentPassword, newPassword);
+    await user.changePassword(currentPassword, newPassword);
     await this.userRepository.save(user);
   }
 
@@ -117,8 +117,7 @@ export class UserManagementService {
       throw new DuplicateEmailError(input.email);
     }
 
-    // Create user aggregate
-    const user = User.create({
+    const user = await User.create({
       tenantId: input.tenantId,
       email: input.email,
       password: input.password,

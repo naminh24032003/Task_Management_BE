@@ -14,7 +14,7 @@ export class CreateUserHandler implements ICommandHandler<CreateUserCommand> {
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     private readonly eventBus: EventBus,
-  ) {}
+  ) { }
 
   async execute(command: CreateUserCommand): Promise<CreateUserResult> {
     // Check if email already exists
@@ -23,8 +23,8 @@ export class CreateUserHandler implements ICommandHandler<CreateUserCommand> {
       throw new Error('Email already registered');
     }
 
-    // Create user with provided status or default to active
-    const user = User.create({
+    // Create user with provided status or default to active (async due to PBKDF2)
+    const user = await User.create({
       tenantId: command.tenantId,
       email: command.email,
       password: command.password,

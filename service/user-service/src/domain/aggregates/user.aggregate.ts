@@ -63,18 +63,18 @@ export class User {
 
   private _domainEvents: UserDomainEvent[] = [];
 
-  private constructor() {}
+  private constructor() { }
 
   /**
-   * Create a new User (Factory method)
+   * Create a new User (Factory method - async due to password hashing)
    */
-  static create(props: CreateUserProps): User {
+  static async create(props: CreateUserProps): Promise<User> {
     const user = new User();
 
     user._id = UserId.create();
     user._tenantId = props.tenantId;
     user._email = Email.create(props.email);
-    user._password = Password.create(props.password);
+    user._password = await Password.create(props.password);
     user._firstName = props.firstName.trim();
     user._lastName = props.lastName.trim();
     user._displayName = props.displayName?.trim() || `${props.firstName} ${props.lastName}`;
@@ -226,21 +226,21 @@ export class User {
   // ============================================
 
   /**
-   * Verify password
+   * Verify password (async due to PBKDF2 hashing)
    */
-  verifyPassword(plainPassword: string): boolean {
+  async verifyPassword(plainPassword: string): Promise<boolean> {
     return this._password.verify(plainPassword);
   }
 
   /**
-   * Change password
+   * Change password (async due to PBKDF2 hashing)
    */
-  changePassword(currentPassword: string, newPassword: string): void {
-    if (!this._password.verify(currentPassword)) {
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    if (!(await this._password.verify(currentPassword))) {
       throw new PasswordMismatchError();
     }
 
-    this._password = Password.create(newPassword);
+    this._password = await Password.create(newPassword);
     this._updatedAt = new Date();
 
     this._domainEvents.push(

@@ -13,7 +13,7 @@ export class UserRegistrationService {
   constructor(
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
-  ) {}
+  ) { }
 
   /**
    * Register a new user
@@ -29,8 +29,8 @@ export class UserRegistrationService {
       throw new DuplicateEmailError(input.email);
     }
 
-    // Create user aggregate (validates email, password strength)
-    const user = User.create({
+    // Create user aggregate (validates email, password strength - async due to PBKDF2)
+    const user = await User.create({
       tenantId: input.tenantId,
       email: input.email,
       password: input.password,

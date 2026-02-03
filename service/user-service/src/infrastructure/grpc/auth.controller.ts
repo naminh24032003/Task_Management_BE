@@ -162,7 +162,7 @@ export class AuthController implements AuthServiceController {
   @SkipTenantCheck()
   @GrpcMethod('AuthService', 'ValidateToken')
   async validateToken(request: ValidateTokenRequest): Promise<ValidateTokenResponse> {
-    const result = await this.authService.validateToken(request.accessToken);
+    const result = await this.authService.validateTokenWithCache(request.accessToken);
 
     return {
       valid: result.valid,

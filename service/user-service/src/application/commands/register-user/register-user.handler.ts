@@ -33,8 +33,8 @@ export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand>
         throw new DuplicateEmailError(command.email);
       }
 
-      // Step 2: Create user aggregate
-      const user = User.create({
+      // Step 2: Create user aggregate (async due to password hashing)
+      const user = await User.create({
         tenantId: command.tenantId,
         email: command.email,
         password: command.password,
