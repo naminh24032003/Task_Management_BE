@@ -9,6 +9,7 @@ import (
 	"task-service/internal/application/command"
 	"task-service/internal/application/port"
 	"task-service/internal/domain/aggregate"
+	"task-service/internal/domain/event"
 	"task-service/internal/domain/repository"
 	"task-service/internal/domain/service"
 	"task-service/internal/domain/valueobject"
@@ -79,11 +80,18 @@ func (h *CommandHandler) HandleUpdateTaskStatus(ctx context.Context, cmd *comman
 	}
 
 	identity := auth.GetIdentityFromContext(ctx)
-	if err := h.domainService.AuthorizeWriteTask(ctx, identity, task); err != nil {
+	if err := h.domainService.AuthorizeUpdateTaskStatus(ctx, identity, task); err != nil {
 		return err
 	}
 
-	if err := task.UpdateStatus(valueobject.TaskStatus(cmd.Status)); err != nil {
+	actorID := ""
+	if identity != nil {
+		actorID = identity.UserID
+	} else if cmd.UpdatedBy != "" {
+		actorID = cmd.UpdatedBy
+	}
+
+	if err := task.UpdateStatus(valueobject.TaskStatus(cmd.Status), actorID); err != nil {
 		return err
 	}
 
@@ -103,11 +111,18 @@ func (h *CommandHandler) HandleAssignTask(ctx context.Context, cmd *command.Assi
 	}
 
 	identity := auth.GetIdentityFromContext(ctx)
-	if err := h.domainService.AuthorizeWriteTask(ctx, identity, task); err != nil {
+	if err := h.domainService.AuthorizeAssignTask(ctx, identity, task); err != nil {
 		return err
 	}
 
-	task.Assign(cmd.AssigneeIDs)
+	actorID := ""
+	if identity != nil {
+		actorID = identity.UserID
+	} else if cmd.AssignedBy != "" {
+		actorID = cmd.AssignedBy
+	}
+
+	task.Assign(cmd.AssigneeIDs, actorID)
 
 	if err := h.taskRepo.Update(ctx, task); err != nil {
 		return fmt.Errorf("failed to update task: %w", err)
@@ -125,7 +140,7 @@ func (h *CommandHandler) HandleDeleteTask(ctx context.Context, cmd *command.Dele
 	}
 
 	identity := auth.GetIdentityFromContext(ctx)
-	if err := h.domainService.AuthorizeWriteTask(ctx, identity, task); err != nil {
+	if err := h.domainService.AuthorizeDeleteTask(ctx, identity, task); err != nil {
 		return err
 	}
 
@@ -133,7 +148,19 @@ func (h *CommandHandler) HandleDeleteTask(ctx context.Context, cmd *command.Dele
 		return fmt.Errorf("failed to delete task: %w", err)
 	}
 
+	actorID := ""
+	if identity != nil {
+		actorID = identity.UserID
+	} else if cmd.DeletedBy != "" {
+		actorID = cmd.DeletedBy
+	}
+
 	// Publish delete event
+	deleteEvent := event.NewTaskDeletedEvent(cmd.ID, cmd.TenantID, actorID)
+	if h.eventPublisher != nil {
+		h.eventPublisher.Publish(ctx, []interface{}{deleteEvent})
+	}
+
 	return nil
 }
 

@@ -61,25 +61,21 @@ func (s *TaskDomainService) ValidateTaskCreation(ctx context.Context, title, pro
 	return nil
 }
 
-// AuthorizeWriteTask implements the fine-grained AuthZ rules (Phase E2)
-// Rule: owner / assignee / admin, status != DONE (except admin)
-func (s *TaskDomainService) AuthorizeWriteTask(ctx context.Context, identity *auth.UserIdentity, task *aggregate.Task) error {
-	// 1. Admin bypass
+// AuthorizeUpdateTaskStatus allows both lead and assignees to update status
+func (s *TaskDomainService) AuthorizeUpdateTaskStatus(ctx context.Context, identity *auth.UserIdentity, task *aggregate.Task) error {
 	if identity.HasRole("admin") {
 		return nil
 	}
 
-	// 2. Scope check (redundant but safe)
 	if !identity.HasScope("task:write") {
 		return errors.New("access denied: missing task:write scope")
 	}
 
-	// 3. Status check: non-admins cannot edit DONE tasks
+	// Status check: non-admins cannot edit DONE tasks
 	if task.Status == valueobject.TaskStatusComplete || task.Status == valueobject.TaskStatusClosed {
 		return errors.New("access denied: cannot modify task in DONE status")
 	}
 
-	// 4. Ownership/Assignee check
 	isOwner := task.CreatorID == identity.UserID
 	isAssignee := false
 	for _, id := range task.AssigneeIDs {
@@ -90,8 +86,47 @@ func (s *TaskDomainService) AuthorizeWriteTask(ctx context.Context, identity *au
 	}
 
 	if !isOwner && !isAssignee {
-		return errors.New("access denied: must be owner or assignee to modify task")
+		return errors.New("access denied: must be owner or assignee to update task status")
 	}
 
 	return nil
+}
+
+// AuthorizeAssignTask only allows lead (owner) or admin to assign/reassign
+func (s *TaskDomainService) AuthorizeAssignTask(ctx context.Context, identity *auth.UserIdentity, task *aggregate.Task) error {
+	if identity.HasRole("admin") {
+		return nil
+	}
+
+	if !identity.HasScope("task:write") {
+		return errors.New("access denied: missing task:write scope")
+	}
+
+	if task.CreatorID != identity.UserID {
+		return errors.New("access denied: only the task lead (creator) can assign users")
+	}
+
+	return nil
+}
+
+// AuthorizeDeleteTask only allows lead (owner) or admin to delete
+func (s *TaskDomainService) AuthorizeDeleteTask(ctx context.Context, identity *auth.UserIdentity, task *aggregate.Task) error {
+	if identity.HasRole("admin") {
+		return nil
+	}
+
+	if !identity.HasScope("task:write") {
+		return errors.New("access denied: missing task:write scope")
+	}
+
+	if task.CreatorID != identity.UserID {
+		return errors.New("access denied: only the task lead (creator) can delete the task")
+	}
+
+	return nil
+}
+
+// AuthorizeWriteTask is kept for backward compatibility and general edits
+func (s *TaskDomainService) AuthorizeWriteTask(ctx context.Context, identity *auth.UserIdentity, task *aggregate.Task) error {
+	return s.AuthorizeUpdateTaskStatus(ctx, identity, task)
 }

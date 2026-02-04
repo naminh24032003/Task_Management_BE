@@ -2,14 +2,19 @@ import { Injectable, Logger, OnModuleInit, OnModuleDestroy, Inject } from '@nest
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import * as crypto from 'crypto';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter } from 'prom-client';
 import {
     IAuthCacheService,
     CachedSession,
     CachedRefreshToken,
+    UserProfile,
 } from '../../application/ports/auth-cache.port';
 import { IEventPublisher, EVENT_PUBLISHER } from '../../application/ports/event-publisher.port';
 import { NearCache } from './near-cache';
 import { SingleFlight } from './single-flight';
+import { TracingService } from '../tracing/tracing.service';
+import { CACHE_HIT_COUNTER, CACHE_MISS_COUNTER } from './cache-metrics';
 
 const CACHE_KEYS = {
     ACCESS_TOKEN: 'auth:access_token:',
@@ -26,16 +31,6 @@ const TTL = {
     REDIS_PROFILE: 180,      // 3 minutes
     REFRESH_TOKEN: 604800,   // 7 days
 } as const;
-
-interface UserProfile {
-    userId: string;
-    tenantId: string;
-    email: string;
-    firstName?: string;
-    lastName?: string;
-    displayName?: string;
-    roleIds: string[];
-}
 
 /**
  * Multi-Tier Cache Service
@@ -61,11 +56,14 @@ export class MultiTierCacheService implements IAuthCacheService, OnModuleInit, O
     constructor(
         @InjectRedis() private readonly redis: Redis,
         @Inject(EVENT_PUBLISHER) private readonly eventPublisher: IEventPublisher,
+        private readonly tracingService: TracingService,
+        @InjectMetric(CACHE_HIT_COUNTER) private readonly hitCounter: Counter<string>,
+        @InjectMetric(CACHE_MISS_COUNTER) private readonly missCounter: Counter<string>,
     ) { }
 
     async onModuleInit() {
         await this.redis.ping();
-        this.logger.log('MultiTierCacheService initialized');
+        this.logger.log('MultiTierCacheService initialized with L1, L2 support');
     }
 
     onModuleDestroy() {
@@ -89,20 +87,33 @@ export class MultiTierCacheService implements IAuthCacheService, OnModuleInit, O
     }
 
     async getSession(accessToken: string): Promise<CachedSession | null> {
-        const key = CACHE_KEYS.ACCESS_TOKEN + this.hashToken(accessToken);
+        return this.tracingService.createAsyncSpan('cache.getSession', async (span) => {
+            const key = CACHE_KEYS.ACCESS_TOKEN + this.hashToken(accessToken);
 
-        const nearCached = this.nearCache.get(key) as CachedSession | null;
-        if (nearCached) {
-            return nearCached;
-        }
+            // Tier 1: Near Cache
+            const nearCached = this.nearCache.get(key) as CachedSession | null;
+            if (nearCached) {
+                span.setAttribute('cache.hit', 'L1');
+                this.hitCounter.inc({ tier: 'L1', type: 'session' });
+                this.logger.debug(`Cache L1 Hit: session`);
+                return nearCached;
+            }
 
-        return this.singleFlight.do(key, async () => {
-            const data = await this.redis.get(key);
-            if (!data) return null;
+            // Tier 2: Redis (with SingleFlight)
+            return this.singleFlight.do(key, async () => {
+                const data = await this.redis.get(key);
+                if (!data) {
+                    span.setAttribute('cache.hit', 'none');
+                    this.missCounter.inc({ type: 'session' });
+                    return null;
+                }
 
-            const session = JSON.parse(data) as CachedSession;
-            this.nearCache.set(key, session, TTL.NEAR_CACHE);
-            return session;
+                span.setAttribute('cache.hit', 'L2');
+                this.hitCounter.inc({ tier: 'L2', type: 'session' });
+                const session = JSON.parse(data) as CachedSession;
+                this.nearCache.set(key, session, TTL.NEAR_CACHE);
+                return session;
+            });
         });
     }
 
@@ -165,20 +176,30 @@ export class MultiTierCacheService implements IAuthCacheService, OnModuleInit, O
     }
 
     async getPermissions(tenantId: string, userId: string): Promise<string[] | null> {
-        const key = `${CACHE_KEYS.PERMISSIONS}${tenantId}:${userId}`;
+        return this.tracingService.createAsyncSpan('cache.getPermissions', async (span) => {
+            const key = `${CACHE_KEYS.PERMISSIONS}${tenantId}:${userId}`;
 
-        const nearCached = this.nearCache.get(key) as string[] | null;
-        if (nearCached) {
-            return nearCached;
-        }
+            const nearCached = this.nearCache.get(key) as string[] | null;
+            if (nearCached) {
+                span.setAttribute('cache.hit', 'L1');
+                this.hitCounter.inc({ tier: 'L1', type: 'permissions' });
+                return nearCached;
+            }
 
-        return this.singleFlight.do(key, async () => {
-            const data = await this.redis.get(key);
-            if (!data) return null;
+            return this.singleFlight.do(key, async () => {
+                const data = await this.redis.get(key);
+                if (!data) {
+                    span.setAttribute('cache.hit', 'none');
+                    this.missCounter.inc({ type: 'permissions' });
+                    return null;
+                }
 
-            const permissions = JSON.parse(data) as string[];
-            this.nearCache.set(key, permissions, TTL.NEAR_CACHE);
-            return permissions;
+                span.setAttribute('cache.hit', 'L2');
+                this.hitCounter.inc({ tier: 'L2', type: 'permissions' });
+                const permissions = JSON.parse(data) as string[];
+                this.nearCache.set(key, permissions, TTL.NEAR_CACHE);
+                return permissions;
+            });
         });
     }
 
@@ -200,20 +221,30 @@ export class MultiTierCacheService implements IAuthCacheService, OnModuleInit, O
     }
 
     async getRoles(tenantId: string, userId: string): Promise<string[] | null> {
-        const key = `${CACHE_KEYS.ROLES}${tenantId}:${userId}`;
+        return this.tracingService.createAsyncSpan('cache.getRoles', async (span) => {
+            const key = `${CACHE_KEYS.ROLES}${tenantId}:${userId}`;
 
-        const nearCached = this.nearCache.get(key) as string[] | null;
-        if (nearCached) {
-            return nearCached;
-        }
+            const nearCached = this.nearCache.get(key) as string[] | null;
+            if (nearCached) {
+                span.setAttribute('cache.hit', 'L1');
+                this.hitCounter.inc({ tier: 'L1', type: 'roles' });
+                return nearCached;
+            }
 
-        return this.singleFlight.do(key, async () => {
-            const data = await this.redis.get(key);
-            if (!data) return null;
+            return this.singleFlight.do(key, async () => {
+                const data = await this.redis.get(key);
+                if (!data) {
+                    span.setAttribute('cache.hit', 'none');
+                    this.missCounter.inc({ type: 'roles' });
+                    return null;
+                }
 
-            const roles = JSON.parse(data) as string[];
-            this.nearCache.set(key, roles, TTL.NEAR_CACHE);
-            return roles;
+                span.setAttribute('cache.hit', 'L2');
+                this.hitCounter.inc({ tier: 'L2', type: 'roles' });
+                const roles = JSON.parse(data) as string[];
+                this.nearCache.set(key, roles, TTL.NEAR_CACHE);
+                return roles;
+            });
         });
     }
 
@@ -235,20 +266,31 @@ export class MultiTierCacheService implements IAuthCacheService, OnModuleInit, O
     }
 
     async getUserProfile(tenantId: string, userId: string): Promise<UserProfile | null> {
-        const key = `${CACHE_KEYS.USER_PROFILE}${tenantId}:${userId}`;
+        return this.tracingService.createAsyncSpan('cache.getUserProfile', async (span) => {
+            const key = `${CACHE_KEYS.USER_PROFILE}${tenantId}:${userId}`;
 
-        const nearCached = this.nearCache.get(key) as UserProfile | null;
-        if (nearCached) {
-            return nearCached;
-        }
+            const nearCached = this.nearCache.get(key) as UserProfile | null;
+            if (nearCached) {
+                span.setAttribute('cache.hit', 'L1');
+                this.hitCounter.inc({ tier: 'L1', type: 'profile' });
+                this.logger.debug(`Cache L1 Hit: profile`);
+                return nearCached;
+            }
 
-        return this.singleFlight.do(key, async () => {
-            const data = await this.redis.get(key);
-            if (!data) return null;
+            return this.singleFlight.do(key, async () => {
+                const data = await this.redis.get(key);
+                if (!data) {
+                    span.setAttribute('cache.hit', 'none');
+                    this.missCounter.inc({ type: 'profile' });
+                    return null;
+                }
 
-            const profile = JSON.parse(data) as UserProfile;
-            this.nearCache.set(key, profile, TTL.NEAR_CACHE);
-            return profile;
+                span.setAttribute('cache.hit', 'L2');
+                this.hitCounter.inc({ tier: 'L2', type: 'profile' });
+                const profile = JSON.parse(data) as UserProfile;
+                this.nearCache.set(key, profile, TTL.NEAR_CACHE);
+                return profile;
+            });
         });
     }
 

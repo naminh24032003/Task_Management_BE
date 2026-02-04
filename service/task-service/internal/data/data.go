@@ -71,9 +71,9 @@ type RedisConfig struct {
 
 // KafkaConfig represents Kafka configuration
 type KafkaConfig struct {
-	Brokers    interface{}     `json:"brokers"`
-	TopicTasks string          `json:"topic_tasks"`
-	SASL       KafkaSASLConfig `json:"sasl"`
+	Brokers         interface{}     `json:"brokers"`
+	TopicTaskEvents string          `json:"topic_task_events"`
+	SASL            KafkaSASLConfig `json:"sasl"`
 }
 
 // KafkaSASLConfig represents Kafka SASL authentication configuration
@@ -183,7 +183,7 @@ func NewKafkaProducer(c config.Config, logger log.Logger) (*kafka.Producer, func
 	kafkaCfg := cfg.Data.Kafka
 	producerConfig := kafka.ProducerConfig{
 		Brokers: toStringSlice(kafkaCfg.Brokers, []string{"localhost:9092"}),
-		Topic:   kafkaCfg.TopicTasks,
+		Topic:   kafkaCfg.TopicTaskEvents,
 	}
 
 	// Configure SASL if enabled
@@ -197,7 +197,7 @@ func NewKafkaProducer(c config.Config, logger log.Logger) (*kafka.Producer, func
 	}
 
 	helper.Infof("Connecting to Kafka brokers: %v, topic: %s, SASL: %v",
-		kafkaCfg.Brokers, kafkaCfg.TopicTasks, kafkaCfg.SASL.Enabled)
+		kafkaCfg.Brokers, kafkaCfg.TopicTaskEvents, kafkaCfg.SASL.Enabled)
 
 	producer, err := kafka.NewProducer(producerConfig)
 	if err != nil {

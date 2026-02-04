@@ -8,15 +8,17 @@ type TaskDeletedEvent struct {
 	OccurredAt time.Time `json:"occurred_at"`
 	TaskID     string    `json:"aggregate_id"`
 	TenantID   string    `json:"tenant_id"`
+	DeletedBy  string    `json:"deleted_by"`
 }
 
 // NewTaskDeletedEvent creates a new TaskDeletedEvent
-func NewTaskDeletedEvent(taskID, tenantID string) *TaskDeletedEvent {
+func NewTaskDeletedEvent(taskID, tenantID, deletedBy string) *TaskDeletedEvent {
 	return &TaskDeletedEvent{
 		Type:       "task.deleted",
 		OccurredAt: time.Now(),
 		TaskID:     taskID,
 		TenantID:   tenantID,
+		DeletedBy:  deletedBy,
 	}
 }
 

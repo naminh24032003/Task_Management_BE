@@ -16,8 +16,10 @@ data:
   kafka:
     brokers:
       - ${KAFKA_BROKERS:localhost:9092}
-    consumer_topic: ${KAFKA_CONSUMER_TOPIC:tasks}
-    producer_topic: ${KAFKA_PRODUCER_TOPIC:notification.events.v1}
+    consumer_topics:
+      - ${KAFKA_CONSUMER_TOPIC_TASK_EVENTS:task.events}
+      - ${KAFKA_CONSUMER_TOPIC_NOTIFICATION_COMMANDS:notification.commands}
+    producer_topic: ${KAFKA_PRODUCER_TOPIC:audit.logs}
     consumer_group: ${KAFKA_CONSUMER_GROUP:notification-service}
     sasl:
       enabled: ${KAFKA_SASL_ENABLED:false}

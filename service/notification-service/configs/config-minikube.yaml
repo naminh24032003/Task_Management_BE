@@ -17,8 +17,10 @@ data:
   kafka:
     brokers:
       - kafka.kafka.svc.cluster.local:9092
-    consumer_topic: ${KAFKA_CONSUMER_TOPIC:tasks}
-    producer_topic: ${KAFKA_PRODUCER_TOPIC:notification.events.v1}
+    consumer_topics:
+      - task.events
+      - notification.commands
+    producer_topic: ${KAFKA_PRODUCER_TOPIC:audit.logs}
     consumer_group: notification-service
     sasl:
       enabled: true

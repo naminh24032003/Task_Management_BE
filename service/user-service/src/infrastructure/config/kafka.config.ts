@@ -17,9 +17,9 @@ export interface KafkaConfig {
     retries: number;
   };
   topics: {
-    users: string;
-    userActivities: string;
-    notifications: string;
+    userEvents: string;
+    notificationCommands: string;
+    auditLogs: string;
     deadLetterQueue: string;
   };
 }
@@ -43,10 +43,10 @@ export default registerAs(
       retries: parseInt(process.env.KAFKA_RETRIES || '10', 10),
     },
     topics: {
-      users: process.env.KAFKA_TOPIC_USERS || 'users',
-      userActivities: process.env.KAFKA_TOPIC_USER_ACTIVITIES || 'user-activities',
-      notifications: process.env.KAFKA_TOPIC_NOTIFICATIONS || 'notifications',
-      deadLetterQueue: process.env.KAFKA_TOPIC_DLQ || 'dead-letter-queue',
+      userEvents: process.env.KAFKA_TOPIC_USER_EVENTS || 'user.events',
+      notificationCommands: process.env.KAFKA_TOPIC_NOTIFICATION_COMMANDS || 'notification.commands',
+      auditLogs: process.env.KAFKA_TOPIC_AUDIT_LOGS || 'audit.logs',
+      deadLetterQueue: process.env.KAFKA_TOPIC_DLQ || 'dlq',
     },
   }),
 );

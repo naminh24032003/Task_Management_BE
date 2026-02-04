@@ -91,13 +91,13 @@ func NewTask(id, tenantID, title, creatorID, projectID, spaceID string) (*Task, 
 	}
 
 	// Raise domain event
-	task.AddDomainEvent(event.NewTaskCreatedEvent(id, title, projectID, now))
+	task.AddDomainEvent(event.NewTaskCreatedEvent(id, tenantID, title, projectID, creatorID, now))
 
 	return task, nil
 }
 
 // UpdateStatus changes the task status
-func (t *Task) UpdateStatus(newStatus valueobject.TaskStatus) error {
+func (t *Task) UpdateStatus(newStatus valueobject.TaskStatus, actorID string) error {
 	if !newStatus.IsValid() {
 		return errors.New("invalid task status")
 	}
@@ -108,10 +108,10 @@ func (t *Task) UpdateStatus(newStatus valueobject.TaskStatus) error {
 	if newStatus == valueobject.TaskStatusComplete || newStatus == valueobject.TaskStatusClosed {
 		now := time.Now()
 		t.CompletedAt = &now
+		t.AddDomainEvent(event.NewTaskCompletedEvent(t.ID, t.TenantID, actorID, now))
 	}
 
-	// Raise domain event (could create a StatusChanged event)
-	// For now using TaskUpdated or similar
+	// Raise generic updated event or specific status changed event if needed
 	return nil
 }
 
@@ -127,10 +127,29 @@ func (t *Task) UpdatePriority(newPriority valueobject.TaskPriority) error {
 }
 
 // Assign assigns the task to users
-func (t *Task) Assign(assigneeIDs []string) {
+func (t *Task) Assign(assigneeIDs []string, actorID string) {
+	oldAssignees := t.AssigneeIDs
 	t.AssigneeIDs = assigneeIDs
 	t.UpdatedAt = time.Now()
-	// Raise domain event
+
+	// Raise domain event for each new assignee or bulk
+	if len(assigneeIDs) > 0 {
+		// Simplified: just taking the first one for the specific event if needed,
+		// but better to have a TaskAssigned event that supports multiple or individual
+		for _, newID := range assigneeIDs {
+			// Find if it's a new assignment
+			isNew := true
+			for _, oldID := range oldAssignees {
+				if oldID == newID {
+					isNew = false
+					break
+				}
+			}
+			if isNew {
+				t.AddDomainEvent(event.NewTaskAssignedEvent(t.ID, t.TenantID, "", newID, actorID, time.Now()))
+			}
+		}
+	}
 }
 
 // AddWatcher adds a watcher to the task

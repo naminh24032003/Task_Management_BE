@@ -137,7 +137,7 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy, IEve
     };
 
     await this.publish({
-      topic: this.config.topics.users,
+      topic: this.config.topics.userEvents,
       messages: [
         {
           key: payload.userId as string,

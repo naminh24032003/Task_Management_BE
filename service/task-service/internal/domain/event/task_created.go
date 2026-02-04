@@ -15,18 +15,22 @@ type TaskCreatedEvent struct {
 	Type       string    `json:"event_type"`
 	OccurredAt time.Time `json:"occurred_at"`
 	TaskID     string    `json:"aggregate_id"`
+	TenantID   string    `json:"tenant_id"`
 	Title      string    `json:"title"`
 	ProjectID  string    `json:"project_id"`
+	CreatorID  string    `json:"creator_id"`
 }
 
 // NewTaskCreatedEvent creates a new TaskCreatedEvent
-func NewTaskCreatedEvent(taskID, title, projectID string, occurredOn time.Time) *TaskCreatedEvent {
+func NewTaskCreatedEvent(taskID, tenantID, title, projectID, creatorID string, occurredOn time.Time) *TaskCreatedEvent {
 	return &TaskCreatedEvent{
 		Type:       "task.created",
 		OccurredAt: occurredOn,
 		TaskID:     taskID,
+		TenantID:   tenantID,
 		Title:      title,
 		ProjectID:  projectID,
+		CreatorID:  creatorID,
 	}
 }
 

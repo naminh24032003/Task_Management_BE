@@ -19,12 +19,22 @@ export interface CachedRefreshToken {
     createdAt: number;
 }
 
+export interface UserProfile {
+    userId: string;
+    tenantId: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    displayName?: string;
+    roleIds: string[];
+}
+
 /**
  * Auth Cache Service Port (Interface)
  * Defines the contract for authentication caching operations
  * 
  * Implementations:
- * - RedisAuthCacheService (production)
+ * - MultiTierCacheService (production with L1, L2, L3)
  * - InMemoryAuthCacheService (testing)
  */
 export interface IAuthCacheService {
@@ -106,6 +116,31 @@ export interface IAuthCacheService {
      * Invalidate roles cache
      */
     invalidateRoles(tenantId: string, userId: string): Promise<void>;
+
+    /**
+     * Cache user profile
+     */
+    cacheUserProfile(tenantId: string, userId: string, profile: UserProfile): Promise<void>;
+
+    /**
+     * Get cached user profile
+     */
+    getUserProfile(tenantId: string, userId: string): Promise<UserProfile | null>;
+
+    /**
+     * Invalidate user profile cache
+     */
+    invalidateUserProfile(tenantId: string, userId: string): Promise<void>;
+
+    /**
+     * Invalidate all user related cache
+     */
+    invalidateUserCache(tenantId: string, userId: string): Promise<void>;
+
+    /**
+     * Publish cache invalidation event
+     */
+    publishCacheInvalidation(tenantId: string, userId: string, reason: string): Promise<void>;
 
     /**
      * Health check

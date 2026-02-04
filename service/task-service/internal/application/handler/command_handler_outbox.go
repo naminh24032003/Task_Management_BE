@@ -78,11 +78,18 @@ func (h *CommandHandlerOutbox) HandleUpdateTaskStatus(ctx context.Context, cmd *
 	}
 
 	identity := auth.GetIdentityFromContext(ctx)
-	if err := h.domainService.AuthorizeWriteTask(ctx, identity, task); err != nil {
+	if err := h.domainService.AuthorizeUpdateTaskStatus(ctx, identity, task); err != nil {
 		return err
 	}
 
-	if err := task.UpdateStatus(valueobject.TaskStatus(cmd.Status)); err != nil {
+	actorID := ""
+	if identity != nil {
+		actorID = identity.UserID
+	} else if cmd.UpdatedBy != "" {
+		actorID = cmd.UpdatedBy
+	}
+
+	if err := task.UpdateStatus(valueobject.TaskStatus(cmd.Status), actorID); err != nil {
 		return err
 	}
 
@@ -102,11 +109,18 @@ func (h *CommandHandlerOutbox) HandleAssignTask(ctx context.Context, cmd *comman
 	}
 
 	identity := auth.GetIdentityFromContext(ctx)
-	if err := h.domainService.AuthorizeWriteTask(ctx, identity, task); err != nil {
+	if err := h.domainService.AuthorizeAssignTask(ctx, identity, task); err != nil {
 		return err
 	}
 
-	task.Assign(cmd.AssigneeIDs)
+	actorID := ""
+	if identity != nil {
+		actorID = identity.UserID
+	} else if cmd.AssignedBy != "" {
+		actorID = cmd.AssignedBy
+	}
+
+	task.Assign(cmd.AssigneeIDs, actorID)
 
 	// Update task AND outbox entries in a single transaction
 	if err := h.unitOfWork.UpdateTaskWithEvents(ctx, task); err != nil {
@@ -124,12 +138,19 @@ func (h *CommandHandlerOutbox) HandleDeleteTask(ctx context.Context, cmd *comman
 	}
 
 	identity := auth.GetIdentityFromContext(ctx)
-	if err := h.domainService.AuthorizeWriteTask(ctx, identity, task); err != nil {
+	if err := h.domainService.AuthorizeDeleteTask(ctx, identity, task); err != nil {
 		return err
 	}
 
+	actorID := ""
+	if identity != nil {
+		actorID = identity.UserID
+	} else if cmd.DeletedBy != "" {
+		actorID = cmd.DeletedBy
+	}
+
 	// Create delete event
-	deleteEvent := event.NewTaskDeletedEvent(cmd.ID, cmd.TenantID)
+	deleteEvent := event.NewTaskDeletedEvent(cmd.ID, cmd.TenantID, actorID)
 
 	// Delete task AND create outbox entry in a single transaction
 	if err := h.unitOfWork.DeleteTaskWithEvents(ctx, cmd.TenantID, cmd.ID, deleteEvent); err != nil {

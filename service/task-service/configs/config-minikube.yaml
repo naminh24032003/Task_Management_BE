@@ -38,7 +38,7 @@ data:
   kafka:
     brokers:
       - kafka.kafka.svc.cluster.local:9092
-    topic_tasks: tasks
+    topic_task_events: task.events
     sasl:
       enabled: true
       mechanism: SCRAM-SHA-256
