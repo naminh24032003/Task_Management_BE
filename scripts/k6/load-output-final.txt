@@ -1,0 +1,262 @@
+﻿
+         /\      Grafana   /ΓÇ╛ΓÇ╛/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ΓÇ╛ΓÇ╛\ 
+  /          \   |   (  |  (ΓÇ╛)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: scripts/k6/login-load-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 100 max VUs, 1m0s max duration (incl. graceful stop):
+              * load_test: 100 looping VUs for 30s (gracefulStop: 30s)
+
+k6 : time="2026-02-06T01:21:15+07:00" level=info 
+msg="\n========================================" source=console
+At line:1 char:1
++ k6 run scripts/k6/login-load-test.js -e VUS=100 -e DURATION=30s 2>&1  
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (time="2026-02-0... source=co 
+   nsole:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+time="2026-02-06T01:21:15+07:00" level=info msg="K6 USER SERVICE LOAD 
+TEST" source=console
+time="2026-02-06T01:21:15+07:00" level=info 
+msg="========================================" source=console
+time="2026-02-06T01:21:15+07:00" level=info msg="Endpoint: 
+http://localhost:8000/graphql" source=console
+time="2026-02-06T01:21:15+07:00" level=info msg="Test Email: 
+k6test1770315675243@example.com" source=console
+time="2026-02-06T01:21:15+07:00" level=info msg="Test Password: 
+K6Test@123456" source=console
+time="2026-02-06T01:21:15+07:00" level=info source=console
+time="2026-02-06T01:21:15+07:00" level=info msg="Step 1: Registering new 
+test user..." source=console
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+time="2026-02-06T01:21:16+07:00" level=info msg="Register Status: 200" 
+source=console
+time="2026-02-06T01:21:16+07:00" level=info msg="Register Success! User 
+ID: 6984df9b689e2461063519a0" source=console
+time="2026-02-06T01:21:16+07:00" level=info msg="\nStep 2: Testing login 
+with new user..." source=console
+time="2026-02-06T01:21:16+07:00" level=info msg="Login Status: 200" 
+source=console
+time="2026-02-06T01:21:16+07:00" level=info msg="Has User: true" 
+source=console
+time="2026-02-06T01:21:16+07:00" level=info msg="Has Tokens: true" 
+source=console
+time="2026-02-06T01:21:16+07:00" level=info msg="\nΓ£ô SETUP SUCCESS - 
+User: k6test1770315675243@example.com" source=console
+time="2026-02-06T01:21:16+07:00" level=info 
+msg="========================================\n" source=console
+
+running (0m02.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [   1% ] 100 VUs  00.3s/30s
+
+running (0m03.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [   4% ] 100 VUs  01.3s/30s
+
+running (0m04.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [   8% ] 100 VUs  02.3s/30s
+
+running (0m05.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  11% ] 100 VUs  03.3s/30s
+
+running (0m06.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  14% ] 100 VUs  04.3s/30s
+
+running (0m07.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  18% ] 100 VUs  05.3s/30s
+
+running (0m08.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  21% ] 100 VUs  06.3s/30s
+
+running (0m09.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  24% ] 100 VUs  07.3s/30s
+
+running (0m10.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  28% ] 100 VUs  08.3s/30s
+
+running (0m11.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  31% ] 100 VUs  09.3s/30s
+
+running (0m12.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  34% ] 100 VUs  10.3s/30s
+
+running (0m13.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  38% ] 100 VUs  11.3s/30s
+
+running (0m14.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  41% ] 100 VUs  12.3s/30s
+
+running (0m15.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  44% ] 100 VUs  13.3s/30s
+
+running (0m16.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  48% ] 100 VUs  14.3s/30s
+
+running (0m17.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  51% ] 100 VUs  15.3s/30s
+
+running (0m18.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  54% ] 100 VUs  16.3s/30s
+
+running (0m19.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  58% ] 100 VUs  17.3s/30s
+
+running (0m20.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  61% ] 100 VUs  18.3s/30s
+
+running (0m21.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  64% ] 100 VUs  19.3s/30s
+
+running (0m22.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  68% ] 100 VUs  20.3s/30s
+
+running (0m23.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [  71% ] 100 VUs  21.3s/30s
+
+running (0m24.0s), 100/100 VUs, 10 complete and 0 interrupted iterations
+load_test   [  74% ] 100 VUs  22.3s/30s
+
+running (0m25.0s), 100/100 VUs, 10 complete and 0 interrupted iterations
+load_test   [  78% ] 100 VUs  23.3s/30s
+
+running (0m26.0s), 100/100 VUs, 10 complete and 0 interrupted iterations
+load_test   [  81% ] 100 VUs  24.3s/30s
+
+running (0m27.0s), 100/100 VUs, 10 complete and 0 interrupted iterations
+load_test   [  84% ] 100 VUs  25.3s/30s
+
+running (0m28.0s), 100/100 VUs, 16 complete and 0 interrupted iterations
+load_test   [  88% ] 100 VUs  26.3s/30s
+
+running (0m29.0s), 100/100 VUs, 17 complete and 0 interrupted iterations
+load_test   [  91% ] 100 VUs  27.3s/30s
+time="2026-02-06T01:21:44+07:00" level=info msg="[VU2:0] 200 | data=false 
+| err=true | 27413ms" source=console
+time="2026-02-06T01:21:44+07:00" level=info msg="[VU2] Error: Timeout has 
+occurred" source=console
+
+running (0m30.0s), 100/100 VUs, 40 complete and 0 interrupted iterations
+load_test   [  94% ] 100 VUs  28.3s/30s
+
+running (0m31.0s), 100/100 VUs, 42 complete and 0 interrupted iterations
+load_test   [  98% ] 100 VUs  29.3s/30s
+
+running (0m32.0s), 100/100 VUs, 42 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m33.0s), 100/100 VUs, 42 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m34.0s), 100/100 VUs, 42 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m35.0s), 100/100 VUs, 42 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m36.0s), 100/100 VUs, 42 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m37.0s), 100/100 VUs, 42 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m38.0s), 100/100 VUs, 42 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m39.0s), 100/100 VUs, 42 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m40.0s), 100/100 VUs, 42 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m41.0s), 100/100 VUs, 42 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m42.0s), 097/100 VUs, 45 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m43.0s), 097/100 VUs, 45 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m44.0s), 097/100 VUs, 45 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m45.0s), 097/100 VUs, 45 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+time="2026-02-06T01:22:00+07:00" level=info msg="[VU3:0] 200 | data=false 
+| err=true | 43312ms" source=console
+time="2026-02-06T01:22:00+07:00" level=info msg="[VU3] Error: Timeout has 
+occurred" source=console
+time="2026-02-06T01:22:00+07:00" level=info msg="[VU2:1] 200 | data=false 
+| err=true | 15801ms" source=console
+time="2026-02-06T01:22:00+07:00" level=info msg="[VU2] Error: Timeout has 
+occurred" source=console
+time="2026-02-06T01:22:00+07:00" level=info msg="[VU1:0] 200 | data=false 
+| err=true | 43315ms" source=console
+time="2026-02-06T01:22:00+07:00" level=info msg="[VU1] Error: Timeout has 
+occurred" source=console
+
+running (0m46.0s), 014/100 VUs, 128 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m47.0s), 014/100 VUs, 128 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m48.0s), 014/100 VUs, 128 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m49.0s), 014/100 VUs, 128 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+
+running (0m50.0s), 014/100 VUs, 128 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+time="2026-02-06T01:22:06+07:00" level=info msg="\nΓòöΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòù" 
+source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="Γòæ          USER 
+SERVICE LOAD TEST RESULTS              Γòæ" source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="ΓòáΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòú" 
+source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="Γòæ Total Requests:      
+      144 requests          Γòæ" source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="Γòæ Successful Logins:   
+       19                    Γòæ" source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="Γòæ Failed Logins:       
+      123                    Γòæ" source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="Γòæ Success Rate:        
+    13.4%                    Γòæ" source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="ΓòáΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòú" 
+source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="Γòæ LATENCY METRICS 
+(milliseconds)                       Γòæ" source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="Γòæ   Minimum:           
+    14502 ms                 Γòæ" source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="Γòæ   Average:           
+    30923 ms                 Γòæ" source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="Γòæ   P95:               
+    48604 ms                 Γòæ" source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="Γòæ   P99:               
+      N/A ms                 Γòæ" source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="Γòæ   Maximum:           
+    49009 ms                 Γòæ" source=console
+time="2026-02-06T01:22:06+07:00" level=info msg="ΓòÜΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò¥\n" 
+source=console
+
+running (0m50.8s), 000/100 VUs, 142 complete and 0 interrupted iterations
+load_test Γ£ô [ 100% ] 100 VUs  30s
+time="2026-02-06T01:22:06+07:00" level=error msg="thresholds on metrics 
+'error_rate, login_latency_ms' have been crossed"

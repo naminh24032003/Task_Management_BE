@@ -1,0 +1,178 @@
+﻿
+         /\      Grafana   /ΓÇ╛ΓÇ╛/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ΓÇ╛ΓÇ╛\ 
+  /          \   |   (  |  (ΓÇ╛)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: scripts/k6/login-load-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 30 max VUs, 50s max duration (incl. graceful stop):
+              * load_test: 30 looping VUs for 20s (gracefulStop: 30s)
+
+k6 : time="2026-02-06T01:23:11+07:00" level=info 
+msg="\n========================================" source=console
+At line:1 char:1
++ k6 run scripts/k6/login-load-test.js -e VUS=30 -e DURATION=20s 2>&1 | 
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (time="2026-02-0... source=co 
+   nsole:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+time="2026-02-06T01:23:11+07:00" level=info msg="K6 USER SERVICE LOAD 
+TEST" source=console
+time="2026-02-06T01:23:11+07:00" level=info 
+msg="========================================" source=console
+time="2026-02-06T01:23:11+07:00" level=info msg="Endpoint: 
+http://localhost:8000/graphql" source=console
+time="2026-02-06T01:23:11+07:00" level=info msg="Test Email: 
+k6test1770315791830@example.com" source=console
+time="2026-02-06T01:23:11+07:00" level=info msg="Test Password: 
+K6Test@123456" source=console
+time="2026-02-06T01:23:11+07:00" level=info source=console
+time="2026-02-06T01:23:11+07:00" level=info msg="Step 1: Registering new 
+test user..." source=console
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+time="2026-02-06T01:23:41+07:00" level=warning msg="Request Failed" 
+error="Post \"http://localhost:8000/graphql\": read tcp 
+127.0.0.1:61153->127.0.0.1:8000: wsarecv: An existing connection was 
+forcibly closed by the remote host."
+time="2026-02-06T01:23:41+07:00" level=info msg="Register Status: 0" 
+source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="\nΓòöΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòù" 
+source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="Γòæ          USER 
+SERVICE LOAD TEST RESULTS              Γòæ" source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="ΓòáΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòú" 
+source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="Γòæ Total Requests:      
+        1 requests          Γòæ" source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="Γòæ Successful Logins:   
+        0                    Γòæ" source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="Γòæ Failed Logins:       
+        0                    Γòæ" source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="Γòæ Success Rate:        
+     NaN%                    Γòæ" source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="ΓòáΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòú" 
+source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="Γòæ LATENCY METRICS 
+(milliseconds)                       Γòæ" source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="Γòæ   Minimum:           
+        0 ms                 Γòæ" source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="Γòæ   Average:           
+        0 ms                 Γòæ" source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="Γòæ   P95:               
+        0 ms                 Γòæ" source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="Γòæ   P99:               
+      N/A ms                 Γòæ" source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="Γòæ   Maximum:           
+        0 ms                 Γòæ" source=console
+time="2026-02-06T01:23:41+07:00" level=info msg="ΓòÜΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò¥\n" 
+source=console
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+time="2026-02-06T01:23:42+07:00" level=error msg="TypeError: Cannot read 
+property 'errors' of undefined\n\tat setup (file:///D:/react/task_manageme
+nt_be/scripts/k6/login-load-test.js:107:17(136))\n" hint="script 
+exception"

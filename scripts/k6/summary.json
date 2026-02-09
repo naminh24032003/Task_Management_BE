@@ -1,0 +1,281 @@
+{
+    "setup_data": {
+        "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OTg0Y2IzYzBlNDY1OTI4MzZiMWVmNWUiLCJ0ZW5hbnRJZCI6ImRlZmF1bHQtdGVuYW50IiwiZW1haWwiOiJ0ZXN0MTIzQGV4YW1wbGUuY29tIiwicm9sZXMiOltdLCJzY29wZXMiOltdLCJ0eXBlIjoicmVmcmVzaCIsImp0aSI6ImMxOTRhMDNjLTZmZDYtNDI5NS05MWNlLWNlZWQ3ODIzZjBjYSIsImlhdCI6MTc3MDMxMDQ5NywiZXhwIjoxNzcwOTE1Mjk3fQ.7307y1UaqGV45w881H_cLBGC2r-Z9jidwGWBV3ONbQw",
+        "userId": "6984cb3c0e46592836b1ef5e",
+        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OTg0Y2IzYzBlNDY1OTI4MzZiMWVmNWUiLCJ0ZW5hbnRJZCI6ImRlZmF1bHQtdGVuYW50IiwiZW1haWwiOiJ0ZXN0MTIzQGV4YW1wbGUuY29tIiwicm9sZXMiOltdLCJzY29wZXMiOltdLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzcwMzEwNDk3LCJleHAiOjE3NzAzMTEzOTd9.v0ui3WiPBRgAtEcCfEICxB26bAOxUcXM7mu6xplTSrE"
+    },
+    "root_group": {
+        "checks": {},
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+                "Me Query": {
+                    "path": "::Me Query",
+                    "id": "53b4dd8689fb9b9147d8540b9228b2c4",
+                    "groups": {},
+                    "checks": {
+                            "me status is 200": {
+                                "path": "::Me Query::me status is 200",
+                                "id": "d8547ce53ec5f5c80e261ede13eddec4",
+                                "passes": 499,
+                                "fails": 0,
+                                "name": "me status is 200"
+                            },
+                            "me response has data": {
+                                "name": "me response has data",
+                                "path": "::Me Query::me response has data",
+                                "id": "15a0f76cd1db4aa778ef9c153f816246",
+                                "passes": 26,
+                                "fails": 473
+                            },
+                            "me response has no errors": {
+                                "name": "me response has no errors",
+                                "path": "::Me Query::me response has no errors",
+                                "id": "060bda0ba14d92af06d51caf1f6d8930",
+                                "passes": 26,
+                                "fails": 473
+                            }
+                        },
+                    "name": "Me Query"
+                },
+                "User Query by ID": {
+                    "groups": {},
+                    "checks": {
+                            "user status is 200": {
+                                "name": "user status is 200",
+                                "path": "::User Query by ID::user status is 200",
+                                "id": "6370b9866cabf6961b06ff0338010506",
+                                "passes": 499,
+                                "fails": 0
+                            },
+                            "user response has data": {
+                                "passes": 0,
+                                "fails": 499,
+                                "name": "user response has data",
+                                "path": "::User Query by ID::user response has data",
+                                "id": "0ef190b4c370a18802e9bf860aef6900"
+                            },
+                            "user response has no errors": {
+                                "fails": 499,
+                                "name": "user response has no errors",
+                                "path": "::User Query by ID::user response has no errors",
+                                "id": "9bcd8ac1bffc3cfa5202258bbd737e39",
+                                "passes": 0
+                            }
+                        },
+                    "name": "User Query by ID",
+                    "path": "::User Query by ID",
+                    "id": "feea812867f6106d376e7de53e3e4d17"
+                },
+                "Refresh Token": {
+                    "name": "Refresh Token",
+                    "path": "::Refresh Token",
+                    "id": "3be35da5fe2a4d6e2972aee583c2a378",
+                    "groups": {},
+                    "checks": {
+                            "refresh status is 200": {
+                                "name": "refresh status is 200",
+                                "path": "::Refresh Token::refresh status is 200",
+                                "id": "030c05b086c719881b5c17591bf281fb",
+                                "passes": 104,
+                                "fails": 0
+                            },
+                            "refresh response has tokens": {
+                                "passes": 0,
+                                "fails": 104,
+                                "name": "refresh response has tokens",
+                                "path": "::Refresh Token::refresh response has tokens",
+                                "id": "7ee38547682353284e2e55dabe348b85"
+                            }
+                        }
+                }
+            }
+    },
+    "metrics": {
+        "login_latency_ms": {
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "thresholds": {
+                "p(95)<1000": false,
+                "p(99)<2000": false
+            }
+        },
+        "vus_max": {
+            "value": 100,
+            "min": 100,
+            "max": 100
+        },
+        "data_sent": {
+            "count": 801344,
+            "rate": 22537.28629073061
+        },
+        "iterations": {
+            "count": 499,
+            "rate": 14.03405511125631
+        },
+        "vus": {
+            "value": 10,
+            "min": 0,
+            "max": 100
+        },
+        "data_received": {
+            "count": 2715227,
+            "rate": 76364.01875264756
+        },
+        "successful_requests": {
+            "count": 26,
+            "rate": 0.7312333324502285
+        },
+        "http_req_connecting": {
+            "p(90)": 0,
+            "p(95)": 0.5298,
+            "avg": 0.14196249999999996,
+            "min": 0,
+            "med": 0,
+            "max": 10.5553
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 1104,
+            "value": 0
+        },
+        "me_query_latency_ms": {
+            "avg": 3936.1442885771544,
+            "min": 312,
+            "med": 1532,
+            "max": 32807,
+            "p(90)": 10679.399999999992,
+            "p(95)": 23658.99999999996,
+            "thresholds": {
+                "p(95)<500": true,
+                "p(99)<1000": true
+            }
+        },
+        "http_req_duration": {
+            "p(90)": 2231.77054,
+            "p(95)": 13101.40052999998,
+            "avg": 2768.4093517210094,
+            "min": 7.3445,
+            "med": 1456.5183,
+            "max": 32796.0863,
+            "thresholds": {
+                "p(95)<500": true,
+                "p(99)<1000": true
+            }
+        },
+        "http_req_blocked": {
+            "min": 0,
+            "med": 0,
+            "max": 10.5553,
+            "p(90)": 0,
+            "p(95)": 0.6999,
+            "avg": 0.16879030797101444
+        },
+        "group_duration": {
+            "avg": 2772.7827279491808,
+            "min": 7.3445,
+            "med": 1457.63335,
+            "max": 32808.7674,
+            "p(90)": 2232.253,
+            "p(95)": 13123.87021000001
+        },
+        "http_reqs": {
+            "count": 1104,
+            "rate": 31.049292270194318
+        },
+        "http_req_receiving": {
+            "p(95)": 0.53494,
+            "avg": 0.08432056159420291,
+            "min": 0,
+            "med": 0,
+            "max": 2.5734,
+            "p(90)": 0.51951
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 2768.4093517210094,
+            "min": 7.3445,
+            "med": 1456.5183,
+            "max": 32796.0863,
+            "p(90)": 2231.77054,
+            "p(95)": 13101.40052999998
+        },
+        "checks": {
+            "passes": 1154,
+            "fails": 2048,
+            "value": 0.3603997501561524
+        },
+        "error_rate": {
+            "passes": 1076,
+            "fails": 26,
+            "thresholds": {
+                "rate<0.05": true
+            },
+            "value": 0.9764065335753176
+        },
+        "user_query_latency_ms": {
+            "p(90)": 2053.8,
+            "p(95)": 2230.1,
+            "avg": 1988.1683366733466,
+            "min": 52,
+            "med": 1453,
+            "max": 32329,
+            "thresholds": {
+                "p(95)<500": true,
+                "p(99)<1000": true
+            }
+        },
+        "refresh_token_latency_ms": {
+            "med": 794,
+            "max": 2234,
+            "p(90)": 1852.3,
+            "p(95)": 2031.6499999999999,
+            "avg": 947.9134615384615,
+            "min": 8,
+            "thresholds": {
+                "p(95)<500": true,
+                "p(99)<1000": true
+            }
+        },
+        "http_req_sending": {
+            "avg": 0.04449628623188405,
+            "min": 0,
+            "med": 0,
+            "max": 11.0735,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_req_waiting": {
+            "max": 32796.0863,
+            "p(90)": 2231.57062,
+            "p(95)": 13100.96133499998,
+            "avg": 2768.2805348731836,
+            "min": 7.3445,
+            "med": 1456.5183
+        },
+        "failed_requests": {
+            "count": 1076,
+            "rate": 30.261810219863303
+        },
+        "iteration_duration": {
+            "avg": 6324.574518637273,
+            "min": 1364.4553,
+            "med": 3404.8012,
+            "max": 33771.5879,
+            "p(90)": 18233.205919999986,
+            "p(95)": 32020.365909999993
+        }
+    }
+}

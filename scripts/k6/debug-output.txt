@@ -1,0 +1,174 @@
+﻿
+         /\      Grafana   /ΓÇ╛ΓÇ╛/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ΓÇ╛ΓÇ╛\ 
+  /          \   |   (  |  (ΓÇ╛)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: scripts/k6/debug-single-login.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 10m30s max duration (incl. graceful stop):
+              * default: 3 iterations shared among 1 VUs (maxDuration: 10m0s, gracefulStop: 30s)
+
+k6 : time="2026-02-06T01:02:48+07:00" level=info msg="\n=== Request 1 
+===" source=console
+At line:1 char:1
++ k6 run scripts/k6/debug-single-login.js 2>&1 | Out-File -FilePath scr 
+...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (time="2026-02-0... source=co 
+   nsole:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+time="2026-02-06T01:02:48+07:00" level=info msg="Status: 200" 
+source=console
+time="2026-02-06T01:02:48+07:00" level=info msg="ERROR: 13 INTERNAL: 
+Error: Invalid email or password\n    at AuthController.login (/app/servic
+e/user-service/dist/infrastructure/grpc/auth.controller.js:94:19)\n    at 
+process.processTicksAndRejections 
+(node:internal/process/task_queues:95:5)" source=console
+time="2026-02-06T01:02:48+07:00" level=info msg="Extensions: 
+{\"code\":\"INTERNAL_SERVER_ERROR\",\"stacktrace\":[\"Error: 13 INTERNAL: 
+Error: Invalid email or password\",\"    at AuthController.login (/app/ser
+vice/user-service/dist/infrastructure/grpc/auth.controller.js:94:19)\",\" 
+   at process.processTicksAndRejections 
+(node:internal/process/task_queues:95:5)\",\"    at callErrorFromStatus 
+(/app/node_modules/@grpc/grpc-js/build/src/call.js:32:19)\",\"    at 
+Object.onReceiveStatus 
+(/app/node_modules/@grpc/grpc-js/build/src/client.js:193:76)\",\"    at 
+Object.onReceiveStatus (/app/node_modules/@grpc/grpc-js/build/src/client-i
+nterceptors.js:367:141)\",\"    at Object.onReceiveStatus (/app/node_modul
+es/@grpc/grpc-js/build/src/client-interceptors.js:327:181)\",\"    at 
+/app/node_modules/@grpc/grpc-js/build/src/resolving-call.js:135:78\",\"   
+ at process.processTicksAndRejections 
+(node:internal/process/task_queues:77:11)\",\"for call at\",\"    at 
+ServiceClientImpl.makeUnaryRequest 
+(/app/node_modules/@grpc/grpc-js/build/src/client.js:161:32)\",\"    at 
+ServiceClientImpl.<anonymous> 
+(/app/node_modules/@grpc/grpc-js/build/src/make-client.js:105:19)\",\"    
+at /app/node_modules/@opentelemetry/auto-instrumentations-node/node_module
+s/@opentelemetry/instrumentation-grpc/build/src/clientUtils.js:131:31\",\"
+    at /app/node_modules/@opentelemetry/auto-instrumentations-node/node_mo
+dules/@opentelemetry/instrumentation-grpc/build/src/instrumentation.js:211
+:209\",\"    at AsyncLocalStorage.run (node:async_hooks:346:14)\",\"    
+at AsyncLocalStorageContextManager.with (/app/node_modules/@opentelemetry/
+context-async-hooks/build/src/AsyncLocalStorageContextManager.js:33:40)\",
+\"    at ContextAPI.with (/app/node_modules/@opentelemetry/api/build/src/a
+pi/context.js:60:46)\",\"    at ServiceClientImpl.clientMethodTrace [as 
+Login] (/app/node_modules/@opentelemetry/auto-instrumentations-node/node_m
+odules/@opentelemetry/instrumentation-grpc/build/src/instrumentation.js:21
+1:42)\",\"    at Observable._subscribe (/app/node_modules/@nestjs/microser
+vices/client/client-grpc.js:195:48)\",\"    at Observable._trySubscribe 
+(/app/node_modules/rxjs/dist/cjs/internal/Observable.js:41:25)\"]}" 
+source=console
+time="2026-02-06T01:02:48+07:00" level=info msg="\n=== Request 2 ===" 
+source=console
+time="2026-02-06T01:02:48+07:00" level=info msg="Status: 200" 
+source=console
+time="2026-02-06T01:02:48+07:00" level=info msg="ERROR: 13 INTERNAL: 
+Error: Invalid email or password\n    at AuthController.login (/app/servic
+e/user-service/dist/infrastructure/grpc/auth.controller.js:94:19)\n    at 
+process.processTicksAndRejections 
+(node:internal/process/task_queues:95:5)" source=console
+time="2026-02-06T01:02:48+07:00" level=info msg="Extensions: 
+{\"code\":\"INTERNAL_SERVER_ERROR\",\"stacktrace\":[\"Error: 13 INTERNAL: 
+Error: Invalid email or password\",\"    at AuthController.login (/app/ser
+vice/user-service/dist/infrastructure/grpc/auth.controller.js:94:19)\",\" 
+   at process.processTicksAndRejections 
+(node:internal/process/task_queues:95:5)\",\"    at callErrorFromStatus 
+(/app/node_modules/@grpc/grpc-js/build/src/call.js:32:19)\",\"    at 
+Object.onReceiveStatus 
+(/app/node_modules/@grpc/grpc-js/build/src/client.js:193:76)\",\"    at 
+Object.onReceiveStatus (/app/node_modules/@grpc/grpc-js/build/src/client-i
+nterceptors.js:367:141)\",\"    at Object.onReceiveStatus (/app/node_modul
+es/@grpc/grpc-js/build/src/client-interceptors.js:327:181)\",\"    at 
+/app/node_modules/@grpc/grpc-js/build/src/resolving-call.js:135:78\",\"   
+ at process.processTicksAndRejections 
+(node:internal/process/task_queues:77:11)\",\"for call at\",\"    at 
+ServiceClientImpl.makeUnaryRequest 
+(/app/node_modules/@grpc/grpc-js/build/src/client.js:161:32)\",\"    at 
+ServiceClientImpl.<anonymous> 
+(/app/node_modules/@grpc/grpc-js/build/src/make-client.js:105:19)\",\"    
+at /app/node_modules/@opentelemetry/auto-instrumentations-node/node_module
+s/@opentelemetry/instrumentation-grpc/build/src/clientUtils.js:131:31\",\"
+    at /app/node_modules/@opentelemetry/auto-instrumentations-node/node_mo
+dules/@opentelemetry/instrumentation-grpc/build/src/instrumentation.js:211
+:209\",\"    at AsyncLocalStorage.run (node:async_hooks:346:14)\",\"    
+at AsyncLocalStorageContextManager.with (/app/node_modules/@opentelemetry/
+context-async-hooks/build/src/AsyncLocalStorageContextManager.js:33:40)\",
+\"    at ContextAPI.with (/app/node_modules/@opentelemetry/api/build/src/a
+pi/context.js:60:46)\",\"    at ServiceClientImpl.clientMethodTrace [as 
+Login] (/app/node_modules/@opentelemetry/auto-instrumentations-node/node_m
+odules/@opentelemetry/instrumentation-grpc/build/src/instrumentation.js:21
+1:42)\",\"    at Observable._subscribe (/app/node_modules/@nestjs/microser
+vices/client/client-grpc.js:195:48)\",\"    at Observable._trySubscribe 
+(/app/node_modules/rxjs/dist/cjs/internal/Observable.js:41:25)\"]}" 
+source=console
+time="2026-02-06T01:02:48+07:00" level=info msg="\n=== Request 3 ===" 
+source=console
+time="2026-02-06T01:02:48+07:00" level=info msg="Status: 200" 
+source=console
+time="2026-02-06T01:02:48+07:00" level=info msg="ERROR: 13 INTERNAL: 
+Error: Invalid email or password\n    at AuthController.login (/app/servic
+e/user-service/dist/infrastructure/grpc/auth.controller.js:94:19)\n    at 
+process.processTicksAndRejections 
+(node:internal/process/task_queues:95:5)" source=console
+time="2026-02-06T01:02:48+07:00" level=info msg="Extensions: 
+{\"code\":\"INTERNAL_SERVER_ERROR\",\"stacktrace\":[\"Error: 13 INTERNAL: 
+Error: Invalid email or password\",\"    at AuthController.login (/app/ser
+vice/user-service/dist/infrastructure/grpc/auth.controller.js:94:19)\",\" 
+   at process.processTicksAndRejections 
+(node:internal/process/task_queues:95:5)\",\"    at callErrorFromStatus 
+(/app/node_modules/@grpc/grpc-js/build/src/call.js:32:19)\",\"    at 
+Object.onReceiveStatus 
+(/app/node_modules/@grpc/grpc-js/build/src/client.js:193:76)\",\"    at 
+Object.onReceiveStatus (/app/node_modules/@grpc/grpc-js/build/src/client-i
+nterceptors.js:367:141)\",\"    at Object.onReceiveStatus (/app/node_modul
+es/@grpc/grpc-js/build/src/client-interceptors.js:327:181)\",\"    at 
+/app/node_modules/@grpc/grpc-js/build/src/resolving-call.js:135:78\",\"   
+ at process.processTicksAndRejections 
+(node:internal/process/task_queues:77:11)\",\"for call at\",\"    at 
+ServiceClientImpl.makeUnaryRequest 
+(/app/node_modules/@grpc/grpc-js/build/src/client.js:161:32)\",\"    at 
+ServiceClientImpl.<anonymous> 
+(/app/node_modules/@grpc/grpc-js/build/src/make-client.js:105:19)\",\"    
+at /app/node_modules/@opentelemetry/auto-instrumentations-node/node_module
+s/@opentelemetry/instrumentation-grpc/build/src/clientUtils.js:131:31\",\"
+    at /app/node_modules/@opentelemetry/auto-instrumentations-node/node_mo
+dules/@opentelemetry/instrumentation-grpc/build/src/instrumentation.js:211
+:209\",\"    at AsyncLocalStorage.run (node:async_hooks:346:14)\",\"    
+at AsyncLocalStorageContextManager.with (/app/node_modules/@opentelemetry/
+context-async-hooks/build/src/AsyncLocalStorageContextManager.js:33:40)\",
+\"    at ContextAPI.with (/app/node_modules/@opentelemetry/api/build/src/a
+pi/context.js:60:46)\",\"    at ServiceClientImpl.clientMethodTrace [as 
+Login] (/app/node_modules/@opentelemetry/auto-instrumentations-node/node_m
+odules/@opentelemetry/instrumentation-grpc/build/src/instrumentation.js:21
+1:42)\",\"    at Observable._subscribe (/app/node_modules/@nestjs/microser
+vices/client/client-grpc.js:195:48)\",\"    at Observable._trySubscribe 
+(/app/node_modules/rxjs/dist/cjs/internal/Observable.js:41:25)\"]}" 
+source=console
+
+
+  Γûê TOTAL RESULTS 
+
+    HTTP
+    http_req_duration..............: avg=18.59ms min=14.8ms med=16.35ms max=24.61ms p(90)=22.96ms p(95)=23.79ms
+      { expected_response:true }...: avg=18.59ms min=14.8ms med=16.35ms max=24.61ms p(90)=22.96ms p(95)=23.79ms
+    http_req_failed................: 0.00%  0 out of 3
+    http_reqs......................: 3      45.473424/s
+
+    EXECUTION
+    iteration_duration.............: avg=21.99ms min=14.8ms med=17.46ms max=33.69ms p(90)=30.44ms p(95)=32.07ms
+    iterations.....................: 3      45.473424/s
+
+    NETWORK
+    data_received..................: 8.7 kB 132 kB/s
+    data_sent......................: 1.3 kB 19 kB/s
+
+
+
+
+running (00m00.1s), 0/1 VUs, 3 complete and 0 interrupted iterations
+default Γ£ô [ 100% ] 1 VUs  00m00.1s/10m0s  3/3 shared iters

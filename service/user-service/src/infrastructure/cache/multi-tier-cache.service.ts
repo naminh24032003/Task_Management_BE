@@ -25,20 +25,20 @@ const CACHE_KEYS = {
 } as const;
 
 const TTL = {
-    NEAR_CACHE: 30,          // 30 seconds
-    REDIS_PERMISSIONS: 300,  // 5 minutes
-    REDIS_ROLES: 300,        // 5 minutes  
-    REDIS_PROFILE: 180,      // 3 minutes
-    REFRESH_TOKEN: 604800,   // 7 days
+    NEAR_CACHE: 43200,       // 12 hours (12 * 60 * 60)
+    REDIS_PERMISSIONS: 86400, // 24 hours (24 * 60 * 60)
+    REDIS_ROLES: 86400,       // 24 hours (24 * 60 * 60)
+    REDIS_PROFILE: 86400,     // 24 hours (24 * 60 * 60)
+    REFRESH_TOKEN: 604800,    // 7 days
 } as const;
 
 /**
  * Multi-Tier Cache Service
  * 
  * Cache hierarchy (fastest to slowest):
- * 1. Near Cache (30s TTL) - In-memory, ~1μs
+ * 1. Near Cache (12h TTL) - In-memory, ~1μs
  * 2. SingleFlight - Prevents duplicate requests
- * 3. Redis (1-5m TTL) - Distributed, ~1ms
+ * 3. Redis (24h TTL) - Distributed, ~1ms
  * 4. Database - Source of truth, ~10-100ms
  * 
  * Write strategy:

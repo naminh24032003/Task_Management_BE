@@ -1,0 +1,33 @@
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: user-service
+  namespace: dev
+spec:
+  host: user-service.dev.svc.cluster.local
+  subsets:
+  - labels:
+      version: v1
+    name: v1
+  trafficPolicy:
+    connectionPool:
+      http:
+        h2UpgradePolicy: UPGRADE
+        http1MaxPendingRequests: 10000
+        http2MaxRequests: 10000
+        maxRequestsPerConnection: 0
+        maxRetries: 5
+      tcp:
+        connectTimeout: 30s
+        maxConnections: 10000
+        tcpKeepalive:
+          time: 7200s
+          interval: 75s
+    outlierDetection:
+      baseEjectionTime: 60s
+      consecutive5xxErrors: 100
+      consecutiveGatewayErrors: 100
+      interval: 10s
+      maxEjectionPercent: 0
+    tls:
+      mode: ISTIO_MUTUAL

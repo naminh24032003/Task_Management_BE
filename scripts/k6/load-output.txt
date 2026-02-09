@@ -1,0 +1,223 @@
+﻿
+         /\      Grafana   /ΓÇ╛ΓÇ╛/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ΓÇ╛ΓÇ╛\ 
+  /          \   |   (  |  (ΓÇ╛)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: scripts/k6/login-load-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 100 max VUs, 1m0s max duration (incl. graceful stop):
+              * load_test: 100 looping VUs for 30s (gracefulStop: 30s)
+
+k6 : time="2026-02-06T01:06:46+07:00" level=info 
+msg="\n========================================" source=console
+At line:1 char:25
++ ... -Seconds 5; k6 run scripts/k6/login-load-test.js -e VUS=100 -e 
+DURATI ...
++                 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (time="2026-02-0... source=co 
+   nsole:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+time="2026-02-06T01:06:46+07:00" level=info msg="K6 USER SERVICE LOAD 
+TEST" source=console
+time="2026-02-06T01:06:46+07:00" level=info 
+msg="========================================" source=console
+time="2026-02-06T01:06:46+07:00" level=info msg="Endpoint: 
+http://localhost:8000/graphql" source=console
+time="2026-02-06T01:06:46+07:00" level=info msg="Test Email: 
+k6test1770314806544@example.com" source=console
+time="2026-02-06T01:06:46+07:00" level=info msg="Test Password: 
+K6Test@123456" source=console
+time="2026-02-06T01:06:46+07:00" level=info source=console
+time="2026-02-06T01:06:46+07:00" level=info msg="Step 1: Registering new 
+test user..." source=console
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+time="2026-02-06T01:06:47+07:00" level=info msg="Register Status: 200" 
+source=console
+time="2026-02-06T01:06:47+07:00" level=info msg="Register Success! User 
+ID: 6984dc36d918ae017c0664bb" source=console
+time="2026-02-06T01:06:47+07:00" level=info msg="\nStep 2: Testing login 
+with new user..." source=console
+
+Run         [ 100% ] setup()
+load_test   [   0% ]
+time="2026-02-06T01:06:48+07:00" level=info msg="Login Status: 200" 
+source=console
+time="2026-02-06T01:06:48+07:00" level=info msg="Has User: true" 
+source=console
+time="2026-02-06T01:06:48+07:00" level=info msg="Has Tokens: true" 
+source=console
+time="2026-02-06T01:06:48+07:00" level=info msg="\nΓ£ô SETUP SUCCESS - 
+User: k6test1770314806544@example.com" source=console
+time="2026-02-06T01:06:48+07:00" level=info 
+msg="========================================\n" source=console
+
+running (0m03.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [   3% ] 100 VUs  00.8s/30s
+
+running (0m04.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+load_test   [   6% ] 100 VUs  01.8s/30s
+time="2026-02-06T01:06:51+07:00" level=info msg="[VU3:0] 200 | data=false 
+| err=true | 2637ms" source=console
+time="2026-02-06T01:06:51+07:00" level=info msg="[VU3] Error: 14 
+UNAVAILABLE: upstream connect error or disconnect/reset before headers. 
+reset" source=console
+
+running (0m05.0s), 100/100 VUs, 24 complete and 0 interrupted iterations
+load_test   [   9% ] 100 VUs  02.8s/30s
+time="2026-02-06T01:06:51+07:00" level=info msg="[VU2:0] 200 | data=false 
+| err=true | 3148ms" source=console
+time="2026-02-06T01:06:51+07:00" level=info msg="[VU2] Error: 14 
+UNAVAILABLE: upstream connect error or disconnect/reset before headers. 
+reset" source=console
+time="2026-02-06T01:06:51+07:00" level=info msg="[VU1:0] 200 | data=false 
+| err=true | 3224ms" source=console
+time="2026-02-06T01:06:51+07:00" level=info msg="[VU1] Error: 14 
+UNAVAILABLE: upstream connect error or disconnect/reset before headers. 
+reset" source=console
+
+running (0m06.0s), 100/100 VUs, 85 complete and 0 interrupted iterations
+load_test   [  13% ] 100 VUs  03.8s/30s
+
+running (0m07.0s), 100/100 VUs, 91 complete and 0 interrupted iterations
+load_test   [  16% ] 100 VUs  04.8s/30s
+time="2026-02-06T01:06:53+07:00" level=info msg="[VU3:1] 200 | data=false 
+| err=true | 2086ms" source=console
+time="2026-02-06T01:06:53+07:00" level=info msg="[VU3] Error: 14 
+UNAVAILABLE: no healthy upstream" source=console
+
+running (0m08.0s), 100/100 VUs, 149 complete and 0 interrupted iterations
+load_test   [  19% ] 100 VUs  05.8s/30s
+time="2026-02-06T01:06:54+07:00" level=info msg="[VU2:1] 200 | data=false 
+| err=true | 2597ms" source=console
+time="2026-02-06T01:06:54+07:00" level=info msg="[VU2] Error: 14 
+UNAVAILABLE: no healthy upstream" source=console
+time="2026-02-06T01:06:54+07:00" level=info msg="[VU1:1] 200 | data=false 
+| err=true | 2597ms" source=console
+time="2026-02-06T01:06:54+07:00" level=info msg="[VU1] Error: 14 
+UNAVAILABLE: no healthy upstream" source=console
+
+running (0m09.0s), 100/100 VUs, 175 complete and 0 interrupted iterations
+load_test   [  23% ] 100 VUs  06.8s/30s
+
+running (0m10.0s), 100/100 VUs, 267 complete and 0 interrupted iterations
+load_test   [  26% ] 100 VUs  07.8s/30s
+
+running (0m11.0s), 100/100 VUs, 267 complete and 0 interrupted iterations
+load_test   [  29% ] 100 VUs  08.8s/30s
+
+running (0m12.0s), 100/100 VUs, 349 complete and 0 interrupted iterations
+load_test   [  33% ] 100 VUs  09.8s/30s
+
+running (0m13.0s), 100/100 VUs, 362 complete and 0 interrupted iterations
+load_test   [  36% ] 100 VUs  10.8s/30s
+
+running (0m14.0s), 100/100 VUs, 433 complete and 0 interrupted iterations
+load_test   [  39% ] 100 VUs  11.8s/30s
+
+running (0m15.0s), 100/100 VUs, 460 complete and 0 interrupted iterations
+load_test   [  43% ] 100 VUs  12.8s/30s
+
+running (0m16.0s), 100/100 VUs, 486 complete and 0 interrupted iterations
+load_test   [  46% ] 100 VUs  13.8s/30s
+
+running (0m17.0s), 100/100 VUs, 560 complete and 0 interrupted iterations
+load_test   [  49% ] 100 VUs  14.8s/30s
+
+running (0m18.0s), 100/100 VUs, 561 complete and 0 interrupted iterations
+load_test   [  53% ] 100 VUs  15.8s/30s
+
+running (0m19.0s), 100/100 VUs, 660 complete and 0 interrupted iterations
+load_test   [  56% ] 100 VUs  16.8s/30s
+
+running (0m20.0s), 100/100 VUs, 660 complete and 0 interrupted iterations
+load_test   [  59% ] 100 VUs  17.8s/30s
+
+running (0m21.0s), 100/100 VUs, 703 complete and 0 interrupted iterations
+load_test   [  63% ] 100 VUs  18.8s/30s
+
+running (0m22.0s), 100/100 VUs, 760 complete and 0 interrupted iterations
+load_test   [  66% ] 100 VUs  19.8s/30s
+
+running (0m23.0s), 100/100 VUs, 760 complete and 0 interrupted iterations
+load_test   [  69% ] 100 VUs  20.8s/30s
+
+running (0m24.0s), 100/100 VUs, 860 complete and 0 interrupted iterations
+load_test   [  73% ] 100 VUs  21.8s/30s
+
+running (0m25.0s), 100/100 VUs, 934 complete and 0 interrupted iterations
+load_test   [  76% ] 100 VUs  22.8s/30s
+
+running (0m26.0s), 100/100 VUs, 934 complete and 0 interrupted iterations
+load_test   [  79% ] 100 VUs  23.8s/30s
+
+running (0m27.0s), 100/100 VUs, 1013 complete and 0 interrupted iterations
+load_test   [  83% ] 100 VUs  24.8s/30s
+
+running (0m28.0s), 100/100 VUs, 1036 complete and 0 interrupted iterations
+load_test   [  86% ] 100 VUs  25.8s/30s
+
+running (0m29.0s), 100/100 VUs, 1134 complete and 0 interrupted iterations
+load_test   [  89% ] 100 VUs  26.8s/30s
+
+running (0m30.0s), 100/100 VUs, 1142 complete and 0 interrupted iterations
+load_test   [  93% ] 100 VUs  27.8s/30s
+
+running (0m31.0s), 100/100 VUs, 1193 complete and 0 interrupted iterations
+load_test   [  96% ] 100 VUs  28.8s/30s
+
+running (0m32.0s), 100/100 VUs, 1242 complete and 0 interrupted iterations
+load_test   [  99% ] 100 VUs  29.8s/30s
+
+running (0m33.0s), 060/100 VUs, 1282 complete and 0 interrupted iterations
+load_test Γåô [ 100% ] 100 VUs  30s
+time="2026-02-06T01:07:19+07:00" level=info msg="\nΓòöΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòù" 
+source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="Γòæ          USER 
+SERVICE LOAD TEST RESULTS              Γòæ" source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="ΓòáΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòú" 
+source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="Γòæ Total Requests:      
+     1344 requests          Γòæ" source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="Γòæ Successful Logins:   
+        0                    Γòæ" source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="Γòæ Failed Logins:       
+     1342                    Γòæ" source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="Γòæ Success Rate:        
+     0.0%                    Γòæ" source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="ΓòáΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòú" 
+source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="Γòæ LATENCY METRICS 
+(milliseconds)                       Γòæ" source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="Γòæ   Minimum:           
+      916 ms                 Γòæ" source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="Γòæ   Average:           
+     2194 ms                 Γòæ" source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="Γòæ   P95:               
+     2927 ms                 Γòæ" source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="Γòæ   P99:               
+      N/A ms                 Γòæ" source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="Γòæ   Maximum:           
+    14355 ms                 Γòæ" source=console
+time="2026-02-06T01:07:19+07:00" level=info msg="ΓòÜΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò¥\n" 
+source=console
+
+running (0m33.3s), 000/100 VUs, 1342 complete and 0 interrupted iterations
+load_test Γ£ô [ 100% ] 100 VUs  30s
+time="2026-02-06T01:07:20+07:00" level=error msg="thresholds on metrics 
+'error_rate' have been crossed"

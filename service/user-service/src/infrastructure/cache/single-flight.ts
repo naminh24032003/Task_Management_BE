@@ -24,7 +24,11 @@ export class SingleFlight {
         }
 
         const promise = fn().finally(() => {
-            this.inFlight.delete(key);
+            // Only delete if this entry is still ours (not replaced by a newer request)
+            const current = this.inFlight.get(key);
+            if (current && current.promise === promise) {
+                this.inFlight.delete(key);
+            }
         });
 
         this.inFlight.set(key, {
@@ -33,7 +37,7 @@ export class SingleFlight {
         });
 
         return promise;
-    }
+    }   
 
     clear(): void {
         this.inFlight.clear();
