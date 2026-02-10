@@ -14,26 +14,29 @@ import redisConfig, { RedisConfig } from '../config/redis.config';
         const config = configService.get<RedisConfig>('redis');
         const logger = new Logger('RedisModule');
 
-        logger.log(`Connecting to Redis at ${config.host}:${config.port}`);
+        logger.log(`Connecting to Redis Cluster at ${config.host}:${config.port}`);
 
         return {
-          type: 'single',
+          type: 'cluster',
+          nodes: [{ host: config.host, port: config.port }],
           options: {
-            host: config.host,
-            port: config.port,
-            password: config.password || undefined,
-            db: config.db,
-            keyPrefix: config.keyPrefix,
-            connectTimeout: config.connectTimeout,
-            commandTimeout: config.commandTimeout,
-            maxRetriesPerRequest: config.maxRetriesPerRequest,
-            retryStrategy: (times: number) => {
+            redisOptions: {
+              password: config.password || undefined,
+              keyPrefix: config.keyPrefix,
+              connectTimeout: config.connectTimeout,
+              commandTimeout: config.commandTimeout,
+              maxRetriesPerRequest: config.maxRetriesPerRequest,
+              showFriendlyErrorStack: process.env.NODE_ENV !== 'production',
+            },
+            enableReadyCheck: true,
+            scaleReads: 'slave',
+            clusterRetryStrategy: (times: number) => {
               if (
                 times * config.retryStrategy.retryDelayBase >
                 config.retryStrategy.maxRetryTime
               ) {
                 logger.error(
-                  `Redis connection failed after ${times} retries`,
+                  `Redis Cluster connection failed after ${times} retries`,
                 );
                 return null;
               }
@@ -42,13 +45,10 @@ import redisConfig, { RedisConfig } from '../config/redis.config';
                 2000,
               );
               logger.warn(
-                `Redis retry attempt ${times}, next retry in ${delay}ms`,
+                `Redis Cluster retry attempt ${times}, next retry in ${delay}ms`,
               );
               return delay;
             },
-            lazyConnect: false,
-            enableReadyCheck: true,
-            showFriendlyErrorStack: process.env.NODE_ENV !== 'production',
           },
         };
       },

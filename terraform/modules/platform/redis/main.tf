@@ -1,11 +1,12 @@
 # =============================================================================
 # Redis Cluster Platform Module - Main Configuration
 # =============================================================================
-# This module deploys Redis Cluster using Bitnami Helm chart with:
-# - High availability cluster mode
+# This module deploys a true Redis Cluster using Bitnami redis-cluster chart:
+# - True cluster mode with hash slot sharding
+# - Multi-master architecture
 # - Password authentication
-# - Configurable topology (nodes + replicas)
-# - Optimized for Minikube and EKS
+# - Minikube: 3 masters, 0 replicas
+# - EKS: 6 nodes (3 masters + 3 replicas)
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -45,87 +46,76 @@ resource "kubernetes_secret" "redis_password" {
 }
 
 # -----------------------------------------------------------------------------
-# Redis Helm Release (Standalone mode for Minikube)
+# Redis Cluster Helm Release (True cluster mode)
 # -----------------------------------------------------------------------------
 resource "helm_release" "redis_cluster" {
   name       = var.release_name
   repository = "oci://registry-1.docker.io/bitnamicharts"
-  chart      = "redis"
-  version    = "20.6.0"
+  chart      = "redis-cluster"
+  version    = var.chart_version
   namespace  = local.namespace
 
-  # Allow insecure images for bitnamilegacy
+  # Keep service name clean
   set {
-    name  = "global.security.allowInsecureImages"
-    value = "true"
+    name  = "fullnameOverride"
+    value = "redis-cluster"
   }
 
-  # Use bitnamilegacy repository
+  # Cluster topology
   set {
-    name  = "image.repository"
-    value = "bitnamilegacy/redis"
-  }
-
-  set {
-    name  = "image.tag"
-    value = "8.2.1-debian-12-r0"
+    name  = "cluster.nodes"
+    value = var.is_minikube ? "3" : tostring(var.redis_nodes)
   }
 
   set {
-    name  = "architecture"
-    value = var.is_minikube ? "standalone" : "replication"
+    name  = "cluster.replicas"
+    value = var.is_minikube ? "0" : tostring(var.redis_replicas)
   }
 
+  # Authentication
   set {
-    name  = "auth.enabled"
-    value = "true"
-  }
-
-  set {
-    name  = "auth.password"
+    name  = "password"
     value = var.redis_password
   }
 
   set {
-    name  = "master.persistence.enabled"
+    name  = "usePassword"
+    value = "true"
+  }
+
+  # Persistence
+  set {
+    name  = "persistence.enabled"
     value = tostring(var.persistence_enabled)
   }
 
   set {
-    name  = "master.persistence.size"
+    name  = "persistence.size"
     value = var.persistence_size
   }
 
+  # Resources per node
   set {
-    name  = "master.resources.requests.cpu"
+    name  = "redis.resources.requests.cpu"
     value = var.redis_resources.requests.cpu
   }
 
   set {
-    name  = "master.resources.requests.memory"
+    name  = "redis.resources.requests.memory"
     value = var.redis_resources.requests.memory
   }
 
   set {
-    name  = "master.resources.limits.cpu"
+    name  = "redis.resources.limits.cpu"
     value = var.redis_resources.limits.cpu
   }
 
   set {
-    name  = "master.resources.limits.memory"
+    name  = "redis.resources.limits.memory"
     value = var.redis_resources.limits.memory
   }
 
-  set {
-    name  = "replica.replicaCount"
-    value = var.is_minikube ? "0" : tostring(var.redis_replicas)
-  }
-
-  set {
-    name  = "replica.persistence.enabled"
-    value = tostring(var.persistence_enabled)
-  }
-
+  # Metrics
   set {
     name  = "metrics.enabled"
     value = tostring(var.enable_metrics)
@@ -134,6 +124,12 @@ resource "helm_release" "redis_cluster" {
   set {
     name  = "metrics.image.tag"
     value = "latest"
+  }
+
+  # Cluster configuration
+  set {
+    name  = "redis.configmap"
+    value = "maxmemory-policy ${var.maxmemory_policy}\nappendonly yes\nappendfsync everysec"
   }
 
   timeout = 600
@@ -148,7 +144,7 @@ resource "helm_release" "redis_cluster" {
 # -----------------------------------------------------------------------------
 data "kubernetes_service" "redis_cluster" {
   metadata {
-    name      = "${var.release_name}-master"
+    name      = "redis-cluster"
     namespace = local.namespace
   }
 
@@ -219,13 +215,8 @@ resource "kubernetes_deployment" "redis_commander" {
           }
 
           env {
-            name = "REDIS_PASSWORD"
-            value_from {
-              secret_key_ref {
-                name = "${var.release_name}"
-                key  = "redis-password"
-              }
-            }
+            name  = "REDIS_PASSWORD"
+            value = var.redis_password
           }
 
           resources {

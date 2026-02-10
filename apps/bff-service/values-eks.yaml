@@ -30,10 +30,9 @@ microservice:
     GRPC_USER_SERVICE_URL: "user-service.prod.svc.cluster.local:50051"
     GRPC_TASK_SERVICE_URL: "task-service.prod.svc.cluster.local:50052"
 
-    # Redis (ElastiCache or EKS Redis)
+    # Redis Cluster (ElastiCache or EKS Redis)
     REDIS_HOST: "redis-cluster.prod.svc.cluster.local"
     REDIS_PORT: "6379"
-    REDIS_DB: "1"
     REDIS_KEY_PREFIX: "bff-service:"
 
     # Production rate limits

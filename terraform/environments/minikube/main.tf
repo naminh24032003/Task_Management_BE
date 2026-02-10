@@ -389,10 +389,9 @@ module "bff_service" {
   user_service_url = "user-service.dev.svc.cluster.local:50051"
   task_service_url = "task-service.dev.svc.cluster.local:50052"
 
-  # Redis configuration
-  redis_host     = "redis-cluster-master.redis.svc.cluster.local"
+  # Redis Cluster configuration
+  redis_host     = "redis-cluster.redis.svc.cluster.local"
   redis_port     = 6379
-  redis_db       = 1
   redis_password = var.bff_redis_password
 
   # Authentication

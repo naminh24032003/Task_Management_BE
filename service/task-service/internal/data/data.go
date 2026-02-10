@@ -38,7 +38,7 @@ var ProviderSet = wire.NewSet(
 // Data holds all database connections
 type Data struct {
 	db     *mongo.Database
-	redis  *redis.Client
+	redis  *redis.ClusterClient
 	logger *log.Helper
 }
 
@@ -57,11 +57,10 @@ type DatabaseConfig struct {
 	WriteConcern           string      `json:"write_concern"`
 }
 
-// RedisConfig represents Redis configuration
+// RedisConfig represents Redis Cluster configuration
 type RedisConfig struct {
-	Addr           string      `json:"addr"`
+	Addrs          interface{} `json:"addrs"`
 	Password       string      `json:"password"`
-	DB             interface{} `json:"db"`
 	KeyPrefix      string      `json:"key_prefix"`
 	ReadTimeout    string      `json:"read_timeout"`
 	WriteTimeout   string      `json:"write_timeout"`
@@ -92,7 +91,7 @@ type DataConfig struct {
 }
 
 // NewData creates a new Data instance
-func NewData(db *mongo.Database, redisClient *redis.Client, logger log.Logger) (*Data, func(), error) {
+func NewData(db *mongo.Database, redisClient *redis.ClusterClient, logger log.Logger) (*Data, func(), error) {
 	helper := log.NewHelper(log.With(logger, "module", "data"))
 
 	d := &Data{
@@ -142,8 +141,8 @@ func NewMongoDatabase(c config.Config, logger log.Logger) (*mongo.Database, func
 	return db, cleanup, nil
 }
 
-// NewRedisClient ... (same as before)
-func NewRedisClient(c config.Config, logger log.Logger) (*redis.Client, func(), error) {
+// NewRedisClient creates a new Redis Cluster client
+func NewRedisClient(c config.Config, logger log.Logger) (*redis.ClusterClient, func(), error) {
 	var cfg struct {
 		Data DataConfig `json:"data"`
 	}
@@ -154,9 +153,8 @@ func NewRedisClient(c config.Config, logger log.Logger) (*redis.Client, func(), 
 	writeTimeout, _ := time.ParseDuration(cfg.Data.Redis.WriteTimeout)
 	connectTimeout, _ := time.ParseDuration(cfg.Data.Redis.ConnectTimeout)
 	redisConfig := &redisAdapter.Config{
-		Addr:           cfg.Data.Redis.Addr,
+		Addrs:          toStringSlice(cfg.Data.Redis.Addrs, []string{"localhost:6379"}),
 		Password:       cfg.Data.Redis.Password,
-		DB:             toInt(cfg.Data.Redis.DB, 0),
 		KeyPrefix:      cfg.Data.Redis.KeyPrefix,
 		ReadTimeout:    readTimeout,
 		WriteTimeout:   writeTimeout,

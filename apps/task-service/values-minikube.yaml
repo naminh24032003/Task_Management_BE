@@ -24,7 +24,7 @@ microservice:
   envVarsCM:
     GO_ENV: development
     # Redis Configuration - non-sensitive settings
-    REDIS_HOST: "redis-cluster-master.redis.svc.cluster.local"
+    REDIS_HOST: "redis-cluster.redis.svc.cluster.local"
     REDIS_PORT: "6379"
     # MongoDB Configuration
     MONGODB_URI: "mongodb://root:MongoDB%40Root2024Secure%21@task-mongodb-mongodb-sharded.mongodb-task.svc.cluster.local:27017/task-service?authSource=admin"

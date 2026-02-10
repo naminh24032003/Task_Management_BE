@@ -4,7 +4,6 @@ export interface RedisConfig {
   host: string;
   port: number;
   password: string;
-  db: number;
   keyPrefix: string;
   connectTimeout: number;
   commandTimeout: number;
@@ -29,7 +28,6 @@ export default registerAs(
       host: process.env.REDIS_HOST,
       port: parseInt(process.env.REDIS_PORT, 10),
       password: process.env.REDIS_PASSWORD,
-      db: parseInt(process.env.REDIS_DB, 10),
       keyPrefix: process.env.REDIS_KEY_PREFIX,
       connectTimeout: parseInt(process.env.REDIS_CONNECT_TIMEOUT, 10),
       commandTimeout: parseInt(process.env.REDIS_COMMAND_TIMEOUT, 10),

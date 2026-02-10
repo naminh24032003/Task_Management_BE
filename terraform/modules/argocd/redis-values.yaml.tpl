@@ -1,17 +1,17 @@
-# Redis Values Template for ArgoCD
+# Redis Cluster Values Template for ArgoCD
 # Managed by Terraform
+# Uses bitnami/redis-cluster chart (true cluster mode)
 
-global:
-  redis:
-    password: ${password}
+fullnameOverride: "redis-cluster"
 
-architecture: standalone
+usePassword: true
+password: ${password}
 
-auth:
-  enabled: true
-  password: ${password}
+cluster:
+  nodes: ${nodes}
+  replicas: ${replicas}
 
-master:
+redis:
   resources:
     requests:
       cpu: ${request_cpu}
@@ -20,28 +20,21 @@ master:
       cpu: ${limit_cpu}
       memory: ${limit_memory}
 
-  persistence:
-    enabled: false
-
-  service:
-    type: ClusterIP
-    ports:
-      redis: 6379
-
-replica:
-  replicaCount: 0
-
-sentinel:
+persistence:
   enabled: false
+
+service:
+  type: ClusterIP
+  ports:
+    redis: 6379
 
 networkPolicy:
   enabled: true
   allowExternal: true
 
-securityContext:
+podSecurityContext:
   enabled: true
   fsGroup: 1001
-  runAsUser: 1001
 
 containerSecurityContext:
   enabled: true

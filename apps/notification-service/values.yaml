@@ -36,9 +36,8 @@ microservice:
     # MongoDB Configuration
     MONGODB_URI: "mongodb://mongodb:27017"
     MONGODB_DATABASE: "notification_db"
-    # Redis Configuration
+    # Redis Cluster Configuration
     REDIS_ADDR: "redis:6379"
-    REDIS_DB: "0"
     # Logging
     LOG_LEVEL: "info"
     # Email (disabled by default)

@@ -30,7 +30,7 @@ variable "release_name" {
 
 variable "chart_version" {
   type        = string
-  description = "Redis Cluster Helm chart version"
+  description = "Redis Cluster Helm chart version (bitnami/redis-cluster)"
   default     = "11.0.7"
 }
 
@@ -48,11 +48,11 @@ variable "redis_password" {
 # -----------------------------------------------------------------------------
 variable "redis_nodes" {
   type        = number
-  description = "Total number of Redis nodes in the cluster"
+  description = "Total number of Redis master nodes in the cluster"
   default     = 6
   validation {
-    condition     = var.redis_nodes >= 6 && var.redis_nodes % 3 == 0
-    error_message = "Redis nodes must be at least 6 and divisible by 3 for proper cluster setup."
+    condition     = var.redis_nodes >= 3 && var.redis_nodes % 3 == 0
+    error_message = "Redis nodes must be at least 3 and divisible by 3 for proper cluster setup."
   }
 }
 

@@ -1,7 +1,8 @@
 # =============================================================================
 # Redis Cluster Helm Chart Values Template
 # =============================================================================
-# Bitnami Redis Cluster Chart Configuration
+# Bitnami redis-cluster Chart Configuration
+# True cluster mode with hash slot sharding
 # Optimized for both Minikube and EKS environments
 # =============================================================================
 
@@ -14,13 +15,17 @@ global:
   storageClass: "${storage_class}"
 
 # -----------------------------------------------------------------------------
+# Service Name Override
+# -----------------------------------------------------------------------------
+fullnameOverride: "redis-cluster"
+
+# -----------------------------------------------------------------------------
 # Image Configuration
 # -----------------------------------------------------------------------------
 image:
   registry: docker.io
-  repository: bitnamilegacy/redis
-  tag: "8.2.1-debian-12-r0"
-  digest: ""
+  repository: bitnami/redis-cluster
+  tag: "7.4"
   pullPolicy: IfNotPresent
 
 # -----------------------------------------------------------------------------
@@ -33,13 +38,15 @@ cluster:
     enabled: false
 
 # -----------------------------------------------------------------------------
-# Redis Configuration
+# Redis Authentication
 # -----------------------------------------------------------------------------
 usePassword: true
 password: "${password}"
 
+# -----------------------------------------------------------------------------
+# Redis Node Configuration
+# -----------------------------------------------------------------------------
 redis:
-  # Resources per Redis node
   resources:
     requests:
       cpu: "${request_cpu}"
@@ -48,7 +55,6 @@ redis:
       cpu: "${limit_cpu}"
       memory: "${limit_memory}"
 
-  # Liveness and readiness probes
   livenessProbe:
     enabled: true
     initialDelaySeconds: 30
@@ -66,13 +72,18 @@ redis:
     successThreshold: 1
 
 %{~ if !is_minikube ~}
-  # Node selector for production (EKS)
   nodeSelector:
     node-role: "platform"
 %{~ endif ~}
 
-  # Pod anti-affinity for HA
   podAntiAffinity: soft
+
+  configmap: |-
+    maxmemory-policy allkeys-lru
+    appendonly yes
+    appendfsync everysec
+    slowlog-log-slower-than 10000
+    slowlog-max-len 128
 
 # -----------------------------------------------------------------------------
 # Persistence Configuration
@@ -134,27 +145,6 @@ containerSecurityContext:
 # -----------------------------------------------------------------------------
 networkPolicy:
   enabled: false
-
-# -----------------------------------------------------------------------------
-# Redis Additional Configuration
-# -----------------------------------------------------------------------------
-# These settings can be customized for your use case
-commonConfiguration: |-
-  # Enable AOF persistence
-  appendonly yes
-  appendfsync everysec
-
-  # Memory management
-  maxmemory-policy allkeys-lru
-
-  # Slow log
-  slowlog-log-slower-than 10000
-  slowlog-max-len 128
-
-  # Cluster settings
-  cluster-enabled yes
-  cluster-node-timeout 15000
-  cluster-require-full-coverage yes
 
 # -----------------------------------------------------------------------------
 # Init Containers (Volume Permissions)

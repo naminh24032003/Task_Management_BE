@@ -74,7 +74,7 @@ echo ""
 
 # Apply
 echo "🚀 Deploying Redis Cluster..."
-echo -e "${YELLOW}This will create 6 Redis nodes (3 masters + 3 replicas)${NC}"
+echo -e "${YELLOW}This will create 3 Redis master nodes (true cluster mode with hash slot sharding)${NC}"
 read -p "Continue with deployment? (yes/no): " confirm
 if [ "$confirm" != "yes" ]; then
     echo "Deployment cancelled."
@@ -110,7 +110,11 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 REDIS_POD=$(kubectl get pod -n redis -l app.kubernetes.io/name=redis-cluster -o jsonpath='{.items[0].metadata.name}')
 if [ ! -z "$REDIS_POD" ]; then
     echo "Getting cluster info from pod: $REDIS_POD"
-    kubectl exec -n redis $REDIS_POD -- redis-cli -c -a redis-secret-password CLUSTER INFO 2>/dev/null | grep -E "cluster_state|cluster_slots|cluster_known_nodes|cluster_size" || true
+    REDIS_PASS=$(kubectl get secret -n redis redis-cluster -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
+    kubectl exec -n redis $REDIS_POD -- redis-cli -c -a "$REDIS_PASS" CLUSTER INFO 2>/dev/null | grep -E "cluster_state|cluster_slots|cluster_known_nodes|cluster_size" || true
+    echo ""
+    echo "📊 Redis Cluster Nodes:"
+    kubectl exec -n redis $REDIS_POD -- redis-cli -c -a "$REDIS_PASS" CLUSTER NODES 2>/dev/null || true
 fi
 echo ""
 

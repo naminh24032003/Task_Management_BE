@@ -96,9 +96,9 @@ variable "task_service_url" {
 # -----------------------------------------------------------------------------
 
 variable "redis_host" {
-  description = "Redis host"
+  description = "Redis Cluster host"
   type        = string
-  default     = "redis-cluster-master.redis.svc.cluster.local"
+  default     = "redis-cluster.redis.svc.cluster.local"
 }
 
 variable "redis_port" {
@@ -112,12 +112,6 @@ variable "redis_password" {
   type        = string
   sensitive   = true
   default     = ""
-}
-
-variable "redis_db" {
-  description = "Redis database number"
-  type        = number
-  default     = 1
 }
 
 # -----------------------------------------------------------------------------

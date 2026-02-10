@@ -13,31 +13,29 @@ const (
 	defaultTTL           = 24 * time.Hour
 )
 
-// IdempotencyStore implements idempotency checking using Redis
+// IdempotencyStore implements idempotency checking using Redis Cluster
 type IdempotencyStore struct {
-	client *redis.Client
+	client *redis.ClusterClient
 }
 
-// RedisConfig contains Redis connection configuration
+// RedisConfig contains Redis Cluster connection configuration
 type RedisConfig struct {
-	Addr     string
+	Addrs    []string
 	Password string
-	DB       int
 }
 
 // NewIdempotencyStore creates a new IdempotencyStore
-func NewIdempotencyStore(client *redis.Client) *IdempotencyStore {
+func NewIdempotencyStore(client *redis.ClusterClient) *IdempotencyStore {
 	return &IdempotencyStore{
 		client: client,
 	}
 }
 
-// NewRedisClient creates a new Redis client
-func NewRedisClient(config RedisConfig) (*redis.Client, error) {
-	client := redis.NewClient(&redis.Options{
-		Addr:     config.Addr,
+// NewRedisClient creates a new Redis Cluster client
+func NewRedisClient(config RedisConfig) (*redis.ClusterClient, error) {
+	client := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:    config.Addrs,
 		Password: config.Password,
-		DB:       config.DB,
 	})
 
 	// Test connection
@@ -45,7 +43,7 @@ func NewRedisClient(config RedisConfig) (*redis.Client, error) {
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
+		return nil, fmt.Errorf("failed to connect to Redis Cluster: %w", err)
 	}
 
 	return client, nil

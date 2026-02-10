@@ -8,11 +8,10 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Config represents Redis configuration
+// Config represents Redis Cluster configuration
 type Config struct {
-	Addr           string        `json:"addr"`
+	Addrs          []string      `json:"addrs"`
 	Password       string        `json:"password"`
-	DB             int           `json:"db"`
 	KeyPrefix      string        `json:"key_prefix"`
 	ReadTimeout    time.Duration `json:"read_timeout"`
 	WriteTimeout   time.Duration `json:"write_timeout"`
@@ -20,12 +19,11 @@ type Config struct {
 	MaxRetries     int           `json:"max_retries"`
 }
 
-// NewClient creates a new Redis client
-func NewClient(cfg *Config) (*redis.Client, func(), error) {
-	client := redis.NewClient(&redis.Options{
-		Addr:         cfg.Addr,
+// NewClient creates a new Redis Cluster client
+func NewClient(cfg *Config) (*redis.ClusterClient, func(), error) {
+	client := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:        cfg.Addrs,
 		Password:     cfg.Password,
-		DB:           cfg.DB,
 		ReadTimeout:  cfg.ReadTimeout,
 		WriteTimeout: cfg.WriteTimeout,
 		DialTimeout:  cfg.ConnectTimeout,
@@ -37,7 +35,7 @@ func NewClient(cfg *Config) (*redis.Client, func(), error) {
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		return nil, nil, fmt.Errorf("failed to connect to Redis: %w", err)
+		return nil, nil, fmt.Errorf("failed to connect to Redis Cluster: %w", err)
 	}
 
 	cleanup := func() {

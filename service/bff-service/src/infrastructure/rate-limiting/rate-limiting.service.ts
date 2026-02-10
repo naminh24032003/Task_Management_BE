@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Redis from 'ioredis';
+import { Cluster } from 'ioredis';
 
 export interface RateLimitResult {
   limited: boolean;
@@ -11,7 +11,7 @@ export interface RateLimitResult {
 @Injectable()
 export class RateLimitingService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RateLimitingService.name);
-  private redis: Redis | null = null;
+  private redis: Cluster | null = null;
 
   constructor(private configService: ConfigService) {}
 
@@ -20,29 +20,30 @@ export class RateLimitingService implements OnModuleInit, OnModuleDestroy {
       const host = this.configService.get<string>('redis.host');
       const port = this.configService.get<number>('redis.port');
       const password = this.configService.get<string>('redis.password');
-      const db = this.configService.get<number>('redis.db', 1);
 
-      this.redis = new Redis({
-        host,
-        port,
-        password: password || undefined,
-        db,
-        keyPrefix: 'bff:ratelimit:',
-        retryStrategy: (times) => {
-          if (times > 3) {
-            this.logger.warn('Redis connection failed, rate limiting disabled');
-            return null;
-          }
-          return Math.min(times * 100, 3000);
+      this.redis = new Cluster(
+        [{ host, port }],
+        {
+          redisOptions: {
+            password: password || undefined,
+            keyPrefix: 'bff:ratelimit:',
+          },
+          clusterRetryStrategy: (times) => {
+            if (times > 3) {
+              this.logger.warn('Redis Cluster connection failed, rate limiting disabled');
+              return null;
+            }
+            return Math.min(times * 100, 3000);
+          },
         },
-      });
+      );
 
       this.redis.on('connect', () => {
-        this.logger.log('Redis connected for rate limiting');
+        this.logger.log('Redis Cluster connected for rate limiting');
       });
 
-      this.redis.on('error', (error) => {
-        this.logger.warn(`Redis error: ${error.message}`);
+      this.redis.on('error', (error: Error) => {
+        this.logger.warn(`Redis Cluster error: ${error.message}`);
       });
     } catch (error) {
       this.logger.warn(`Failed to initialize Redis: ${error}. Rate limiting disabled.`);

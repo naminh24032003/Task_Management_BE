@@ -24,9 +24,9 @@ data:
     write_concern: ${MONGODB_WRITE_CONCERN:majority}
 
   redis:
-    addr: ${REDIS_HOST:localhost}:${REDIS_PORT:6379}
+    addrs:
+      - ${REDIS_HOST:localhost}:${REDIS_PORT:6379}
     password: ${REDIS_PASSWORD:}
-    db: ${REDIS_DB:0}
     key_prefix: ${REDIS_KEY_PREFIX:task-service:}
     read_timeout: ${REDIS_READ_TIMEOUT:0.2s}
     write_timeout: ${REDIS_WRITE_TIMEOUT:0.2s}

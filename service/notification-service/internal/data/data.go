@@ -53,7 +53,6 @@ type DatabaseConfig struct {
 type RedisConfig struct {
 	Addr     string `json:"addr"`
 	Password string `json:"password"`
-	DB       int    `json:"db"`
 }
 
 type KafkaConfig struct {
@@ -74,12 +73,12 @@ type KafkaSASLConfig struct {
 // Data holds all data layer dependencies
 type Data struct {
 	mongo *mongo.Client
-	redis *goredis.Client
+	redis *goredis.ClusterClient
 	log   *log.Helper
 }
 
 // NewData creates a new Data instance
-func NewData(mongo *mongo.Client, redis *goredis.Client, logger log.Logger) (*Data, func(), error) {
+func NewData(mongo *mongo.Client, redis *goredis.ClusterClient, logger log.Logger) (*Data, func(), error) {
 	cleanup := func() {
 		log.NewHelper(logger).Info("closing data resources")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -130,8 +129,8 @@ func NewMongoClient(c config.Config, logger log.Logger) (*mongo.Client, error) {
 	return client, nil
 }
 
-// NewRedisClient creates a new Redis client
-func NewRedisClient(c config.Config, logger log.Logger) (*goredis.Client, error) {
+// NewRedisClient creates a new Redis Cluster client
+func NewRedisClient(c config.Config, logger log.Logger) (*goredis.ClusterClient, error) {
 	helper := log.NewHelper(log.With(logger, "module", "data/redis"))
 
 	var cfg struct {
@@ -141,22 +140,21 @@ func NewRedisClient(c config.Config, logger log.Logger) (*goredis.Client, error)
 		return nil, fmt.Errorf("failed to scan config: %w", err)
 	}
 
-	helper.Infof("Connecting to Redis: %s", cfg.Data.Redis.Addr)
+	helper.Infof("Connecting to Redis Cluster: %s", cfg.Data.Redis.Addr)
 
-	client := goredis.NewClient(&goredis.Options{
-		Addr:     cfg.Data.Redis.Addr,
+	client := goredis.NewClusterClient(&goredis.ClusterOptions{
+		Addrs:    []string{cfg.Data.Redis.Addr},
 		Password: cfg.Data.Redis.Password,
-		DB:       cfg.Data.Redis.DB,
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
+		return nil, fmt.Errorf("failed to connect to Redis Cluster: %w", err)
 	}
 
-	helper.Info("Redis connected successfully")
+	helper.Info("Redis Cluster connected successfully")
 	return client, nil
 }
 
@@ -263,7 +261,7 @@ func NewNotificationRepository(client *mongo.Client, c config.Config, logger log
 }
 
 // NewIdempotencyStore creates a new idempotency store
-func NewIdempotencyStore(client *goredis.Client) ports.IdempotencyStore {
+func NewIdempotencyStore(client *goredis.ClusterClient) ports.IdempotencyStore {
 	return redis.NewIdempotencyStore(client)
 }
 

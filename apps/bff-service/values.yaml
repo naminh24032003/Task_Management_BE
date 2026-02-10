@@ -32,10 +32,9 @@ microservice:
     GRPC_USER_SERVICE_URL: "user-service.dev.svc.cluster.local:50051"
     GRPC_TASK_SERVICE_URL: "task-service.dev.svc.cluster.local:50052"
 
-    # Redis Configuration
-    REDIS_HOST: "redis-cluster-master.redis.svc.cluster.local"
+    # Redis Cluster Configuration
+    REDIS_HOST: "redis-cluster.redis.svc.cluster.local"
     REDIS_PORT: "6379"
-    REDIS_DB: "1"
     REDIS_KEY_PREFIX: "bff-service:"
 
     # Rate Limiting

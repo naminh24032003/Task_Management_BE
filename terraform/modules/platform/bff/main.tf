@@ -71,7 +71,6 @@ resource "helm_release" "bff_service" {
 
           REDIS_HOST       = var.redis_host
           REDIS_PORT       = tostring(var.redis_port)
-          REDIS_DB         = tostring(var.redis_db)
           REDIS_KEY_PREFIX = "bff-service:"
 
           RATE_LIMIT_USER_LIMIT  = tostring(var.rate_limit_config.user_limit)

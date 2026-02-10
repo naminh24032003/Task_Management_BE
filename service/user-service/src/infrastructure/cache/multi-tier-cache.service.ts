@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy, Inject } from '@nestjs/common';
 import { InjectRedis } from '@nestjs-modules/ioredis';
-import Redis from 'ioredis';
+import Redis, { Cluster } from 'ioredis';
 import * as crypto from 'crypto';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Counter } from 'prom-client';
@@ -143,24 +143,31 @@ export class MultiTierCacheService implements IAuthCacheService, OnModuleInit, O
 
     async revokeAllUserRefreshTokens(userId: string): Promise<number> {
         const pattern = `${CACHE_KEYS.REFRESH_TOKEN}*`;
-        let cursor = '0';
         let deletedCount = 0;
 
-        do {
-            const [nextCursor, keys] = await this.redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
-            cursor = nextCursor;
+        // In Redis Cluster, SCAN only scans a single node.
+        // We must iterate over all master nodes to find all keys.
+        const masters = (this.redis as unknown as Cluster).nodes('master');
+        for (const node of masters) {
+            let cursor = '0';
+            do {
+                const [nextCursor, keys] = await node.scan(
+                    cursor, 'MATCH', pattern, 'COUNT', 100,
+                );
+                cursor = nextCursor;
 
-            for (const key of keys) {
-                const data = await this.redis.get(key);
-                if (data) {
-                    const token = JSON.parse(data) as CachedRefreshToken;
-                    if (token.userId === userId) {
-                        await this.redis.del(key);
-                        deletedCount++;
+                for (const key of keys) {
+                    const data = await this.redis.get(key);
+                    if (data) {
+                        const token = JSON.parse(data) as CachedRefreshToken;
+                        if (token.userId === userId) {
+                            await this.redis.del(key);
+                            deletedCount++;
+                        }
                     }
                 }
-            }
-        } while (cursor !== '0');
+            } while (cursor !== '0');
+        }
 
         return deletedCount;
     }
