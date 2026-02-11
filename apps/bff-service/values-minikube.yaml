@@ -29,7 +29,7 @@ microservice:
     GRPC_USER_SERVICE_URL: "user-service.dev.svc.cluster.local:50051"
     GRPC_TASK_SERVICE_URL: "task-service.dev.svc.cluster.local:50052"
 
-    # Redis Cluster (Minikube)
+    # Redis Cluster (Minikube) - used for rate limiting + Pub/Sub notification subscriber
     REDIS_HOST: "redis-cluster.redis.svc.cluster.local"
     REDIS_PORT: "6379"
     REDIS_KEY_PREFIX: "bff-service:"

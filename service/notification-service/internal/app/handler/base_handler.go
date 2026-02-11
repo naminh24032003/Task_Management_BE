@@ -13,9 +13,10 @@ type EventHandler interface {
 
 // BaseHandler contains common dependencies for all handlers
 type BaseHandler struct {
-	repo        ports.NotificationRepository
-	multiSender *delivery.MultiChannelSenderImpl
-	idempotency ports.IdempotencyStore
+	repo              ports.NotificationRepository
+	multiSender       *delivery.MultiChannelSenderImpl
+	idempotency       ports.IdempotencyStore
+	realtimePublisher ports.RealtimePublisher
 }
 
 // NewBaseHandler creates a new BaseHandler
@@ -23,11 +24,13 @@ func NewBaseHandler(
 	repo ports.NotificationRepository,
 	multiSender *delivery.MultiChannelSenderImpl,
 	idempotency ports.IdempotencyStore,
+	realtimePublisher ports.RealtimePublisher,
 ) *BaseHandler {
 	return &BaseHandler{
-		repo:        repo,
-		multiSender: multiSender,
-		idempotency: idempotency,
+		repo:              repo,
+		multiSender:       multiSender,
+		idempotency:       idempotency,
+		realtimePublisher: realtimePublisher,
 	}
 }
 

@@ -17,8 +17,9 @@ func NewRegistry(
 	repo ports.NotificationRepository,
 	multiSender *delivery.MultiChannelSenderImpl,
 	idempotency ports.IdempotencyStore,
+	realtimePublisher ports.RealtimePublisher,
 ) *Registry {
-	baseHandler := handler.NewBaseHandler(repo, multiSender, idempotency)
+	baseHandler := handler.NewBaseHandler(repo, multiSender, idempotency, realtimePublisher)
 	dispatcher := NewDispatcher(idempotency)
 
 	return &Registry{

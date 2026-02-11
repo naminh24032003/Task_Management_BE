@@ -116,7 +116,8 @@ async function bootstrap() {
 
   const nodeEnv = configService.get<string>('app.nodeEnv', 'development');
   logger.log(`BFF GraphQL Gateway running in ${nodeEnv} mode`);
-  logger.log(`  - GraphQL: http://0.0.0.0:${port}/graphql`);
+  logger.log(`  - GraphQL:    http://0.0.0.0:${port}/graphql`);
+  logger.log(`  - WebSocket:  ws://0.0.0.0:${port}/notifications`);
 
   const playground = configService.get<boolean>('graphql.playground', false);
   if (playground) {

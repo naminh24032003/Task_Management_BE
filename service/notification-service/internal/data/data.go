@@ -32,6 +32,7 @@ var ProviderSet = wire.NewSet(
 	NewKafkaConsumer,
 	NewNotificationRepository,
 	NewIdempotencyStore,
+	NewRealtimePublisher,
 	NewTemplateRenderer,
 	NewMultiChannelSender,
 	NewDispatcherRegistry,
@@ -265,6 +266,11 @@ func NewIdempotencyStore(client *goredis.ClusterClient) ports.IdempotencyStore {
 	return redis.NewIdempotencyStore(client)
 }
 
+// NewRealtimePublisher creates a new Redis Pub/Sub publisher for real-time notification delivery
+func NewRealtimePublisher(client *goredis.ClusterClient) ports.RealtimePublisher {
+	return redis.NewRedisPubSubPublisher(client)
+}
+
 // NewTemplateRenderer creates a new template renderer
 func NewTemplateRenderer() *template.Renderer {
 	return template.NewRenderer()
@@ -289,8 +295,9 @@ func NewDispatcherRegistry(
 	repo ports.NotificationRepository,
 	multiSender *delivery.MultiChannelSenderImpl,
 	idempotency ports.IdempotencyStore,
+	realtimePublisher ports.RealtimePublisher,
 ) *dispatcher.Dispatcher {
-	registry := dispatcher.NewRegistry(repo, multiSender, idempotency)
+	registry := dispatcher.NewRegistry(repo, multiSender, idempotency, realtimePublisher)
 	return registry.RegisterAllHandlers()
 }
 

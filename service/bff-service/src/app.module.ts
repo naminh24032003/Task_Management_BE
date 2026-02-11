@@ -12,6 +12,7 @@ import { HealthModule } from './presentation/health/health.module';
 import { RateLimitingModule } from './infrastructure/rate-limiting/rate-limiting.module';
 import { GraphqlResolversModule } from './presentation/graphql/graphql.module';
 import { ApplicationModule } from './application/application.module';
+import { WebSocketModule } from './infrastructure/websocket/websocket.module';
 
 import {
   appConfig,
@@ -75,6 +76,7 @@ import { TracingModule } from './infrastructure/tracing/tracing.module';
     GraphqlResolversModule,
     HealthModule,
     RateLimitingModule,
+    WebSocketModule,
   ],
 })
 export class AppModule { }

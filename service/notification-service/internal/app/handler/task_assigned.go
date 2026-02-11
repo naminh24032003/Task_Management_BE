@@ -102,6 +102,13 @@ func (h *TaskAssignedHandler) Handle(ctx context.Context, data map[string]interf
 
 		notif.MarkAsSent()
 		h.repo.Update(ctx, notif)
+
+		// Publish to Redis Pub/Sub for real-time delivery to BFF → WebSocket
+		if h.realtimePublisher != nil {
+			if err := h.realtimePublisher.PublishNotification(ctx, notif); err != nil {
+				log.Printf("Failed to publish notification to Redis Pub/Sub: %v", err)
+			}
+		}
 	}
 
 	return nil

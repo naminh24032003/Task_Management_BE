@@ -57,6 +57,9 @@ func wireApp(c config.Config, logger log.Logger) (*kratos.App, func(), error) {
 	// Create Idempotency Store
 	idempotencyStore := data.NewIdempotencyStore(redisClient)
 
+	// Create Realtime Publisher (Redis Pub/Sub)
+	realtimePublisher := data.NewRealtimePublisher(redisClient)
+
 	// Create Template Renderer
 	templateRenderer := data.NewTemplateRenderer()
 
@@ -64,7 +67,7 @@ func wireApp(c config.Config, logger log.Logger) (*kratos.App, func(), error) {
 	multiChannelSender := data.NewMultiChannelSender(kafkaProducer, templateRenderer)
 
 	// Create Dispatcher
-	dispatcher := data.NewDispatcherRegistry(notificationRepo, multiChannelSender, idempotencyStore)
+	dispatcher := data.NewDispatcherRegistry(notificationRepo, multiChannelSender, idempotencyStore, realtimePublisher)
 
 	// Create Consumer Bootstrap
 	consumerBootstrap := data.NewKafkaConsumerBootstrap(kafkaConsumer, dispatcher)

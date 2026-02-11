@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ObjectId } from 'mongodb';
 import { Role } from '../entities/role.entity';
 import { BaseTenantRepository } from './base.repository';
 
@@ -41,7 +42,7 @@ export class RoleRepository extends BaseTenantRepository<Role> {
 
     return this.findAll(tenantId, {
       where: {
-        _id: { $in: roleIds.map((id) => id) } as any,
+        _id: { $in: roleIds.map((id) => new ObjectId(id)) } as any,
       } as any,
     });
   }

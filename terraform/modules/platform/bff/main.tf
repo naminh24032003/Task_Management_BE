@@ -150,8 +150,11 @@ resource "helm_release" "bff_service" {
         enabled   = var.ingress_enabled
         className = var.ingress_class
         annotations = {
-          "nginx.ingress.kubernetes.io/proxy-body-size"   = "10m"
-          "nginx.ingress.kubernetes.io/proxy-read-timeout" = "60"
+          "nginx.ingress.kubernetes.io/proxy-body-size"     = "10m"
+          "nginx.ingress.kubernetes.io/proxy-read-timeout"  = "3600"
+          "nginx.ingress.kubernetes.io/proxy-send-timeout"  = "3600"
+          "nginx.ingress.kubernetes.io/websocket-services"  = var.release_name
+          "nginx.ingress.kubernetes.io/enable-websockets"   = "true"
         }
         hosts = [
           {
