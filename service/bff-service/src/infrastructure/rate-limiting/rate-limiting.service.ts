@@ -6,6 +6,7 @@ export interface RateLimitResult {
   limited: boolean;
   remaining: number;
   resetAt: number;
+  retryAfter: number;
 }
 
 @Injectable()
@@ -14,6 +15,43 @@ export class RateLimitingService implements OnModuleInit, OnModuleDestroy {
   private redis: Cluster | null = null;
 
   constructor(private configService: ConfigService) {}
+
+  // Token Bucket – Lua script chạy atomic trên Redis
+  // Lưu { tokens, last_refill } trong Redis Hash
+  private readonly TOKEN_BUCKET_SCRIPT = `
+local key = KEYS[1]
+local capacity = tonumber(ARGV[1])
+local refill_rate = tonumber(ARGV[2])
+local now = tonumber(ARGV[3])
+
+local bucket = redis.call('hmget', key, 'tokens', 'last_refill')
+local tokens = tonumber(bucket[1])
+local last_refill = tonumber(bucket[2])
+
+if tokens == nil then
+  tokens = capacity
+  last_refill = now
+end
+
+local elapsed = math.max(0, now - last_refill)
+tokens = math.min(capacity, tokens + (elapsed / 1000) * refill_rate)
+last_refill = now
+
+local limited = 0
+local retry_after = 0
+
+if tokens >= 1 then
+  tokens = tokens - 1
+else
+  limited = 1
+  retry_after = math.ceil((1 - tokens) / refill_rate * 1000)
+end
+
+redis.call('hmset', key, 'tokens', tostring(tokens), 'last_refill', tostring(last_refill))
+redis.call('expire', key, math.ceil(capacity / refill_rate) + 60)
+
+return {limited, math.floor(tokens), retry_after}
+`;
 
   async onModuleInit() {
     try {
@@ -63,34 +101,37 @@ export class RateLimitingService implements OnModuleInit, OnModuleDestroy {
     windowSeconds: number,
   ): Promise<RateLimitResult> {
     if (!this.redis) {
-      // If Redis is not available, allow the request
-      return { limited: false, remaining: limit, resetAt: 0 };
+      return { limited: false, remaining: limit, resetAt: 0, retryAfter: 0 };
     }
 
     try {
-      const now = Math.floor(Date.now() / 1000);
-      const windowStart = now - (now % windowSeconds);
-      const redisKey = `${key}:${windowStart}`;
+      const now = Date.now(); // milliseconds cho refill chính xác
+      const capacity = limit;
+      const refillRate = limit / windowSeconds; // tokens/giây
+      const redisKey = `tb:${key}`;
 
-      const count = await this.redis.incr(redisKey);
+      const result = (await this.redis.eval(
+        this.TOKEN_BUCKET_SCRIPT,
+        1,
+        redisKey,
+        capacity,
+        refillRate,
+        now,
+      )) as [number, number, number];
 
-      // Set expiry on first request in window
-      if (count === 1) {
-        await this.redis.expire(redisKey, windowSeconds);
-      }
-
-      const remaining = Math.max(0, limit - count);
-      const resetAt = windowStart + windowSeconds;
+      const [limited, remaining, retryAfterMs] = result;
+      const retryAfter = Math.ceil(retryAfterMs / 1000);
+      const resetAt = limited ? Math.floor(now / 1000) + retryAfter : 0;
 
       return {
-        limited: count > limit,
+        limited: limited === 1,
         remaining,
         resetAt,
+        retryAfter,
       };
     } catch (error) {
       this.logger.error(`Rate limiting error: ${error}`);
-      // On error, allow the request
-      return { limited: false, remaining: limit, resetAt: 0 };
+      return { limited: false, remaining: limit, resetAt: 0, retryAfter: 0 };
     }
   }
 

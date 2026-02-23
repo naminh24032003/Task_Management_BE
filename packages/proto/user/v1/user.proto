@@ -305,6 +305,10 @@ message ListUsersRequest {
   int32 page_size = 2;
   optional UserStatus status_filter = 3;
   optional string search = 4; // search by email, name
+
+  // Cursor-based pagination (mutually exclusive with page/page_size)
+  string cursor = 5;
+  int32 limit = 6;
 }
 
 message ListUsersResponse {
@@ -312,6 +316,11 @@ message ListUsersResponse {
   int32 total = 2;
   int32 page = 3;
   int32 page_size = 4;
+  int32 total_pages = 5;
+
+  // Cursor-based pagination info
+  string next_cursor = 6;
+  bool has_more = 7;
 }
 
 message DeleteUserRequest {

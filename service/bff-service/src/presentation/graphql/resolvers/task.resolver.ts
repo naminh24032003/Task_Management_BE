@@ -9,6 +9,7 @@ import {
   HelloResponse,
   Task,
   TaskConnection,
+  CursorTaskConnection,
   TaskOperationResponse,
   TaskStatus,
   TaskPriority,
@@ -17,6 +18,7 @@ import {
   CreateTaskInput,
   UpdateTaskInput,
   ListTasksInput,
+  CursorListTasksInput,
   BulkUpdateStatusInput,
 } from '../inputs/task.input';
 import { CreateTaskUseCase } from '../../../application/task/create-task.usecase';
@@ -27,6 +29,7 @@ import { DeleteTaskUseCase } from '../../../application/task/delete-task.usecase
 import { UpdateTaskStatusUseCase } from '../../../application/task/update-task-status.usecase';
 import { AssignTaskUseCase } from '../../../application/task/assign-task.usecase';
 import { BulkUpdateStatusUseCase } from '../../../application/task/bulk-update-status.usecase';
+import { ListTasksCursorUseCase } from '../../../application/task/list-tasks-cursor.usecase';
 import { TaskGrpcClient } from '../../../infrastructure/grpc/clients/task.client';
 
 @Resolver(() => Task)
@@ -44,6 +47,7 @@ export class TaskResolver {
     private readonly updateTaskStatusUseCase: UpdateTaskStatusUseCase,
     private readonly assignTaskUseCase: AssignTaskUseCase,
     private readonly bulkUpdateStatusUseCase: BulkUpdateStatusUseCase,
+    private readonly listTasksCursorUseCase: ListTasksCursorUseCase,
   ) { }
 
   @Public()
@@ -109,6 +113,26 @@ export class TaskResolver {
       total: result.total || 0,
       page: result.page || input.page,
       pageSize: result.page_size || input.pageSize,
+    };
+  }
+
+  @Scopes('task:read')
+  @Query(() => CursorTaskConnection, { description: 'List tasks with cursor-based pagination', name: 'tasksCursor' })
+  async listTasksCursor(
+    @Args('input', { type: () => CursorListTasksInput }) input: CursorListTasksInput,
+    @CurrentUser() user: CurrentUserPayload,
+  ): Promise<CursorTaskConnection> {
+    const result = await this.listTasksCursorUseCase.execute(input, {
+      userId: user.sub,
+      tenantId: user.tenantId,
+      roles: user.roles,
+      scopes: user.scopes,
+    });
+    return {
+      tasks: (result.tasks || []).map((t: any) => this.mapTask(t)),
+      totalCount: result.total || 0,
+      nextCursor: result.next_cursor || undefined,
+      hasMore: result.has_more || false,
     };
   }
 

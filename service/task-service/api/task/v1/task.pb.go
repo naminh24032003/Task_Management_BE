@@ -695,8 +695,11 @@ type ListTasksRequest struct {
 	DueDateFrom string         `protobuf:"bytes,11,opt,name=due_date_from,json=dueDateFrom,proto3" json:"due_date_from,omitempty"`
 	DueDateTo   string         `protobuf:"bytes,12,opt,name=due_date_to,json=dueDateTo,proto3" json:"due_date_to,omitempty"`
 	// Sorting
-	SortBy        string `protobuf:"bytes,13,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"` // e.g., "created_at", "due_date", "priority", "order_index"
-	SortDesc      bool   `protobuf:"varint,14,opt,name=sort_desc,json=sortDesc,proto3" json:"sort_desc,omitempty"`
+	SortBy   string `protobuf:"bytes,13,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"` // e.g., "created_at", "due_date", "priority", "order_index"
+	SortDesc bool   `protobuf:"varint,14,opt,name=sort_desc,json=sortDesc,proto3" json:"sort_desc,omitempty"`
+	// Cursor-based pagination (mutually exclusive with page/page_size)
+	Cursor        string `protobuf:"bytes,15,opt,name=cursor,proto3" json:"cursor,omitempty"` // cursor from previous response
+	Limit         int32  `protobuf:"varint,16,opt,name=limit,proto3" json:"limit,omitempty"`  // items per page (used with cursor)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -829,13 +832,30 @@ func (x *ListTasksRequest) GetSortDesc() bool {
 	return false
 }
 
+func (x *ListTasksRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+func (x *ListTasksRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
 type ListTasksResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Tasks         []*Task                `protobuf:"bytes,1,rep,name=tasks,proto3" json:"tasks,omitempty"`
-	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	PageSize      int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	TotalPages    int32                  `protobuf:"varint,5,opt,name=total_pages,json=totalPages,proto3" json:"total_pages,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Tasks      []*Task                `protobuf:"bytes,1,rep,name=tasks,proto3" json:"tasks,omitempty"`
+	Total      int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	Page       int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize   int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	TotalPages int32                  `protobuf:"varint,5,opt,name=total_pages,json=totalPages,proto3" json:"total_pages,omitempty"`
+	// Cursor-based pagination info
+	NextCursor    string `protobuf:"bytes,6,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"` // cursor for next page (empty if no more)
+	HasMore       bool   `protobuf:"varint,7,opt,name=has_more,json=hasMore,proto3" json:"has_more,omitempty"`         // whether more items exist
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -905,16 +925,33 @@ func (x *ListTasksResponse) GetTotalPages() int32 {
 	return 0
 }
 
+func (x *ListTasksResponse) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
+	}
+	return ""
+}
+
+func (x *ListTasksResponse) GetHasMore() bool {
+	if x != nil {
+		return x.HasMore
+	}
+	return false
+}
+
 // Get Tasks by Project
 type GetTasksByProjectRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	ProjectId     string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	PageSize      int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	Statuses      []TaskStatus           `protobuf:"varint,5,rep,packed,name=statuses,proto3,enum=task.v1.TaskStatus" json:"statuses,omitempty"`
-	SortBy        string                 `protobuf:"bytes,6,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	SortDesc      bool                   `protobuf:"varint,7,opt,name=sort_desc,json=sortDesc,proto3" json:"sort_desc,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	TenantId  string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Page      int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize  int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	Statuses  []TaskStatus           `protobuf:"varint,5,rep,packed,name=statuses,proto3,enum=task.v1.TaskStatus" json:"statuses,omitempty"`
+	SortBy    string                 `protobuf:"bytes,6,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	SortDesc  bool                   `protobuf:"varint,7,opt,name=sort_desc,json=sortDesc,proto3" json:"sort_desc,omitempty"`
+	// Cursor-based pagination
+	Cursor        string `protobuf:"bytes,8,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	Limit         int32  `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -996,6 +1033,20 @@ func (x *GetTasksByProjectRequest) GetSortDesc() bool {
 		return x.SortDesc
 	}
 	return false
+}
+
+func (x *GetTasksByProjectRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+func (x *GetTasksByProjectRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
 }
 
 // Update Task
@@ -1929,7 +1980,7 @@ const file_task_v1_task_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\"4\n" +
 	"\x0fGetTaskResponse\x12!\n" +
-	"\x04task\x18\x01 \x01(\v2\r.task.v1.TaskR\x04task\"\xd6\x03\n" +
+	"\x04task\x18\x01 \x01(\v2\r.task.v1.TaskR\x04task\"\x84\x04\n" +
 	"\x10ListTasksRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n" +
@@ -1948,14 +1999,19 @@ const file_task_v1_task_proto_rawDesc = "" +
 	"\rdue_date_from\x18\v \x01(\tR\vdueDateFrom\x12\x1e\n" +
 	"\vdue_date_to\x18\f \x01(\tR\tdueDateTo\x12\x17\n" +
 	"\asort_by\x18\r \x01(\tR\x06sortBy\x12\x1b\n" +
-	"\tsort_desc\x18\x0e \x01(\bR\bsortDesc\"\xa0\x01\n" +
+	"\tsort_desc\x18\x0e \x01(\bR\bsortDesc\x12\x16\n" +
+	"\x06cursor\x18\x0f \x01(\tR\x06cursor\x12\x14\n" +
+	"\x05limit\x18\x10 \x01(\x05R\x05limit\"\xdc\x01\n" +
 	"\x11ListTasksResponse\x12#\n" +
 	"\x05tasks\x18\x01 \x03(\v2\r.task.v1.TaskR\x05tasks\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1f\n" +
 	"\vtotal_pages\x18\x05 \x01(\x05R\n" +
-	"totalPages\"\xee\x01\n" +
+	"totalPages\x12\x1f\n" +
+	"\vnext_cursor\x18\x06 \x01(\tR\n" +
+	"nextCursor\x12\x19\n" +
+	"\bhas_more\x18\a \x01(\bR\ahasMore\"\x9c\x02\n" +
 	"\x18GetTasksByProjectRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
@@ -1964,7 +2020,9 @@ const file_task_v1_task_proto_rawDesc = "" +
 	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12/\n" +
 	"\bstatuses\x18\x05 \x03(\x0e2\x13.task.v1.TaskStatusR\bstatuses\x12\x17\n" +
 	"\asort_by\x18\x06 \x01(\tR\x06sortBy\x12\x1b\n" +
-	"\tsort_desc\x18\a \x01(\bR\bsortDesc\"\xb5\x04\n" +
+	"\tsort_desc\x18\a \x01(\bR\bsortDesc\x12\x16\n" +
+	"\x06cursor\x18\b \x01(\tR\x06cursor\x12\x14\n" +
+	"\x05limit\x18\t \x01(\x05R\x05limit\"\xb5\x04\n" +
 	"\x11UpdateTaskRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x19\n" +

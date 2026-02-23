@@ -64,10 +64,18 @@ func wireApp(c config.Config, logger log.Logger) (*kratos.App, func(), error) {
 	templateRenderer := data.NewTemplateRenderer()
 
 	// Create Multi-Channel Sender
-	multiChannelSender := data.NewMultiChannelSender(kafkaProducer, templateRenderer)
+	multiChannelSender := data.NewMultiChannelSender(kafkaProducer, templateRenderer, c)
+
+	// Create User Service Client
+	userService, userServiceCleanup, err := data.NewUserServiceClient(c, logger)
+	if err != nil {
+		producerCleanup()
+		dataCleanup()
+		return nil, nil, err
+	}
 
 	// Create Dispatcher
-	dispatcher := data.NewDispatcherRegistry(notificationRepo, multiChannelSender, idempotencyStore, realtimePublisher)
+	dispatcher := data.NewDispatcherRegistry(notificationRepo, multiChannelSender, idempotencyStore, realtimePublisher, userService)
 
 	// Create Consumer Bootstrap
 	consumerBootstrap := data.NewKafkaConsumerBootstrap(kafkaConsumer, dispatcher)
@@ -83,6 +91,7 @@ func wireApp(c config.Config, logger log.Logger) (*kratos.App, func(), error) {
 		if err := consumerBootstrap.Stop(); err != nil {
 			log.NewHelper(logger).Errorf("failed to stop consumer: %v", err)
 		}
+		userServiceCleanup()
 		producerCleanup()
 		dataCleanup()
 	}

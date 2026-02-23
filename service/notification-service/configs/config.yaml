@@ -18,11 +18,25 @@ data:
     consumer_topic: ${KAFKA_CONSUMER_TOPIC:task.events}
     producer_topic: ${KAFKA_PRODUCER_TOPIC:audit.logs}
     consumer_group: ${KAFKA_CONSUMER_GROUP:notification-service}
+    worker_pool_size: ${KAFKA_WORKER_POOL_SIZE:5}
+    buffer_size: ${KAFKA_BUFFER_SIZE:100}
     sasl:
       enabled: ${KAFKA_SASL_ENABLED:false}
       mechanism: ${KAFKA_SASL_MECHANISM:SCRAM-SHA-256}
       username: ${KAFKA_SASL_USERNAME:}
       password: ${KAFKA_SASL_PASSWORD:}
+
+  email:
+    enabled: ${EMAIL_ENABLED:false}
+    smtp_host: ${EMAIL_SMTP_HOST:smtp.gmail.com}
+    smtp_port: ${EMAIL_SMTP_PORT:587}
+    username: ${EMAIL_USERNAME:}
+    password: ${EMAIL_PASSWORD:}
+    from_address: ${EMAIL_FROM_ADDRESS:noreply@taskmanagement.com}
+    from_name: ${EMAIL_FROM_NAME:Task Management}
+
+  user_service:
+    address: ${USER_SERVICE_ADDR:localhost:9091}
 
 logging:
   level: ${LOG_LEVEL:info}

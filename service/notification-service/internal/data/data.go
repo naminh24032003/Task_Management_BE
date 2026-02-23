@@ -17,6 +17,7 @@ import (
 	"notification-service/internal/app/dispatcher"
 	"notification-service/internal/domain/template"
 	"notification-service/internal/infrastructure/delivery"
+	grpcClient "notification-service/internal/infrastructure/grpc"
 	kafkaInfra "notification-service/internal/infrastructure/kafka"
 	"notification-service/internal/infrastructure/redis"
 	"notification-service/internal/infrastructure/repository"
@@ -35,15 +36,32 @@ var ProviderSet = wire.NewSet(
 	NewRealtimePublisher,
 	NewTemplateRenderer,
 	NewMultiChannelSender,
+	NewUserServiceClient,
 	NewDispatcherRegistry,
 	NewKafkaConsumerBootstrap,
 )
 
 // DataConfig represents the data layer configuration
 type DataConfig struct {
-	Database DatabaseConfig `json:"database"`
-	Redis    RedisConfig    `json:"redis"`
-	Kafka    KafkaConfig    `json:"kafka"`
+	Database    DatabaseConfig    `json:"database"`
+	Redis       RedisConfig       `json:"redis"`
+	Kafka       KafkaConfig       `json:"kafka"`
+	Email       EmailConfig       `json:"email"`
+	UserService UserServiceConfig `json:"user_service"`
+}
+
+type EmailConfig struct {
+	Enabled     interface{} `json:"enabled"`
+	SMTPHost    string      `json:"smtp_host"`
+	SMTPPort    int         `json:"smtp_port"`
+	Username    string      `json:"username"`
+	Password    string      `json:"password"`
+	FromAddress string      `json:"from_address"`
+	FromName    string      `json:"from_name"`
+}
+
+type UserServiceConfig struct {
+	Address string `json:"address"`
 }
 
 type DatabaseConfig struct {
@@ -57,11 +75,13 @@ type RedisConfig struct {
 }
 
 type KafkaConfig struct {
-	Brokers       interface{}     `json:"brokers"`
-	ConsumerTopic string          `json:"consumer_topic"`
-	ProducerTopic string          `json:"producer_topic"`
-	ConsumerGroup string          `json:"consumer_group"`
-	SASL          KafkaSASLConfig `json:"sasl"`
+	Brokers        interface{}     `json:"brokers"`
+	ConsumerTopic  string          `json:"consumer_topic"`
+	ProducerTopic  string          `json:"producer_topic"`
+	ConsumerGroup  string          `json:"consumer_group"`
+	WorkerPoolSize int             `json:"worker_pool_size"`
+	BufferSize     int             `json:"buffer_size"`
+	SASL           KafkaSASLConfig `json:"sasl"`
 }
 
 type KafkaSASLConfig struct {
@@ -217,9 +237,11 @@ func NewKafkaConsumer(c config.Config, logger log.Logger) (*kafkaInfra.Consumer,
 		cfg.Data.Kafka.ConsumerTopic, cfg.Data.Kafka.ConsumerGroup)
 
 	consumerConfig := kafkaInfra.ConsumerConfig{
-		Brokers: brokers,
-		Topic:   cfg.Data.Kafka.ConsumerTopic,
-		GroupID: cfg.Data.Kafka.ConsumerGroup,
+		Brokers:        brokers,
+		Topic:          cfg.Data.Kafka.ConsumerTopic,
+		GroupID:        cfg.Data.Kafka.ConsumerGroup,
+		WorkerPoolSize: cfg.Data.Kafka.WorkerPoolSize,
+		BufferSize:     cfg.Data.Kafka.BufferSize,
 	}
 
 	if toBool(cfg.Data.Kafka.SASL.Enabled, false) {
@@ -277,17 +299,65 @@ func NewTemplateRenderer() *template.Renderer {
 }
 
 // NewMultiChannelSender creates a new multi-channel sender
-func NewMultiChannelSender(producer *kafkaInfra.Producer, renderer *template.Renderer) *delivery.MultiChannelSenderImpl {
+func NewMultiChannelSender(producer *kafkaInfra.Producer, renderer *template.Renderer, c config.Config) *delivery.MultiChannelSenderImpl {
 	multiSender := delivery.NewMultiChannelSender()
 
 	// Register InApp sender (publishes to notification.events topic)
 	inAppSender := delivery.NewInAppSender(producer)
 	multiSender.RegisterSender(inAppSender)
 
-	// Email and Push senders can be enabled via config
-	// For now, they are disabled by default
+	// Register Email sender if configured
+	var cfg struct {
+		Data DataConfig `json:"data"`
+	}
+	if err := c.Scan(&cfg); err == nil {
+		emailEnabled := toBool(cfg.Data.Email.Enabled, false)
+		emailCfg := delivery.EmailConfig{
+			SMTPHost:    cfg.Data.Email.SMTPHost,
+			SMTPPort:    cfg.Data.Email.SMTPPort,
+			Username:    cfg.Data.Email.Username,
+			Password:    cfg.Data.Email.Password,
+			FromAddress: cfg.Data.Email.FromAddress,
+			FromName:    cfg.Data.Email.FromName,
+			Enabled:     emailEnabled,
+		}
+		emailSender := delivery.NewEmailSender(emailCfg, renderer)
+		multiSender.RegisterSender(emailSender)
+	}
 
 	return multiSender
+}
+
+// NewUserServiceClient creates a new user service gRPC client
+func NewUserServiceClient(c config.Config, logger log.Logger) (ports.UserService, func(), error) {
+	helper := log.NewHelper(log.With(logger, "module", "data/user-service"))
+
+	var cfg struct {
+		Data DataConfig `json:"data"`
+	}
+	if err := c.Scan(&cfg); err != nil {
+		return nil, nil, fmt.Errorf("failed to scan config: %w", err)
+	}
+
+	address := cfg.Data.UserService.Address
+	if address == "" {
+		address = "localhost:9091"
+	}
+
+	helper.Infof("Connecting to user service at: %s", address)
+
+	client, err := grpcClient.NewUserServiceClient(address)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create user service client: %w", err)
+	}
+
+	cleanup := func() {
+		helper.Info("closing user service gRPC client")
+		client.Close()
+	}
+
+	helper.Info("User service gRPC client connected")
+	return client, cleanup, nil
 }
 
 // NewDispatcherRegistry creates a new dispatcher registry
@@ -296,8 +366,9 @@ func NewDispatcherRegistry(
 	multiSender *delivery.MultiChannelSenderImpl,
 	idempotency ports.IdempotencyStore,
 	realtimePublisher ports.RealtimePublisher,
+	userService ports.UserService,
 ) *dispatcher.Dispatcher {
-	registry := dispatcher.NewRegistry(repo, multiSender, idempotency, realtimePublisher)
+	registry := dispatcher.NewRegistry(repo, multiSender, idempotency, realtimePublisher, userService)
 	return registry.RegisterAllHandlers()
 }
 

@@ -75,4 +75,7 @@ export interface ListUsersResult {
   total: number;
   page: number;
   pageSize: number;
+  nextCursor?: string | null;
+  hasMore?: boolean;
+  totalPages?: number;
 }

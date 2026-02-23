@@ -8,6 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/task-management/go-shared/pagination"
+
 	"task-service/internal/domain/aggregate"
 	"task-service/internal/domain/repository"
 	"task-service/internal/domain/valueobject"
@@ -111,23 +113,7 @@ func (r *TaskRepository) FindByID(ctx context.Context, tenantID, id string) (*ag
 }
 
 func (r *TaskRepository) FindAll(ctx context.Context, tenantID string, page, pageSize int32, filter repository.TaskFilter) ([]*aggregate.Task, int64, error) {
-	bsonFilter := bson.M{"tenant_id": tenantID}
-
-	if filter.ProjectID != "" {
-		bsonFilter["project_id"] = filter.ProjectID
-	}
-	if filter.SpaceID != "" {
-		bsonFilter["space_id"] = filter.SpaceID
-	}
-	if len(filter.Statuses) > 0 {
-		bsonFilter["status"] = bson.M{"$in": filter.Statuses}
-	}
-	if len(filter.AssigneeIDs) > 0 {
-		bsonFilter["assignee_ids"] = bson.M{"$in": filter.AssigneeIDs}
-	}
-	if filter.SearchQuery != "" {
-		bsonFilter["$text"] = bson.M{"$search": filter.SearchQuery}
-	}
+	bsonFilter := r.buildFilter(tenantID, filter)
 
 	total, _ := r.collection.CountDocuments(ctx, bsonFilter)
 
@@ -152,6 +138,113 @@ func (r *TaskRepository) FindAll(ctx context.Context, tenantID string, page, pag
 	}
 
 	return tasks, total, nil
+}
+
+func (r *TaskRepository) FindAllWithCursor(ctx context.Context, tenantID string, cursor string, limit int32, filter repository.TaskFilter, sortBy string, sortDesc bool) (*repository.CursorResult, error) {
+	limit = pagination.NormalizeLimit(limit)
+
+	bsonFilter := r.buildFilter(tenantID, filter)
+
+	// Determine sort field and direction
+	if sortBy == "" {
+		sortBy = "created_at"
+	}
+	sortDirection := -1 // descending by default
+	if !sortDesc {
+		sortDirection = 1
+	}
+
+	// Apply cursor filter
+	if cursor != "" {
+		cursorID, cursorValue, err := pagination.DecodeCursor(cursor)
+		if err != nil {
+			return nil, err
+		}
+
+		cursorTime, err := time.Parse(time.RFC3339Nano, cursorValue)
+		if err != nil {
+			return nil, err
+		}
+
+		// For descending: get items where sort field < cursor value, or same value but different ID
+		if sortDesc {
+			bsonFilter["$or"] = bson.A{
+				bson.M{sortBy: bson.M{"$lt": cursorTime}},
+				bson.M{sortBy: cursorTime, "_id": bson.M{"$lt": cursorID}},
+			}
+		} else {
+			bsonFilter["$or"] = bson.A{
+				bson.M{sortBy: bson.M{"$gt": cursorTime}},
+				bson.M{sortBy: cursorTime, "_id": bson.M{"$gt": cursorID}},
+			}
+		}
+	}
+
+	// Count total (without cursor filter, for informational purposes)
+	totalFilter := r.buildFilter(tenantID, filter)
+	totalCount, _ := r.collection.CountDocuments(ctx, totalFilter)
+
+	// Fetch limit+1 to determine hasMore
+	findOptions := options.Find()
+	findOptions.SetLimit(int64(limit) + 1)
+	findOptions.SetSort(bson.D{{Key: sortBy, Value: sortDirection}, {Key: "_id", Value: sortDirection}})
+
+	mongoCursor, err := r.collection.Find(ctx, bsonFilter, findOptions)
+	if err != nil {
+		return nil, err
+	}
+	defer mongoCursor.Close(ctx)
+
+	var tasks []*aggregate.Task
+	for mongoCursor.Next(ctx) {
+		var doc TaskDocument
+		if err := mongoCursor.Decode(&doc); err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, r.toAggregate(&doc))
+	}
+
+	hasMore := len(tasks) > int(limit)
+	if hasMore {
+		tasks = tasks[:limit]
+	}
+
+	var nextCursor string
+	if hasMore && len(tasks) > 0 {
+		lastTask := tasks[len(tasks)-1]
+		sortValue := lastTask.CreatedAt.Format(time.RFC3339Nano)
+		nextCursor = pagination.EncodeCursor(lastTask.ID, sortValue)
+	}
+
+	return &repository.CursorResult{
+		Tasks:      tasks,
+		NextCursor: nextCursor,
+		HasMore:    hasMore,
+		TotalCount: totalCount,
+	}, nil
+}
+
+// buildFilter constructs the MongoDB filter from repository TaskFilter
+func (r *TaskRepository) buildFilter(tenantID string, filter repository.TaskFilter) bson.M {
+	bsonFilter := bson.M{"tenant_id": tenantID}
+
+	if filter.ProjectID != "" {
+		bsonFilter["project_id"] = filter.ProjectID
+	}
+	if filter.SpaceID != "" {
+		bsonFilter["space_id"] = filter.SpaceID
+	}
+	if len(filter.Statuses) > 0 {
+		bsonFilter["status"] = bson.M{"$in": filter.Statuses}
+	}
+	if len(filter.AssigneeIDs) > 0 {
+		bsonFilter["assignee_ids"] = bson.M{"$in": filter.AssigneeIDs}
+	}
+	if filter.SearchQuery != "" {
+		bsonFilter["$text"] = bson.M{"$search": filter.SearchQuery}
+	}
+
+	return bsonFilter
 }
 
 func (r *TaskRepository) BulkUpdateStatus(ctx context.Context, tenantID string, ids []string, status valueobject.TaskStatus) (int32, []string, error) {

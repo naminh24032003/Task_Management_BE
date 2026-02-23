@@ -10,12 +10,14 @@ import { DeleteTaskUseCase } from './task/delete-task.usecase';
 import { UpdateTaskStatusUseCase } from './task/update-task-status.usecase';
 import { AssignTaskUseCase } from './task/assign-task.usecase';
 import { BulkUpdateStatusUseCase } from './task/bulk-update-status.usecase';
+import { ListTasksCursorUseCase } from './task/list-tasks-cursor.usecase';
 
 const USER_USE_CASES = [RegisterUseCase, LoginUseCase];
 const TASK_USE_CASES = [
     CreateTaskUseCase,
     GetTaskUseCase,
     ListTasksUseCase,
+    ListTasksCursorUseCase,
     UpdateTaskUseCase,
     DeleteTaskUseCase,
     UpdateTaskStatusUseCase,

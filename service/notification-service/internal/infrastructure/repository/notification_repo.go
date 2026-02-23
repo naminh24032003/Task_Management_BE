@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/task-management/go-shared/pagination"
 	"notification-service/internal/domain/notification"
 )
 
@@ -118,6 +119,55 @@ func (r *MongoNotificationRepository) FindByUserID(ctx context.Context, userID s
 	return notifications, nil
 }
 
+// FindByUserIDWithCursor finds notifications for a user with cursor-based pagination
+func (r *MongoNotificationRepository) FindByUserIDWithCursor(ctx context.Context, userID string, cursor string, limit int) ([]*notification.Notification, string, bool, error) {
+	normalizedLimit := int(pagination.NormalizeLimit(int32(limit)))
+	filter := bson.M{"user_id": userID}
+
+	if cursor != "" {
+		cursorID, cursorValue, err := pagination.DecodeCursor(cursor)
+		if err != nil {
+			return nil, "", false, fmt.Errorf("invalid cursor: %w", err)
+		}
+		cursorTime, err := time.Parse(time.RFC3339Nano, cursorValue)
+		if err != nil {
+			return nil, "", false, fmt.Errorf("invalid cursor time: %w", err)
+		}
+		filter["$or"] = bson.A{
+			bson.M{"created_at": bson.M{"$lt": cursorTime}},
+			bson.M{"created_at": cursorTime, "_id": bson.M{"$lt": cursorID}},
+		}
+	}
+
+	opts := options.Find().
+		SetSort(bson.D{{Key: "created_at", Value: -1}, {Key: "_id", Value: -1}}).
+		SetLimit(int64(normalizedLimit + 1))
+
+	mongoCursor, err := r.collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, "", false, fmt.Errorf("failed to find notifications: %w", err)
+	}
+	defer mongoCursor.Close(ctx)
+
+	var notifications []*notification.Notification
+	if err := mongoCursor.All(ctx, &notifications); err != nil {
+		return nil, "", false, fmt.Errorf("failed to decode notifications: %w", err)
+	}
+
+	hasMore := len(notifications) > normalizedLimit
+	if hasMore {
+		notifications = notifications[:normalizedLimit]
+	}
+
+	var nextCursor string
+	if hasMore && len(notifications) > 0 {
+		last := notifications[len(notifications)-1]
+		nextCursor = pagination.EncodeCursor(last.ID, last.CreatedAt.Format(time.RFC3339Nano))
+	}
+
+	return notifications, nextCursor, hasMore, nil
+}
+
 // FindUnreadByUserID finds unread notifications for a user
 func (r *MongoNotificationRepository) FindUnreadByUserID(ctx context.Context, userID string, limit, offset int) ([]*notification.Notification, error) {
 	filter := bson.M{
@@ -143,6 +193,60 @@ func (r *MongoNotificationRepository) FindUnreadByUserID(ctx context.Context, us
 	}
 
 	return notifications, nil
+}
+
+// FindUnreadByUserIDWithCursor finds unread notifications for a user with cursor-based pagination
+func (r *MongoNotificationRepository) FindUnreadByUserIDWithCursor(ctx context.Context, userID string, cursor string, limit int) ([]*notification.Notification, string, bool, error) {
+	normalizedLimit := int(pagination.NormalizeLimit(int32(limit)))
+	filter := bson.M{
+		"user_id": userID,
+		"status": bson.M{
+			"$in": []notification.Status{notification.StatusPending, notification.StatusSent},
+		},
+	}
+
+	if cursor != "" {
+		cursorID, cursorValue, err := pagination.DecodeCursor(cursor)
+		if err != nil {
+			return nil, "", false, fmt.Errorf("invalid cursor: %w", err)
+		}
+		cursorTime, err := time.Parse(time.RFC3339Nano, cursorValue)
+		if err != nil {
+			return nil, "", false, fmt.Errorf("invalid cursor time: %w", err)
+		}
+		filter["$or"] = bson.A{
+			bson.M{"created_at": bson.M{"$lt": cursorTime}},
+			bson.M{"created_at": cursorTime, "_id": bson.M{"$lt": cursorID}},
+		}
+	}
+
+	opts := options.Find().
+		SetSort(bson.D{{Key: "created_at", Value: -1}, {Key: "_id", Value: -1}}).
+		SetLimit(int64(normalizedLimit + 1))
+
+	mongoCursor, err := r.collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, "", false, fmt.Errorf("failed to find unread notifications: %w", err)
+	}
+	defer mongoCursor.Close(ctx)
+
+	var notifications []*notification.Notification
+	if err := mongoCursor.All(ctx, &notifications); err != nil {
+		return nil, "", false, fmt.Errorf("failed to decode notifications: %w", err)
+	}
+
+	hasMore := len(notifications) > normalizedLimit
+	if hasMore {
+		notifications = notifications[:normalizedLimit]
+	}
+
+	var nextCursorStr string
+	if hasMore && len(notifications) > 0 {
+		last := notifications[len(notifications)-1]
+		nextCursorStr = pagination.EncodeCursor(last.ID, last.CreatedAt.Format(time.RFC3339Nano))
+	}
+
+	return notifications, nextCursorStr, hasMore, nil
 }
 
 // CountUnreadByUserID counts unread notifications for a user

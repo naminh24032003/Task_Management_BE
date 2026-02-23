@@ -8,13 +8,14 @@ import (
 )
 
 type MockTaskRepository struct {
-	CreateFunc           func(ctx context.Context, task *aggregate.Task) error
-	UpdateFunc           func(ctx context.Context, task *aggregate.Task) error
-	DeleteFunc           func(ctx context.Context, tenantID, id string) error
-	FindByIDFunc         func(ctx context.Context, tenantID, id string) (*aggregate.Task, error)
-	FindAllFunc          func(ctx context.Context, tenantID string, page, pageSize int32, filter repository.TaskFilter) ([]*aggregate.Task, int64, error)
-	BulkUpdateStatusFunc func(ctx context.Context, tenantID string, ids []string, status valueobject.TaskStatus) (int32, []string, error)
-	BulkAssignFunc       func(ctx context.Context, tenantID string, ids []string, assigneeIDs []string) (int32, []string, error)
+	CreateFunc            func(ctx context.Context, task *aggregate.Task) error
+	UpdateFunc            func(ctx context.Context, task *aggregate.Task) error
+	DeleteFunc            func(ctx context.Context, tenantID, id string) error
+	FindByIDFunc          func(ctx context.Context, tenantID, id string) (*aggregate.Task, error)
+	FindAllFunc           func(ctx context.Context, tenantID string, page, pageSize int32, filter repository.TaskFilter) ([]*aggregate.Task, int64, error)
+	FindAllWithCursorFunc func(ctx context.Context, tenantID string, cursor string, limit int32, filter repository.TaskFilter, sortBy string, sortDesc bool) (*repository.CursorResult, error)
+	BulkUpdateStatusFunc  func(ctx context.Context, tenantID string, ids []string, status valueobject.TaskStatus) (int32, []string, error)
+	BulkAssignFunc        func(ctx context.Context, tenantID string, ids []string, assigneeIDs []string) (int32, []string, error)
 }
 
 func (m *MockTaskRepository) Create(ctx context.Context, task *aggregate.Task) error {
@@ -64,4 +65,11 @@ func (m *MockTaskRepository) BulkAssign(ctx context.Context, tenantID string, id
 		return m.BulkAssignFunc(ctx, tenantID, ids, assigneeIDs)
 	}
 	return 0, nil, nil
+}
+
+func (m *MockTaskRepository) FindAllWithCursor(ctx context.Context, tenantID string, cursor string, limit int32, filter repository.TaskFilter, sortBy string, sortDesc bool) (*repository.CursorResult, error) {
+	if m.FindAllWithCursorFunc != nil {
+		return m.FindAllWithCursorFunc(ctx, tenantID, cursor, limit, filter, sortBy, sortDesc)
+	}
+	return nil, nil
 }

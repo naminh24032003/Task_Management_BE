@@ -12,3 +12,6 @@ export * from './filters';
 
 // Metrics
 export * from './metrics';
+
+// Pagination
+export * from './pagination';

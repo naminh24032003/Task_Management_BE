@@ -7,38 +7,42 @@
 package main
 
 import (
-	"github.com/go-kratos/kratos/v2"
-	"github.com/go-kratos/kratos/v2/config"
-	"github.com/go-kratos/kratos/v2/log"
 	"task-service/internal/data"
 	"task-service/internal/server"
 	"task-service/internal/transport/grpc"
+
+	"github.com/go-kratos/kratos/v2"
+	"github.com/go-kratos/kratos/v2/config"
+	"github.com/go-kratos/kratos/v2/log"
 )
 
 // Injectors from wire.go:
 
 // wireApp init kratos application.
 func wireApp(c config.Config, logger log.Logger) (*kratos.App, func(), error) {
-	database, cleanup, err := data.NewMongoDatabase(c, logger)
+	database, mongoClient, cleanup, err := data.NewMongoDatabaseAndClient(c, logger)
 	if err != nil {
 		return nil, nil, err
 	}
-	taskRepository := data.NewTaskRepository(database)
-	taskDomainService := data.NewTaskDomainService(taskRepository)
-	producer, cleanup2, err := data.NewKafkaProducer(c, logger)
+	redisClient, cleanupRedis, err := data.NewRedisClient(c, logger)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	eventPublisher := data.NewTaskEventPublisher(producer)
-	commandHandler := data.NewCommandHandler(taskRepository, taskDomainService, eventPublisher)
-	queryHandler := data.NewQueryHandler(taskRepository)
-	taskService := grpc.NewTaskService(commandHandler, queryHandler, logger)
+	taskRepository := data.NewTaskRepository(database)
+	outboxRepository := data.NewOutboxRepository(database)
+	unitOfWork := data.NewUnitOfWork(mongoClient, database, taskRepository, outboxRepository)
+	taskFinder := data.NewTaskFinder(database)
+	taskCache := data.NewTaskCache(redisClient)
+	taskDomainService := data.NewTaskDomainService(taskRepository)
+	commandHandlerOutbox := data.NewCommandHandlerOutbox(unitOfWork, taskFinder, taskDomainService, taskCache)
+	queryHandler := data.NewQueryHandler(taskRepository, taskCache)
+	taskService := grpc.NewTaskService(commandHandlerOutbox, queryHandler, logger)
 	grpcServer := server.NewGRPCServer(logger, taskService)
 	httpServer := server.NewHTTPServer(logger)
 	app := newApp(logger, grpcServer, httpServer)
 	return app, func() {
-		cleanup2()
+		cleanupRedis()
 		cleanup()
 	}, nil
 }

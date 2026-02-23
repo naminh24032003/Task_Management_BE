@@ -20,8 +20,14 @@ type NotificationRepository interface {
 	// FindByUserID finds all notifications for a user
 	FindByUserID(ctx context.Context, userID string, limit, offset int) ([]*notification.Notification, error)
 
+	// FindByUserIDWithCursor finds notifications for a user with cursor-based pagination
+	FindByUserIDWithCursor(ctx context.Context, userID string, cursor string, limit int) ([]*notification.Notification, string, bool, error)
+
 	// FindUnreadByUserID finds unread notifications for a user
 	FindUnreadByUserID(ctx context.Context, userID string, limit, offset int) ([]*notification.Notification, error)
+
+	// FindUnreadByUserIDWithCursor finds unread notifications for a user with cursor-based pagination
+	FindUnreadByUserIDWithCursor(ctx context.Context, userID string, cursor string, limit int) ([]*notification.Notification, string, bool, error)
 
 	// CountUnreadByUserID counts unread notifications for a user
 	CountUnreadByUserID(ctx context.Context, userID string) (int64, error)

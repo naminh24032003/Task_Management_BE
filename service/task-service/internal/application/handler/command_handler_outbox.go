@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -15,12 +16,22 @@ import (
 	"task-service/internal/pkg/auth"
 )
 
+const (
+	// Lock TTL for write operations on a single task
+	taskLockTTL = 10 * time.Second
+	// Idempotency window – duplicate requests within this window are deduplicated
+	idempotencyTTL = 5 * time.Minute
+	// Cache TTL for individual task objects
+	taskCacheTTL = 10 * time.Minute
+)
+
 // CommandHandlerOutbox handles all write operations using Outbox Pattern
-// This replaces the original CommandHandler to ensure transactional consistency
+// Enhanced with Redis Lua-based distributed lock, idempotency, cache invalidation & atomic counters.
 type CommandHandlerOutbox struct {
 	unitOfWork    port.UnitOfWork
 	taskFinder    port.TaskFinder
 	domainService *service.TaskDomainService
+	cache         port.TaskCache // nil-safe: all features degrade gracefully
 }
 
 // NewCommandHandlerOutbox creates a new command handler with outbox support
@@ -28,29 +39,38 @@ func NewCommandHandlerOutbox(
 	unitOfWork port.UnitOfWork,
 	taskFinder port.TaskFinder,
 	domainService *service.TaskDomainService,
+	cache port.TaskCache,
 ) *CommandHandlerOutbox {
 	return &CommandHandlerOutbox{
 		unitOfWork:    unitOfWork,
 		taskFinder:    taskFinder,
 		domainService: domainService,
+		cache:         cache,
 	}
 }
 
-// HandleCreateTask handles create task command with transactional outbox
+// HandleCreateTask handles create task command with transactional outbox.
+// Lua-atomic features: idempotency check → distributed lock → DB TX → cache warm → counters.
 func (h *CommandHandlerOutbox) HandleCreateTask(ctx context.Context, cmd *command.CreateTaskCommand) (string, error) {
-	// Validate
+	// ── 1. Idempotency (Lua SETNX) ──────────────────────────
+	idempotencyKey := fmt.Sprintf("create:%s:%s:%s", cmd.TenantID, cmd.ProjectID, cmd.Title)
+	if h.cache != nil {
+		if existing, ok, _ := h.cache.CheckIdempotency(ctx, idempotencyKey, idempotencyTTL); ok {
+			return existing, nil // already processed → return cached taskID
+		}
+	}
+
+	// ── 2. Validate ──────────────────────────────────────────
 	if err := h.domainService.ValidateTaskCreation(ctx, cmd.Title, cmd.ProjectID); err != nil {
 		return "", err
 	}
 
-	// Create task aggregate
+	// ── 3. Build aggregate ──────────────────────────────────
 	taskID := uuid.New().String()
 	task, err := aggregate.NewTask(taskID, cmd.TenantID, cmd.Title, cmd.CreatorID, cmd.ProjectID, cmd.SpaceID)
 	if err != nil {
 		return "", fmt.Errorf("failed to create task: %w", err)
 	}
-
-	// Set additional fields
 	task.Description = cmd.Description
 	task.Priority = valueobject.TaskPriority(cmd.Priority)
 	task.DueDate = cmd.DueDate
@@ -61,17 +81,43 @@ func (h *CommandHandlerOutbox) HandleCreateTask(ctx context.Context, cmd *comman
 	task.CustomFields = cmd.CustomFields
 	task.AssigneeIDs = cmd.AssigneeIDs
 
-	// Save task AND outbox entries in a single transaction
-	// This ensures atomicity - either both succeed or both fail
+	// ── 4. MongoDB transaction (task + outbox) ───────────────
 	if err := h.unitOfWork.CreateTaskWithEvents(ctx, task); err != nil {
 		return "", fmt.Errorf("failed to save task with events: %w", err)
+	}
+
+	// ── 5. Post-commit: cache warm + counters (best effort) ─
+	if h.cache != nil {
+		_ = h.cache.SetIdempotencyResult(ctx, idempotencyKey, taskID, idempotencyTTL)
+		_ = h.cache.SetTask(ctx, cmd.TenantID, taskID, task, taskCacheTTL)
+		_, _ = h.cache.IncrementProjectTaskCount(ctx, cmd.TenantID, cmd.ProjectID, 1)
+		for _, uid := range cmd.AssigneeIDs {
+			_, _ = h.cache.IncrementUserAssignedCount(ctx, cmd.TenantID, uid, 1)
+		}
 	}
 
 	return taskID, nil
 }
 
-// HandleUpdateTaskStatus handles update task status command with transactional outbox
+// HandleUpdateTaskStatus handles update task status command with transactional outbox.
+// Lua-atomic: distributed lock (prevents concurrent status transitions on the same task) → DB TX → cache invalidation.
 func (h *CommandHandlerOutbox) HandleUpdateTaskStatus(ctx context.Context, cmd *command.UpdateTaskStatusCommand) error {
+	// ── 1. Distributed lock on the task (Lua SET NX PX) ────
+	lockResource := fmt.Sprintf("task:%s:%s", cmd.TenantID, cmd.ID)
+	var lockToken string
+	if h.cache != nil {
+		var err error
+		lockToken, err = h.cache.AcquireLock(ctx, lockResource, taskLockTTL)
+		if err != nil {
+			return fmt.Errorf("failed to acquire lock: %w", err)
+		}
+		if lockToken == "" {
+			return fmt.Errorf("task %s is being modified by another request", cmd.ID)
+		}
+		defer h.cache.ReleaseLock(ctx, lockResource, lockToken) //nolint:errcheck
+	}
+
+	// ── 2. Load & authorize ─────────────────────────────────
 	task, err := h.taskFinder.FindByID(ctx, cmd.TenantID, cmd.ID)
 	if err != nil {
 		return fmt.Errorf("task not found: %w", err)
@@ -93,16 +139,38 @@ func (h *CommandHandlerOutbox) HandleUpdateTaskStatus(ctx context.Context, cmd *
 		return err
 	}
 
-	// Update task AND outbox entries in a single transaction
+	// ── 3. MongoDB transaction ──────────────────────────────
 	if err := h.unitOfWork.UpdateTaskWithEvents(ctx, task); err != nil {
 		return fmt.Errorf("failed to update task with events: %w", err)
+	}
+
+	// ── 4. Cache invalidation (Lua DEL) ─────────────────────
+	if h.cache != nil {
+		_ = h.cache.InvalidateTask(ctx, cmd.TenantID, cmd.ID)
 	}
 
 	return nil
 }
 
-// HandleAssignTask handles assign task command with transactional outbox
+// HandleAssignTask handles assign task command with transactional outbox.
+// Lua-atomic: distributed lock → DB TX → cache invalidation → user counters (HINCRBY).
 func (h *CommandHandlerOutbox) HandleAssignTask(ctx context.Context, cmd *command.AssignTaskCommand) error {
+	// ── 1. Distributed lock ─────────────────────────────────
+	lockResource := fmt.Sprintf("task:%s:%s", cmd.TenantID, cmd.ID)
+	var lockToken string
+	if h.cache != nil {
+		var err error
+		lockToken, err = h.cache.AcquireLock(ctx, lockResource, taskLockTTL)
+		if err != nil {
+			return fmt.Errorf("failed to acquire lock: %w", err)
+		}
+		if lockToken == "" {
+			return fmt.Errorf("task %s is being modified by another request", cmd.ID)
+		}
+		defer h.cache.ReleaseLock(ctx, lockResource, lockToken) //nolint:errcheck
+	}
+
+	// ── 2. Load & authorize ─────────────────────────────────
 	task, err := h.taskFinder.FindByID(ctx, cmd.TenantID, cmd.ID)
 	if err != nil {
 		return fmt.Errorf("task not found: %w", err)
@@ -120,18 +188,49 @@ func (h *CommandHandlerOutbox) HandleAssignTask(ctx context.Context, cmd *comman
 		actorID = cmd.AssignedBy
 	}
 
+	oldAssignees := task.AssigneeIDs
 	task.Assign(cmd.AssigneeIDs, actorID)
 
-	// Update task AND outbox entries in a single transaction
+	// ── 3. MongoDB transaction ──────────────────────────────
 	if err := h.unitOfWork.UpdateTaskWithEvents(ctx, task); err != nil {
 		return fmt.Errorf("failed to update task with events: %w", err)
+	}
+
+	// ── 4. Post-commit: cache + counters (best effort) ──────
+	if h.cache != nil {
+		_ = h.cache.InvalidateTask(ctx, cmd.TenantID, cmd.ID)
+
+		// Decrement old assignees, increment new ones (Lua HINCRBY)
+		for _, uid := range oldAssignees {
+			_, _ = h.cache.IncrementUserAssignedCount(ctx, cmd.TenantID, uid, -1)
+		}
+		for _, uid := range cmd.AssigneeIDs {
+			_, _ = h.cache.IncrementUserAssignedCount(ctx, cmd.TenantID, uid, 1)
+		}
 	}
 
 	return nil
 }
 
-// HandleDeleteTask handles delete task command with transactional outbox
+// HandleDeleteTask handles delete task command with transactional outbox.
+// Lua-atomic: distributed lock → DB TX → cache invalidation → decrement counters.
 func (h *CommandHandlerOutbox) HandleDeleteTask(ctx context.Context, cmd *command.DeleteTaskCommand) error {
+	// ── 1. Distributed lock ─────────────────────────────────
+	lockResource := fmt.Sprintf("task:%s:%s", cmd.TenantID, cmd.ID)
+	var lockToken string
+	if h.cache != nil {
+		var err error
+		lockToken, err = h.cache.AcquireLock(ctx, lockResource, taskLockTTL)
+		if err != nil {
+			return fmt.Errorf("failed to acquire lock: %w", err)
+		}
+		if lockToken == "" {
+			return fmt.Errorf("task %s is being modified by another request", cmd.ID)
+		}
+		defer h.cache.ReleaseLock(ctx, lockResource, lockToken) //nolint:errcheck
+	}
+
+	// ── 2. Load & authorize ─────────────────────────────────
 	task, err := h.taskFinder.FindByID(ctx, cmd.TenantID, cmd.ID)
 	if err != nil {
 		return fmt.Errorf("task not found: %w", err)
@@ -149,12 +248,20 @@ func (h *CommandHandlerOutbox) HandleDeleteTask(ctx context.Context, cmd *comman
 		actorID = cmd.DeletedBy
 	}
 
-	// Create delete event
 	deleteEvent := event.NewTaskDeletedEvent(cmd.ID, cmd.TenantID, actorID)
 
-	// Delete task AND create outbox entry in a single transaction
+	// ── 3. MongoDB transaction ──────────────────────────────
 	if err := h.unitOfWork.DeleteTaskWithEvents(ctx, cmd.TenantID, cmd.ID, deleteEvent); err != nil {
 		return fmt.Errorf("failed to delete task with events: %w", err)
+	}
+
+	// ── 4. Post-commit: cache invalidation + counter decrement
+	if h.cache != nil {
+		_ = h.cache.InvalidateTask(ctx, cmd.TenantID, cmd.ID)
+		_, _ = h.cache.IncrementProjectTaskCount(ctx, cmd.TenantID, task.ProjectID, -1)
+		for _, uid := range task.AssigneeIDs {
+			_, _ = h.cache.IncrementUserAssignedCount(ctx, cmd.TenantID, uid, -1)
+		}
 	}
 
 	return nil

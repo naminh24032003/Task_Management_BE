@@ -120,6 +120,21 @@ export class TaskConnection {
 }
 
 @ObjectType()
+export class CursorTaskConnection {
+  @Field(() => [Task])
+  tasks: Task[];
+
+  @Field(() => Int)
+  totalCount: number;
+
+  @Field({ nullable: true })
+  nextCursor?: string;
+
+  @Field()
+  hasMore: boolean;
+}
+
+@ObjectType()
 export class TaskOperationResponse {
   @Field()
   success: boolean;

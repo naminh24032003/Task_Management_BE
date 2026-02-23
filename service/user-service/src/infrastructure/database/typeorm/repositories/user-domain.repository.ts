@@ -4,7 +4,8 @@ import { Repository } from 'typeorm';
 import { ObjectId } from 'mongodb';
 import { User as UserEntity, UserStatus as EntityUserStatus } from '../entities/user.entity';
 import { User, UserStatus as DomainUserStatus, UserProps, OAuthProvider } from '../../../../domain/aggregates/user.aggregate';
-import { IUserRepository } from '../../../../application/ports/user-repository.port';
+import { IUserRepository, FindAllWithCursorResult } from '../../../../application/ports/user-repository.port';
+import { encodeCursor, decodeCursor, normalizeLimit } from '@task-management/shared';
 
 /**
  * User Repository Implementation
@@ -95,6 +96,67 @@ export class UserDomainRepository implements IUserRepository {
     return {
       users: entities.map((e) => this.toDomain(e)),
       total,
+    };
+  }
+
+  async findAllWithCursor(
+    tenantId: string,
+    options: {
+      page: number;
+      pageSize: number;
+      status?: string;
+      search?: string;
+      cursor?: string;
+      limit?: number;
+    },
+  ): Promise<FindAllWithCursorResult> {
+    const limit = normalizeLimit(options.limit || 20);
+    const where: any = { tenantId, isDeleted: false };
+
+    if (options.status) {
+      where.status = options.status;
+    }
+
+    // Decode cursor and add cursor-based filter
+    if (options.cursor) {
+      const cursorData = decodeCursor(options.cursor);
+      const cursorDate = new Date(cursorData.value);
+      const cursorId = new ObjectId(cursorData.id);
+
+      // Descending sort: get items created before cursor
+      where.$or = [
+        { createdAt: { $lt: cursorDate } },
+        { createdAt: cursorDate, _id: { $lt: cursorId } },
+      ];
+    }
+
+    // Fetch limit + 1 to determine hasMore
+    const [entities, totalCount] = await Promise.all([
+      this.repository.find({
+        where,
+        order: { createdAt: 'DESC' } as any,
+        take: limit + 1,
+      }),
+      this.repository.count({ where: { tenantId, isDeleted: false, ...(options.status ? { status: options.status } : {}) } as any }),
+    ]);
+
+    const hasMore = entities.length > limit;
+    const items = hasMore ? entities.slice(0, limit) : entities;
+
+    let nextCursor: string | null = null;
+    if (hasMore && items.length > 0) {
+      const lastItem = items[items.length - 1];
+      nextCursor = encodeCursor(
+        lastItem._id.toString(),
+        lastItem.createdAt.toISOString(),
+      );
+    }
+
+    return {
+      users: items.map((e) => this.toDomain(e)),
+      nextCursor,
+      hasMore,
+      totalCount,
     };
   }
 

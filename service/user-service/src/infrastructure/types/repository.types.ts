@@ -25,3 +25,17 @@ export interface PaginatedResult<T> {
   limit: number;
   totalPages: number;
 }
+
+export interface CursorPaginationOptions {
+  cursor?: string;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface CursorPaginatedResult<T> {
+  data: T[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  totalCount: number;
+}

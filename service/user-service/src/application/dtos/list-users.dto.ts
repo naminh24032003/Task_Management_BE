@@ -8,6 +8,8 @@ export interface ListUsersDto {
   pageSize: number;
   status?: UserStatus;
   search?: string;
+  cursor?: string;
+  limit?: number;
 }
 
 /**

@@ -37,6 +37,9 @@ export class RateLimitingGuard implements CanActivate {
     if (req.res) {
       req.res.setHeader('X-RateLimit-Remaining', result.remaining.toString());
       req.res.setHeader('X-RateLimit-Reset', result.resetAt.toString());
+      if (result.retryAfter > 0) {
+        req.res.setHeader('Retry-After', result.retryAfter.toString());
+      }
     }
 
     if (result.limited) {

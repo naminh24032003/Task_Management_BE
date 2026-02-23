@@ -92,6 +92,16 @@ func (s *NotificationService) GetUnreadNotifications(ctx context.Context, userID
 	return s.repo.FindUnreadByUserID(ctx, userID, limit, offset)
 }
 
+// GetUserNotificationsWithCursor gets notifications for a user with cursor-based pagination
+func (s *NotificationService) GetUserNotificationsWithCursor(ctx context.Context, userID string, cursor string, limit int) ([]*notification.Notification, string, bool, error) {
+	return s.repo.FindByUserIDWithCursor(ctx, userID, cursor, limit)
+}
+
+// GetUnreadNotificationsWithCursor gets unread notifications for a user with cursor-based pagination
+func (s *NotificationService) GetUnreadNotificationsWithCursor(ctx context.Context, userID string, cursor string, limit int) ([]*notification.Notification, string, bool, error) {
+	return s.repo.FindUnreadByUserIDWithCursor(ctx, userID, cursor, limit)
+}
+
 // GetUnreadCount gets the count of unread notifications for a user
 func (s *NotificationService) GetUnreadCount(ctx context.Context, userID string) (int64, error) {
 	return s.repo.CountUnreadByUserID(ctx, userID)

@@ -11,10 +11,12 @@ type TaskAssignedEvent struct {
 	OldAssigneeID string    `json:"old_assignee_id"`
 	NewAssigneeID string    `json:"new_assignee_id"`
 	AssignedBy    string    `json:"assigned_by"`
+	TaskTitle     string    `json:"task_title"`
+	ProjectID     string    `json:"project_id"`
 }
 
 // NewTaskAssignedEvent creates a new TaskAssignedEvent
-func NewTaskAssignedEvent(taskID, tenantID, oldAssigneeID, newAssigneeID, assignedBy string, occurredOn time.Time) *TaskAssignedEvent {
+func NewTaskAssignedEvent(taskID, tenantID, oldAssigneeID, newAssigneeID, assignedBy, taskTitle, projectID string, occurredOn time.Time) *TaskAssignedEvent {
 	return &TaskAssignedEvent{
 		Type:          "task.assigned",
 		OccurredAt:    occurredOn,
@@ -23,6 +25,8 @@ func NewTaskAssignedEvent(taskID, tenantID, oldAssigneeID, newAssigneeID, assign
 		OldAssigneeID: oldAssigneeID,
 		NewAssigneeID: newAssigneeID,
 		AssignedBy:    assignedBy,
+		TaskTitle:     taskTitle,
+		ProjectID:     projectID,
 	}
 }
 

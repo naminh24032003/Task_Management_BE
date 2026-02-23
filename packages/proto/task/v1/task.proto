@@ -135,6 +135,10 @@ message ListTasksRequest {
   // Sorting
   string sort_by = 13;  // e.g., "created_at", "due_date", "priority", "order_index"
   bool sort_desc = 14;
+
+  // Cursor-based pagination (mutually exclusive with page/page_size)
+  string cursor = 15;   // cursor from previous response
+  int32 limit = 16;      // items per page (used with cursor)
 }
 
 message ListTasksResponse {
@@ -143,6 +147,10 @@ message ListTasksResponse {
   int32 page = 3;
   int32 page_size = 4;
   int32 total_pages = 5;
+
+  // Cursor-based pagination info
+  string next_cursor = 6;  // cursor for next page (empty if no more)
+  bool has_more = 7;        // whether more items exist
 }
 
 // Get Tasks by Project
@@ -154,6 +162,10 @@ message GetTasksByProjectRequest {
   repeated TaskStatus statuses = 5;
   string sort_by = 6;
   bool sort_desc = 7;
+
+  // Cursor-based pagination
+  string cursor = 8;
+  int32 limit = 9;
 }
 
 // Update Task

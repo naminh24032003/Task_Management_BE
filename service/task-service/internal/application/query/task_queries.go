@@ -22,6 +22,15 @@ type ListTasksQuery struct {
 	SearchQuery string
 	SortBy      string
 	SortDesc    bool
+
+	// Cursor-based pagination
+	Cursor string
+	Limit  int32
+}
+
+// IsCursorBased returns true if cursor-based pagination is requested
+func (q *ListTasksQuery) IsCursorBased() bool {
+	return q.Cursor != "" || q.Limit > 0
 }
 
 // GetTasksByProjectQuery represents a query to get tasks by project
@@ -31,4 +40,13 @@ type GetTasksByProjectQuery struct {
 	Page      int32
 	PageSize  int32
 	Statuses  []valueobject.TaskStatus
+
+	// Cursor-based pagination
+	Cursor string
+	Limit  int32
+}
+
+// IsCursorBased returns true if cursor-based pagination is requested
+func (q *GetTasksByProjectQuery) IsCursorBased() bool {
+	return q.Cursor != "" || q.Limit > 0
 }

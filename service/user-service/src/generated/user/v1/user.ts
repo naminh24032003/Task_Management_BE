@@ -162,7 +162,12 @@ export interface ListUsersRequest {
     | UserStatus
     | undefined;
   /** search by email, name */
-  search?: string | undefined;
+  search?:
+    | string
+    | undefined;
+  /** Cursor-based pagination (mutually exclusive with page/page_size) */
+  cursor: string;
+  limit: number;
 }
 
 export interface ListUsersResponse {
@@ -170,6 +175,10 @@ export interface ListUsersResponse {
   total: number;
   page: number;
   pageSize: number;
+  totalPages: number;
+  /** Cursor-based pagination info */
+  nextCursor: string;
+  hasMore: boolean;
 }
 
 export interface DeleteUserRequest {
@@ -1384,7 +1393,7 @@ export const UpdateUserResponse: MessageFns<UpdateUserResponse> = {
 };
 
 function createBaseListUsersRequest(): ListUsersRequest {
-  return { page: 0, pageSize: 0 };
+  return { page: 0, pageSize: 0, cursor: "", limit: 0 };
 }
 
 export const ListUsersRequest: MessageFns<ListUsersRequest> = {
@@ -1400,6 +1409,12 @@ export const ListUsersRequest: MessageFns<ListUsersRequest> = {
     }
     if (message.search !== undefined) {
       writer.uint32(34).string(message.search);
+    }
+    if (message.cursor !== "") {
+      writer.uint32(42).string(message.cursor);
+    }
+    if (message.limit !== 0) {
+      writer.uint32(48).int32(message.limit);
     }
     return writer;
   },
@@ -1443,6 +1458,22 @@ export const ListUsersRequest: MessageFns<ListUsersRequest> = {
           message.search = reader.string();
           continue;
         }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.cursor = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.limit = reader.int32();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1454,7 +1485,7 @@ export const ListUsersRequest: MessageFns<ListUsersRequest> = {
 };
 
 function createBaseListUsersResponse(): ListUsersResponse {
-  return { users: [], total: 0, page: 0, pageSize: 0 };
+  return { users: [], total: 0, page: 0, pageSize: 0, totalPages: 0, nextCursor: "", hasMore: false };
 }
 
 export const ListUsersResponse: MessageFns<ListUsersResponse> = {
@@ -1470,6 +1501,15 @@ export const ListUsersResponse: MessageFns<ListUsersResponse> = {
     }
     if (message.pageSize !== 0) {
       writer.uint32(32).int32(message.pageSize);
+    }
+    if (message.totalPages !== 0) {
+      writer.uint32(40).int32(message.totalPages);
+    }
+    if (message.nextCursor !== "") {
+      writer.uint32(50).string(message.nextCursor);
+    }
+    if (message.hasMore !== false) {
+      writer.uint32(56).bool(message.hasMore);
     }
     return writer;
   },
@@ -1511,6 +1551,30 @@ export const ListUsersResponse: MessageFns<ListUsersResponse> = {
           }
 
           message.pageSize = reader.int32();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
+
+          message.totalPages = reader.int32();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.nextCursor = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
+
+          message.hasMore = reader.bool();
           continue;
         }
       }

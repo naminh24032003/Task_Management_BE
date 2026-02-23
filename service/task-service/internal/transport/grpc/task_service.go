@@ -18,13 +18,13 @@ import (
 type TaskService struct {
 	taskv1.UnimplementedTaskServiceServer
 
-	commandHandler *handler.CommandHandler
+	commandHandler *handler.CommandHandlerOutbox
 	queryHandler   *handler.QueryHandler
 	logger         *log.Helper
 }
 
 // NewTaskService creates a new TaskService
-func NewTaskService(commandHandler *handler.CommandHandler, queryHandler *handler.QueryHandler, logger log.Logger) *TaskService {
+func NewTaskService(commandHandler *handler.CommandHandlerOutbox, queryHandler *handler.QueryHandler, logger log.Logger) *TaskService {
 	return &TaskService{
 		commandHandler: commandHandler,
 		queryHandler:   queryHandler,
@@ -82,7 +82,7 @@ func (s *TaskService) GetTask(ctx context.Context, req *taskv1.GetTaskRequest) (
 	return &taskv1.GetTaskResponse{Task: s.toProto(task)}, nil
 }
 
-// ListTasks handles task listing with filters
+// ListTasks handles task listing with filters (supports both offset and cursor pagination)
 func (s *TaskService) ListTasks(ctx context.Context, req *taskv1.ListTasksRequest) (*taskv1.ListTasksResponse, error) {
 	q := &query.ListTasksQuery{
 		TenantID:    req.GetTenantId(),
@@ -92,27 +92,33 @@ func (s *TaskService) ListTasks(ctx context.Context, req *taskv1.ListTasksReques
 		SpaceID:     req.GetSpaceId(),
 		AssigneeIDs: req.GetAssigneeIds(),
 		SearchQuery: req.GetSearchQuery(),
+		SortBy:      req.GetSortBy(),
+		SortDesc:    req.GetSortDesc(),
+		Cursor:      req.GetCursor(),
+		Limit:       req.GetLimit(),
 	}
 
-	for _, s := range req.GetStatuses() {
-		q.Statuses = append(q.Statuses, valueobject.TaskStatus(s))
+	for _, st := range req.GetStatuses() {
+		q.Statuses = append(q.Statuses, valueobject.TaskStatus(st))
 	}
 
-	tasks, total, err := s.queryHandler.HandleListTasks(ctx, q)
+	result, err := s.queryHandler.HandleListTasks(ctx, q)
 	if err != nil {
 		return nil, err
 	}
 
 	var protoTasks []*taskv1.Task
-	for _, t := range tasks {
+	for _, t := range result.Tasks {
 		protoTasks = append(protoTasks, s.toProto(t))
 	}
 
 	return &taskv1.ListTasksResponse{
-		Tasks:    protoTasks,
-		Total:    int32(total),
-		Page:     req.GetPage(),
-		PageSize: req.GetPageSize(),
+		Tasks:      protoTasks,
+		Total:      int32(result.Total),
+		Page:       req.GetPage(),
+		PageSize:   req.GetPageSize(),
+		NextCursor: result.NextCursor,
+		HasMore:    result.HasMore,
 	}, nil
 }
 

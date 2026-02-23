@@ -146,7 +146,7 @@ func (t *Task) Assign(assigneeIDs []string, actorID string) {
 				}
 			}
 			if isNew {
-				t.AddDomainEvent(event.NewTaskAssignedEvent(t.ID, t.TenantID, "", newID, actorID, time.Now()))
+				t.AddDomainEvent(event.NewTaskAssignedEvent(t.ID, t.TenantID, "", newID, actorID, t.Title, t.ProjectID, time.Now()))
 			}
 		}
 	}

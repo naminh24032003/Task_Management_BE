@@ -17,6 +17,7 @@ type BaseHandler struct {
 	multiSender       *delivery.MultiChannelSenderImpl
 	idempotency       ports.IdempotencyStore
 	realtimePublisher ports.RealtimePublisher
+	userService       ports.UserService
 }
 
 // NewBaseHandler creates a new BaseHandler
@@ -25,12 +26,14 @@ func NewBaseHandler(
 	multiSender *delivery.MultiChannelSenderImpl,
 	idempotency ports.IdempotencyStore,
 	realtimePublisher ports.RealtimePublisher,
+	userService ports.UserService,
 ) *BaseHandler {
 	return &BaseHandler{
 		repo:              repo,
 		multiSender:       multiSender,
 		idempotency:       idempotency,
 		realtimePublisher: realtimePublisher,
+		userService:       userService,
 	}
 }
 

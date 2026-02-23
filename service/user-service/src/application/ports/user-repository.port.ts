@@ -1,6 +1,18 @@
 import { User } from '../../domain/aggregates/user.aggregate';
 import { ListUsersDto } from '../dtos';
 
+export interface FindAllResult {
+  users: User[];
+  total: number;
+}
+
+export interface FindAllWithCursorResult {
+  users: User[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  totalCount: number;
+}
+
 /**
  * User Repository Port (Interface)
  * Defines the contract for user persistence operations
@@ -32,12 +44,20 @@ export interface IUserRepository {
   save(user: User): Promise<User>;
 
   /**
-   * Find all users within tenant with pagination
+   * Find all users within tenant with offset pagination
    */
   findAll(
     tenantId: string,
     options: ListUsersDto,
-  ): Promise<{ users: User[]; total: number }>;
+  ): Promise<FindAllResult>;
+
+  /**
+   * Find all users within tenant with cursor-based pagination
+   */
+  findAllWithCursor(
+    tenantId: string,
+    options: ListUsersDto,
+  ): Promise<FindAllWithCursorResult>;
 
   /**
    * Delete user (soft delete)

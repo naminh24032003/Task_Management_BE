@@ -57,7 +57,18 @@ func (h *TaskAssignedHandler) Handle(ctx context.Context, data map[string]interf
 			body = fmt.Sprintf("Task '%s' has been reassigned to another user", taskTitle)
 		}
 
-		notif := notification.NewNotificationBuilder().
+		// Fetch user email for email notifications
+		var userEmail string
+		if h.userService != nil {
+			email, err := h.userService.GetUserEmail(ctx, recipient.UserID)
+			if err != nil {
+				log.Printf("Failed to fetch email for user %s: %v", recipient.UserID, err)
+			} else {
+				userEmail = email
+			}
+		}
+
+		builder := notification.NewNotificationBuilder().
 			WithUserID(recipient.UserID).
 			WithType("task_assigned").
 			WithTitle(result.Title).
@@ -71,8 +82,13 @@ func (h *TaskAssignedHandler) Handle(ctx context.Context, data map[string]interf
 			WithMetadata("project_id", projectID).
 			WithMetadata("assigned_by", assignedBy).
 			WithMetadata("old_assignee_id", oldAssigneeID).
-			WithMetadata("new_assignee_id", newAssigneeID).
-			Build()
+			WithMetadata("new_assignee_id", newAssigneeID)
+
+		if userEmail != "" {
+			builder = builder.WithMetadata("email", userEmail)
+		}
+
+		notif := builder.Build()
 
 		// Save notification
 		if err := h.repo.Create(ctx, notif); err != nil {

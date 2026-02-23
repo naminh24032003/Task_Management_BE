@@ -9,23 +9,13 @@ import (
 	"testing"
 )
 
-type MockEventPublisher struct {
-	PublishFunc func(ctx context.Context, events []interface{}) error
-}
-
-func (m *MockEventPublisher) Publish(ctx context.Context, events []interface{}) error {
-	if m.PublishFunc != nil {
-		return m.PublishFunc(ctx, events)
-	}
-	return nil
-}
-
 func TestHandleCreateTask(t *testing.T) {
 	repo := &mocks.MockTaskRepository{}
-	publisher := &MockEventPublisher{}
+	uow := &mocks.MockUnitOfWork{}
+	finder := &mocks.MockTaskFinder{}
 	domainSvc := service.NewTaskDomainService(repo)
 
-	h := handler.NewCommandHandler(repo, domainSvc, publisher)
+	h := handler.NewCommandHandlerOutbox(uow, finder, domainSvc, nil)
 
 	cmd := &command.CreateTaskCommand{
 		TenantID:  "tenant-1",

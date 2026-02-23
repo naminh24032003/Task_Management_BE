@@ -139,14 +139,19 @@ export class UserController implements UserServiceController {
           request.pageSize || 10,
           request.statusFilter ? this.toDomainStatus(request.statusFilter) : undefined,
           request.search,
+          request.cursor || undefined,
+          request.limit || undefined,
         ),
       );
 
       return {
         users: result.users.map((u) => this.toProtoUser(u)),
         total: result.total,
-        page: request.page || 1,
-        pageSize: request.pageSize || 10,
+        page: result.page,
+        pageSize: result.pageSize,
+        totalPages: result.totalPages || 0,
+        nextCursor: result.nextCursor || '',
+        hasMore: result.hasMore || false,
       };
     } catch (error: any) {
       throw new RpcException({

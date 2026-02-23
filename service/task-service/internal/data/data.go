@@ -12,7 +12,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"task-service/internal/adapter/messaging/kafka"
 	"task-service/internal/adapter/persistence/mongodb"
 	mongoRepo "task-service/internal/adapter/persistence/mongodb"
 	redisAdapter "task-service/internal/adapter/persistence/redis"
@@ -25,13 +24,15 @@ import (
 // ProviderSet is data providers.
 var ProviderSet = wire.NewSet(
 	NewData,
-	NewMongoDatabase,
+	NewMongoDatabaseAndClient,
 	NewRedisClient,
-	NewKafkaProducer,
 	NewTaskRepository,
-	NewTaskEventPublisher,
+	NewOutboxRepository,
+	NewUnitOfWork,
+	NewTaskFinder,
+	NewTaskCache,
 	NewTaskDomainService,
-	NewCommandHandler,
+	NewCommandHandlerOutbox,
 	NewQueryHandler,
 )
 
@@ -107,8 +108,9 @@ func NewData(db *mongo.Database, redisClient *redis.ClusterClient, logger log.Lo
 	return d, cleanup, nil
 }
 
-// NewMongoDatabase creates a new MongoDB database connection
-func NewMongoDatabase(c config.Config, logger log.Logger) (*mongo.Database, func(), error) {
+// NewMongoDatabaseAndClient creates a new MongoDB database connection and also returns the client
+// The client is needed for UnitOfWork (MongoDB transactions require a session from the client)
+func NewMongoDatabaseAndClient(c config.Config, logger log.Logger) (*mongo.Database, *mongo.Client, func(), error) {
 	helper := log.NewHelper(log.With(logger, "module", "data/mongodb"))
 
 	var cfg struct {
@@ -117,7 +119,7 @@ func NewMongoDatabase(c config.Config, logger log.Logger) (*mongo.Database, func
 
 	if err := c.Scan(&cfg); err != nil {
 		helper.Errorf("failed to scan config: %v", err)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	mongoConfig := &mongodb.Config{
@@ -133,12 +135,12 @@ func NewMongoDatabase(c config.Config, logger log.Logger) (*mongo.Database, func
 		WriteConcern:           cfg.Data.Database.WriteConcern,
 	}
 
-	db, cleanup, err := mongodb.NewDatabase(mongoConfig)
+	db, client, cleanup, err := mongodb.NewDatabaseAndClient(mongoConfig)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return db, cleanup, nil
+	return db, client, cleanup, nil
 }
 
 // NewRedisClient creates a new Redis Cluster client
@@ -168,60 +170,38 @@ func NewRedisClient(c config.Config, logger log.Logger) (*redis.ClusterClient, f
 	return client, cleanup, nil
 }
 
-func NewKafkaProducer(c config.Config, logger log.Logger) (*kafka.Producer, func(), error) {
-	helper := log.NewHelper(log.With(logger, "module", "data/kafka"))
-
-	var cfg struct {
-		Data DataConfig `json:"data"`
-	}
-	if err := c.Scan(&cfg); err != nil {
-		return nil, nil, err
-	}
-
-	kafkaCfg := cfg.Data.Kafka
-	producerConfig := kafka.ProducerConfig{
-		Brokers: toStringSlice(kafkaCfg.Brokers, []string{"localhost:9092"}),
-		Topic:   kafkaCfg.TopicTaskEvents,
-	}
-
-	// Configure SASL if enabled
-	if toBool(kafkaCfg.SASL.Enabled, true) {
-		producerConfig.SASL = &kafka.SASLConfig{
-			Enabled:   true,
-			Mechanism: kafkaCfg.SASL.Mechanism,
-			Username:  kafkaCfg.SASL.Username,
-			Password:  kafkaCfg.SASL.Password,
-		}
-	}
-
-	helper.Infof("Connecting to Kafka brokers: %v, topic: %s, SASL: %v",
-		kafkaCfg.Brokers, kafkaCfg.TopicTaskEvents, kafkaCfg.SASL.Enabled)
-
-	producer, err := kafka.NewProducer(producerConfig)
-	if err != nil {
-		return nil, nil, err
-	}
-	return producer, func() { producer.Close() }, nil
-}
-
 func NewTaskRepository(db *mongo.Database) repository.TaskRepository {
 	return mongoRepo.NewTaskRepository(db)
 }
 
-func NewTaskEventPublisher(producer *kafka.Producer) port.EventPublisher {
-	return kafka.NewTaskEventPublisher(producer)
+func NewOutboxRepository(db *mongo.Database) *mongoRepo.OutboxRepository {
+	return mongoRepo.NewOutboxRepository(db)
+}
+
+func NewUnitOfWork(client *mongo.Client, db *mongo.Database, taskRepo repository.TaskRepository, outboxRepo *mongoRepo.OutboxRepository) port.UnitOfWork {
+	// TaskRepository in UnitOfWork expects the concrete type
+	concreteTaskRepo := mongoRepo.NewTaskRepository(db)
+	return mongoRepo.NewUnitOfWork(client, db, concreteTaskRepo, outboxRepo)
+}
+
+func NewTaskFinder(db *mongo.Database) port.TaskFinder {
+	return mongoRepo.NewTaskRepository(db)
+}
+
+func NewTaskCache(redisClient *redis.ClusterClient) port.TaskCache {
+	return redisAdapter.NewTaskCache(redisClient, "task:")
 }
 
 func NewTaskDomainService(repo repository.TaskRepository) *domainService.TaskDomainService {
 	return domainService.NewTaskDomainService(repo)
 }
 
-func NewCommandHandler(repo repository.TaskRepository, ds *domainService.TaskDomainService, ep port.EventPublisher) *handler.CommandHandler {
-	return handler.NewCommandHandler(repo, ds, ep)
+func NewCommandHandlerOutbox(uow port.UnitOfWork, finder port.TaskFinder, ds *domainService.TaskDomainService, cache port.TaskCache) *handler.CommandHandlerOutbox {
+	return handler.NewCommandHandlerOutbox(uow, finder, ds, cache)
 }
 
-func NewQueryHandler(repo repository.TaskRepository) *handler.QueryHandler {
-	return handler.NewQueryHandler(repo)
+func NewQueryHandler(repo repository.TaskRepository, cache port.TaskCache) *handler.QueryHandler {
+	return handler.NewQueryHandler(repo, cache)
 }
 func toDuration(v interface{}, defaultSeconds int) time.Duration {
 	if v == nil {

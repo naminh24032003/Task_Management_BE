@@ -209,6 +209,23 @@ export class ListTasksInput {
 }
 
 @InputType()
+export class CursorListTasksInput {
+    @Field({ nullable: true })
+    @IsString()
+    @IsOptional()
+    cursor?: string;
+
+    @Field(() => Int, { defaultValue: 20 })
+    @IsInt()
+    @Min(1)
+    limit: number;
+
+    @Field(() => TaskFiltersInput, { nullable: true })
+    @IsOptional()
+    filters?: TaskFiltersInput;
+}
+
+@InputType()
 export class BulkUpdateStatusInput {
     @Field(() => [String])
     @IsArray()

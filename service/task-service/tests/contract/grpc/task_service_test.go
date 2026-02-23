@@ -24,8 +24,10 @@ func startTaskServer() *grpc.Server {
 	s := grpc.NewServer()
 
 	repo := &mocks.MockTaskRepository{}
-	cmdHandler := handler.NewCommandHandler(repo, nil, nil)
-	queryHandler := handler.NewQueryHandler(repo)
+	uow := &mocks.MockUnitOfWork{}
+	finder := &mocks.MockTaskFinder{}
+	cmdHandler := handler.NewCommandHandlerOutbox(uow, finder, nil, nil)
+	queryHandler := handler.NewQueryHandler(repo, nil)
 
 	svc := transport_grpc.NewTaskService(cmdHandler, queryHandler, nil)
 	taskv1.RegisterTaskServiceServer(s, svc)
