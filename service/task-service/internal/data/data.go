@@ -188,8 +188,8 @@ func NewTaskFinder(db *mongo.Database) port.TaskFinder {
 	return mongoRepo.NewTaskRepository(db)
 }
 
-func NewTaskCache(redisClient *redis.ClusterClient) port.TaskCache {
-	return redisAdapter.NewTaskCache(redisClient, "task:")
+func NewTaskCache(redisClient *redis.ClusterClient, logger log.Logger) port.TaskCache {
+	return redisAdapter.NewTaskCache(redisClient, "task:", logger)
 }
 
 func NewTaskDomainService(repo repository.TaskRepository) *domainService.TaskDomainService {

@@ -45,6 +45,7 @@ func NewHTTPServer(
 
 	addr := cfg.Server.HTTP.Addr
 	if addr == "" {
+		helper.Warn("HTTP address not configured (HTTP_ADDR env var), using default 0.0.0.0:9093")
 		addr = "0.0.0.0:9093"
 	}
 

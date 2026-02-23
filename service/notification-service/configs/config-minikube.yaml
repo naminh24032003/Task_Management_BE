@@ -1,13 +1,12 @@
 server:
   http:
-    addr: 0.0.0.0:9093
-    timeout: 10s
+    addr: ${HTTP_ADDR:0.0.0.0:9093}
+    timeout: ${SERVER_TIMEOUT:10s}
 
 data:
   database:
-    # MongoDB Connection String for Task MongoDB Cluster in Minikube
-    source: mongodb://root:MongoDB%40Root2024Secure%21@task-mongodb-mongodb-sharded.mongodb-task.svc.cluster.local:27017/notification_db?authSource=admin
-    name: notification_db
+    source: ${MONGODB_URI}
+    name: ${MONGODB_DATABASE:notification_db}
 
   redis:
     addr: ${REDIS_HOST:redis-cluster.redis.svc.cluster.local}:${REDIS_PORT:6379}
@@ -15,17 +14,31 @@ data:
 
   kafka:
     brokers:
-      - kafka.kafka.svc.cluster.local:9092
-    consumer_topic: task.events
+      - ${KAFKA_BROKERS:kafka.kafka.svc.cluster.local:9092}
+    consumer_topic: ${KAFKA_CONSUMER_TOPIC:task.events}
     producer_topic: ${KAFKA_PRODUCER_TOPIC:audit.logs}
-    consumer_group: notification-service
+    consumer_group: ${KAFKA_CONSUMER_GROUP:notification-service}
+    worker_pool_size: ${KAFKA_WORKER_POOL_SIZE:5}
+    buffer_size: ${KAFKA_BUFFER_SIZE:100}
     sasl:
-      enabled: true
-      mechanism: SCRAM-SHA-256
-      username: ${KAFKA_USERNAME:kafka-user}
-      password: ${KAFKA_PASSWORD}
+      enabled: ${KAFKA_SASL_ENABLED:true}
+      mechanism: ${KAFKA_SASL_MECHANISM:SCRAM-SHA-256}
+      username: ${KAFKA_SASL_USERNAME:kafka-user}
+      password: ${KAFKA_SASL_PASSWORD}
+
+  email:
+    enabled: ${EMAIL_ENABLED:false}
+    smtp_host: ${EMAIL_SMTP_HOST:smtp.gmail.com}
+    smtp_port: ${EMAIL_SMTP_PORT:587}
+    username: ${EMAIL_USERNAME:}
+    password: ${EMAIL_PASSWORD:}
+    from_address: ${EMAIL_FROM_ADDRESS:noreply@taskmanagement.com}
+    from_name: ${EMAIL_FROM_NAME:Task Management}
+
+  user_service:
+    address: ${USER_SERVICE_ADDR:user-service.dev.svc.cluster.local:50051}
 
 logging:
-  level: debug
-  format: console
+  level: ${LOG_LEVEL:debug}
+  format: ${LOG_FORMAT:console}
   output: stdout

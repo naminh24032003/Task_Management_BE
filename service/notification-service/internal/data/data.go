@@ -190,7 +190,10 @@ func NewKafkaProducer(c config.Config, logger log.Logger) (*kafkaInfra.Producer,
 		return nil, nil, fmt.Errorf("failed to scan config: %w", err)
 	}
 
-	brokers := toStringSlice(cfg.Data.Kafka.Brokers, []string{"localhost:9092"})
+	brokers := toStringSlice(cfg.Data.Kafka.Brokers, nil)
+	if len(brokers) == 0 {
+		return nil, nil, fmt.Errorf("kafka brokers not configured, check KAFKA_BROKERS env var")
+	}
 	helper.Infof("Creating Kafka producer for topic: %s", cfg.Data.Kafka.ProducerTopic)
 
 	producerConfig := kafkaInfra.ProducerConfig{
@@ -232,7 +235,10 @@ func NewKafkaConsumer(c config.Config, logger log.Logger) (*kafkaInfra.Consumer,
 		return nil, fmt.Errorf("failed to scan config: %w", err)
 	}
 
-	brokers := toStringSlice(cfg.Data.Kafka.Brokers, []string{"localhost:9092"})
+	brokers := toStringSlice(cfg.Data.Kafka.Brokers, nil)
+	if len(brokers) == 0 {
+		return nil, fmt.Errorf("kafka brokers not configured, check KAFKA_BROKERS env var")
+	}
 	helper.Infof("Creating Kafka consumer for topic: %s, group: %s",
 		cfg.Data.Kafka.ConsumerTopic, cfg.Data.Kafka.ConsumerGroup)
 
@@ -341,7 +347,7 @@ func NewUserServiceClient(c config.Config, logger log.Logger) (ports.UserService
 
 	address := cfg.Data.UserService.Address
 	if address == "" {
-		address = "localhost:9091"
+		return nil, nil, fmt.Errorf("user service address not configured, check USER_SERVICE_ADDR env var")
 	}
 
 	helper.Infof("Connecting to user service at: %s", address)

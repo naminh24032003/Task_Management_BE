@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -15,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
+	"notification-service/internal/infrastructure/resilience"
 	"notification-service/internal/ports"
 )
 
@@ -44,9 +47,13 @@ type Consumer struct {
 	done    chan struct{}
 	wg      sync.WaitGroup
 
+	// resilience: circuit breaker on message handling
+	handlerCB *resilience.CircuitBreaker
+
 	// metrics
 	processed atomic.Int64
 	errors    atomic.Int64
+	retries   atomic.Int64
 }
 
 // NewConsumer creates a new Kafka consumer with worker pool support
@@ -91,6 +98,10 @@ func NewConsumer(config ConsumerConfig) (*Consumer, error) {
 		tracer:  otel.Tracer("notification-service/kafka-consumer"),
 		msgChan: make(chan kafka.Message, config.BufferSize),
 		done:    make(chan struct{}),
+		handlerCB: resilience.NewCircuitBreaker("kafka-handler",
+			resilience.WithFailureThreshold(10),       // tolerate more errors — Kafka is high-volume
+			resilience.WithResetTimeout(60*time.Second), // longer cooldown
+		),
 	}, nil
 }
 
@@ -154,11 +165,48 @@ func (c *Consumer) worker(ctx context.Context, id int) {
 	defer c.wg.Done()
 	log.Printf("Worker %d started", id)
 
+	const maxRetries = 3
+
 	for msg := range c.msgChan {
-		if err := c.processMessage(ctx, msg); err != nil {
+		var finalErr error
+
+		// Retry with exponential backoff + circuit breaker
+		err := c.handlerCB.Exec(func() error {
+			for attempt := 0; attempt <= maxRetries; attempt++ {
+				processErr := c.processMessage(ctx, msg)
+				if processErr == nil {
+					return nil
+				}
+				finalErr = processErr
+				if attempt >= maxRetries {
+					break
+				}
+				c.retries.Add(1)
+				// Exponential backoff: 500ms, 1s, 2s + jitter
+				base := float64(500*time.Millisecond) * math.Pow(2, float64(attempt))
+				jitter := base * 0.3 * (rand.Float64()*2 - 1)
+				delay := time.Duration(math.Max(0, base+jitter))
+				log.Printf("Worker %d: retry %d/%d for partition=%d offset=%d (waiting %v): %v",
+					id, attempt+1, maxRetries, msg.Partition, msg.Offset, delay, processErr)
+
+				select {
+				case <-time.After(delay):
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			}
+			return finalErr
+		})
+
+		if err != nil {
 			c.errors.Add(1)
-			log.Printf("Worker %d: error processing message (partition=%d, offset=%d): %v",
-				id, msg.Partition, msg.Offset, err)
+			if err == resilience.ErrCircuitOpen {
+				log.Printf("Worker %d: circuit OPEN, skipping message (partition=%d, offset=%d)",
+					id, msg.Partition, msg.Offset)
+			} else {
+				log.Printf("Worker %d: error processing message after retries (partition=%d, offset=%d): %v",
+					id, msg.Partition, msg.Offset, err)
+			}
 		} else {
 			c.processed.Add(1)
 		}
@@ -224,8 +272,9 @@ func (c *Consumer) reportMetrics(ctx context.Context) {
 		case <-c.done:
 			return
 		case <-ticker.C:
-			log.Printf("Consumer metrics — processed: %d, errors: %d, channel buffer: %d/%d",
-				c.processed.Load(), c.errors.Load(), len(c.msgChan), cap(c.msgChan))
+			log.Printf("Consumer metrics — processed: %d, errors: %d, retries: %d, circuit: %s, buffer: %d/%d",
+				c.processed.Load(), c.errors.Load(), c.retries.Load(),
+				c.handlerCB.State(), len(c.msgChan), cap(c.msgChan))
 		}
 	}
 }

@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, Inject, Logger } from '@nestjs/common';
 import { ClientGrpc } from '@nestjs/microservices';
 import { Observable, lastValueFrom, timeout, catchError } from 'rxjs';
 import { Metadata } from '@grpc/grpc-js';
+import { CircuitBreaker, resilientCall, RetryOptions } from '../../resilience/resilience';
 
 // gRPC service interfaces (based on task.proto)
 interface TaskServiceGrpc {
@@ -24,6 +25,22 @@ export class TaskGrpcClient implements OnModuleInit {
   private readonly logger = new Logger(TaskGrpcClient.name);
   private taskService: TaskServiceGrpc;
   private readonly TIMEOUT_MS = 10000;
+
+  // Circuit breaker for task-service downstream
+  private readonly taskServiceCB = new CircuitBreaker({
+    name: 'task-service',
+    failureThreshold: 5,
+    resetTimeoutMs: 30_000,
+  });
+
+  // Retry config — exponential backoff on transient errors
+  private readonly retryOpts: RetryOptions = {
+    maxRetries: 3,
+    initialDelayMs: 200,
+    maxDelayMs: 5000,
+    backoffMultiplier: 2,
+    jitterFactor: 0.3,
+  };
 
   constructor(@Inject('TASK_SERVICE') private client: ClientGrpc) { }
 
@@ -51,17 +68,22 @@ export class TaskGrpcClient implements OnModuleInit {
 
   private async executeGrpcCall<T>(call: Observable<T>, operation: string): Promise<T> {
     try {
-      return await lastValueFrom(
-        call.pipe(
-          timeout(this.TIMEOUT_MS),
-          catchError((error) => {
-            this.logger.error(`gRPC call failed for ${operation}: ${error.message}`);
-            throw error;
-          }),
-        ),
+      return await resilientCall(
+        this.taskServiceCB,
+        () =>
+          lastValueFrom(
+            call.pipe(
+              timeout(this.TIMEOUT_MS),
+              catchError((error) => {
+                this.logger.error(`gRPC call failed for ${operation}: ${error.message}`);
+                throw error;
+              }),
+            ),
+          ),
+        this.retryOpts,
       );
     } catch (error) {
-      this.logger.error(`Failed to execute ${operation}`, error);
+      this.logger.error(`Failed to execute ${operation} (circuit: ${this.taskServiceCB.getState()})`, error);
       throw error;
     }
   }

@@ -33,7 +33,7 @@ func wireApp(c config.Config, logger log.Logger) (*kratos.App, func(), error) {
 	outboxRepository := data.NewOutboxRepository(database)
 	unitOfWork := data.NewUnitOfWork(mongoClient, database, taskRepository, outboxRepository)
 	taskFinder := data.NewTaskFinder(database)
-	taskCache := data.NewTaskCache(redisClient)
+	taskCache := data.NewTaskCache(redisClient, logger)
 	taskDomainService := data.NewTaskDomainService(taskRepository)
 	commandHandlerOutbox := data.NewCommandHandlerOutbox(unitOfWork, taskFinder, taskDomainService, taskCache)
 	queryHandler := data.NewQueryHandler(taskRepository, taskCache)

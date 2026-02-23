@@ -23,6 +23,8 @@ microservice:
   # =========================================================
   envVarsCM:
     GO_ENV: development
+    # MongoDB Configuration - database name only (URI in secret)
+    MONGODB_DATABASE: "notification_db"
     # Redis Configuration - non-sensitive settings
     REDIS_HOST: "redis-cluster.redis.svc.cluster.local"
     REDIS_PORT: "6379"
@@ -31,17 +33,25 @@ microservice:
     OTEL_SERVICE_NAME: "notification-service"
     # Kafka Configuration - non-sensitive settings
     KAFKA_BROKERS: "kafka.kafka.svc.cluster.local:9092"
-    KAFKA_USERNAME: "kafka-user"
-    KAFKA_CONSUMER_TOPIC: "tasks"
+    KAFKA_CONSUMER_TOPIC: "task.events"
     KAFKA_PRODUCER_TOPIC: "notification.events.v1"
     KAFKA_CONSUMER_GROUP: "notification-service"
+    KAFKA_SASL_ENABLED: "true"
+    KAFKA_SASL_MECHANISM: "SCRAM-SHA-256"
+    KAFKA_SASL_USERNAME: "kafka-user"
+    # User Service
+    USER_SERVICE_ADDR: "user-service.dev.svc.cluster.local:50051"
+    # Logging
+    LOG_LEVEL: "debug"
+    LOG_FORMAT: "console"
 
   # =========================================================
   # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
   # =========================================================
   envVarsSecret:
+    MONGODB_URI: "mongodb://root:MongoDB%40Root2024Secure%21@task-mongodb-mongodb-sharded.mongodb-task.svc.cluster.local:27017/notification_db?authSource=admin"
     REDIS_PASSWORD: "Redis@Cluster2024Secure!"
-    KAFKA_PASSWORD: "Kafka@SASL2024Secure!"
+    KAFKA_SASL_PASSWORD: "Kafka@SASL2024Secure!"
 
   # =========================================================
   # CONTAINER PORTS

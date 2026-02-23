@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, Inject, Logger } from '@nestjs/common';
 import { ClientGrpc } from '@nestjs/microservices';
 import { Observable, lastValueFrom, timeout, catchError } from 'rxjs';
 import { Metadata } from '@grpc/grpc-js';
+import { CircuitBreaker, resilientCall, RetryOptions } from '../../resilience/resilience';
 
 // gRPC service interfaces
 interface UserServiceGrpc {
@@ -42,6 +43,27 @@ export class UserGrpcClient implements OnModuleInit {
   private authService: AuthServiceGrpc;
   private readonly TIMEOUT_MS = 10000;
 
+  // Circuit breakers — one per downstream logical service
+  private readonly userServiceCB = new CircuitBreaker({
+    name: 'user-service',
+    failureThreshold: 5,
+    resetTimeoutMs: 30_000,
+  });
+  private readonly authServiceCB = new CircuitBreaker({
+    name: 'auth-service',
+    failureThreshold: 5,
+    resetTimeoutMs: 30_000,
+  });
+
+  // Retry config — only retry transient / network errors
+  private readonly retryOpts: RetryOptions = {
+    maxRetries: 3,
+    initialDelayMs: 200,
+    maxDelayMs: 5000,
+    backoffMultiplier: 2,
+    jitterFactor: 0.3,
+  };
+
   constructor(@Inject('USER_SERVICE') private client: ClientGrpc) { }
 
   onModuleInit() {
@@ -78,25 +100,32 @@ export class UserGrpcClient implements OnModuleInit {
     }));
   }
 
-  private async executeGrpcCall<T>(call: Observable<T>, operation: string): Promise<T> {
+  private async executeGrpcCall<T>(call: Observable<T>, operation: string, cb?: CircuitBreaker): Promise<T> {
     const startTime = Date.now();
+    const circuitBreaker = cb ?? this.userServiceCB;
 
     this.logger.log(JSON.stringify({
       event: 'grpc_call_started',
       operation,
       layer: 'grpc_client',
+      circuitState: circuitBreaker.getState(),
       timestamp: new Date().toISOString(),
     }));
 
     try {
-      const result = await lastValueFrom(
-        call.pipe(
-          timeout(this.TIMEOUT_MS),
-          catchError((error) => {
-            this.logger.error(`gRPC call failed for ${operation}: ${error.message}`);
-            throw error;
-          }),
-        ),
+      const result = await resilientCall(
+        circuitBreaker,
+        () =>
+          lastValueFrom(
+            call.pipe(
+              timeout(this.TIMEOUT_MS),
+              catchError((error) => {
+                this.logger.error(`gRPC call failed for ${operation}: ${error.message}`);
+                throw error;
+              }),
+            ),
+          ),
+        this.retryOpts,
       );
 
       const durationMs = Date.now() - startTime;
@@ -173,7 +202,7 @@ export class UserGrpcClient implements OnModuleInit {
         display_name: data.displayName,
       };
 
-      const result = await this.executeGrpcCall(this.authService.Register(grpcData, metadata), 'register');
+      const result = await this.executeGrpcCall(this.authService.Register(grpcData, metadata), 'register', this.authServiceCB);
 
       const totalDuration = Date.now() - startTime;
 
@@ -214,7 +243,7 @@ export class UserGrpcClient implements OnModuleInit {
       email: data.email,
       password: data.password,
     };
-    return this.executeGrpcCall(this.authService.Login(grpcData, metadata), 'login');
+    return this.executeGrpcCall(this.authService.Login(grpcData, metadata), 'login', this.authServiceCB);
   }
 
   async googleLogin(data: { tenantId: string; idToken: string }) {
@@ -223,13 +252,14 @@ export class UserGrpcClient implements OnModuleInit {
       tenant_id: data.tenantId,
       id_token: data.idToken,
     };
-    return this.executeGrpcCall(this.authService.GoogleLogin(grpcData, metadata), 'googleLogin');
+    return this.executeGrpcCall(this.authService.GoogleLogin(grpcData, metadata), 'googleLogin', this.authServiceCB);
   }
 
   async refreshToken(refreshToken: string) {
     return this.executeGrpcCall(
       this.authService.RefreshToken({ refreshToken }),
       'refreshToken',
+      this.authServiceCB,
     );
   }
 
@@ -237,6 +267,7 @@ export class UserGrpcClient implements OnModuleInit {
     return this.executeGrpcCall(
       this.authService.ValidateToken({ accessToken }),
       'validateToken',
+      this.authServiceCB,
     );
   }
 
@@ -244,6 +275,7 @@ export class UserGrpcClient implements OnModuleInit {
     return this.executeGrpcCall(
       this.authService.Logout({ refreshToken }),
       'logout',
+      this.authServiceCB,
     );
   }
 

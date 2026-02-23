@@ -3,14 +3,17 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/go-kratos/kratos/v2/log"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
 	"task-service/internal/application/port"
 	"task-service/internal/domain/aggregate"
+	"task-service/internal/pkg/resilience"
 )
 
 // ──────────────────────────────────────────────────────────────
@@ -108,10 +111,12 @@ type TaskCacheRedis struct {
 	keyPrefix    string
 	nearCache    *NearCache
 	singleFlight *SingleFlight
+	cb           *resilience.CircuitBreaker // protects Redis calls
+	logger       *log.Helper
 }
 
-// NewTaskCache creates a new 3-tier TaskCache.
-func NewTaskCache(client *redis.ClusterClient, keyPrefix string) *TaskCacheRedis {
+// NewTaskCache creates a new 3-tier TaskCache with circuit breaker on Redis.
+func NewTaskCache(client *redis.ClusterClient, keyPrefix string, logger log.Logger) *TaskCacheRedis {
 	if keyPrefix == "" {
 		keyPrefix = "task:"
 	}
@@ -120,6 +125,11 @@ func NewTaskCache(client *redis.ClusterClient, keyPrefix string) *TaskCacheRedis
 		keyPrefix:    keyPrefix,
 		nearCache:    NewNearCache(10 * time.Second),
 		singleFlight: NewSingleFlight(30 * time.Second),
+		cb: resilience.NewCircuitBreaker("redis-cache", logger,
+			resilience.WithFailureThreshold(5),
+			resilience.WithResetTimeout(30*time.Second),
+		),
+		logger: log.NewHelper(log.With(logger, "component", "task-cache")),
 	}
 }
 
@@ -157,23 +167,33 @@ func (r *TaskCacheRedis) GetTask(ctx context.Context, tenantID, taskID string) (
 		r.nearCache.Delete(key) // corrupted → evict
 	}
 
-	// ── L2: Redis Lua (EVAL GET, ~1ms) ─────────────────
-	result, err := r.client.Eval(ctx, luaGetOrSet, []string{key}).Text()
-	if err != nil && err != redis.Nil {
-		return nil, fmt.Errorf("redis GetTask lua error: %w", err)
+	// ── L2: Redis Lua (EVAL GET, ~1ms) — circuit breaker protected ──
+	var task *aggregate.Task
+	err := r.cb.Exec(func() error {
+		result, err := r.client.Eval(ctx, luaGetOrSet, []string{key}).Text()
+		if err != nil && err != redis.Nil {
+			return fmt.Errorf("redis GetTask lua error: %w", err)
+		}
+		if result == "" {
+			return nil // L2 miss
+		}
+		var t aggregate.Task
+		if err := json.Unmarshal([]byte(result), &t); err != nil {
+			_ = r.client.Del(ctx, key) // corrupted → evict
+			return nil
+		}
+		r.nearCache.Set(key, []byte(result), nearCacheTTL)
+		task = &t
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, resilience.ErrCircuitOpen) {
+			r.logger.Warnf("Redis circuit OPEN, skipping L2 cache read for %s", key)
+			return nil, nil // degrade: cache miss → SingleFlight → DB
+		}
+		return nil, err
 	}
-	if result == "" {
-		return nil, nil // L1+L2 miss → caller should use SingleFlightDo → DB
-	}
-
-	// ── Backfill L1 from L2 hit ────────────────────────
-	var task aggregate.Task
-	if err := json.Unmarshal([]byte(result), &task); err != nil {
-		_ = r.client.Del(ctx, key) // corrupted → evict
-		return nil, nil
-	}
-	r.nearCache.Set(key, []byte(result), nearCacheTTL)
-	return &task, nil
+	return task, nil
 }
 
 // SingleFlightDo deduplicates concurrent calls for the same key.
@@ -214,14 +234,24 @@ func (r *TaskCacheRedis) SetTask(ctx context.Context, tenantID, taskID string, t
 	}
 	key := r.cacheKey(tenantID, taskID)
 
-	// L1: near cache
+	// L1: near cache (always works — in-process)
 	r.nearCache.Set(key, bytes, nearCacheTTL)
 
-	// L2: Redis Lua (SET + PEXPIRE atomic)
-	ttlMs := ttl.Milliseconds()
-	_, err = r.client.Eval(ctx, luaSetWithTTL, []string{key}, string(bytes), ttlMs).Result()
+	// L2: Redis Lua (SET + PEXPIRE atomic) — circuit breaker protected
+	err = r.cb.Exec(func() error {
+		ttlMs := ttl.Milliseconds()
+		_, err := r.client.Eval(ctx, luaSetWithTTL, []string{key}, string(bytes), ttlMs).Result()
+		if err != nil {
+			return fmt.Errorf("redis SetTask lua error: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("redis SetTask lua error: %w", err)
+		if errors.Is(err, resilience.ErrCircuitOpen) {
+			r.logger.Warnf("Redis circuit OPEN, skipping L2 cache write for %s", key)
+			return nil // degrade: L1 only, skip L2
+		}
+		return err
 	}
 	return nil
 }
@@ -229,13 +259,23 @@ func (r *TaskCacheRedis) SetTask(ctx context.Context, tenantID, taskID string, t
 func (r *TaskCacheRedis) InvalidateTask(ctx context.Context, tenantID, taskID string) error {
 	key := r.cacheKey(tenantID, taskID)
 
-	// L1: near cache — immediate eviction
+	// L1: near cache — immediate eviction (always works)
 	r.nearCache.Delete(key)
 
-	// L2: Redis Lua (DEL)
-	_, err := r.client.Eval(ctx, luaInvalidate, []string{key}).Result()
-	if err != nil && err != redis.Nil {
-		return fmt.Errorf("redis InvalidateTask lua error: %w", err)
+	// L2: Redis Lua (DEL) — circuit breaker protected
+	err := r.cb.Exec(func() error {
+		_, err := r.client.Eval(ctx, luaInvalidate, []string{key}).Result()
+		if err != nil && err != redis.Nil {
+			return fmt.Errorf("redis InvalidateTask lua error: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, resilience.ErrCircuitOpen) {
+			r.logger.Warnf("Redis circuit OPEN, skipping L2 cache invalidation for %s", key)
+			return nil // degrade: L1 evicted at least
+		}
+		return err
 	}
 	return nil
 }
@@ -247,11 +287,23 @@ func (r *TaskCacheRedis) AcquireLock(ctx context.Context, resource string, ttl t
 	key := r.lockKey(resource)
 	ttlMs := ttl.Milliseconds()
 
-	result, err := r.client.Eval(ctx, luaAcquireLock, []string{key}, token, ttlMs).Text()
-	if err != nil && err != redis.Nil {
-		return "", fmt.Errorf("redis AcquireLock lua error: %w", err)
+	var acquired bool
+	err := r.cb.Exec(func() error {
+		result, err := r.client.Eval(ctx, luaAcquireLock, []string{key}, token, ttlMs).Text()
+		if err != nil && err != redis.Nil {
+			return fmt.Errorf("redis AcquireLock lua error: %w", err)
+		}
+		acquired = result == "OK"
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, resilience.ErrCircuitOpen) {
+			r.logger.Warnf("Redis circuit OPEN, lock not available for %s (degraded)", resource)
+			return "", nil // degrade: lock not acquired, caller proceeds without lock
+		}
+		return "", err
 	}
-	if result == "OK" {
+	if acquired {
 		return token, nil
 	}
 	return "", nil // lock not acquired
@@ -259,9 +311,19 @@ func (r *TaskCacheRedis) AcquireLock(ctx context.Context, resource string, ttl t
 
 func (r *TaskCacheRedis) ReleaseLock(ctx context.Context, resource string, token string) error {
 	key := r.lockKey(resource)
-	_, err := r.client.Eval(ctx, luaReleaseLock, []string{key}, token).Result()
-	if err != nil && err != redis.Nil {
-		return fmt.Errorf("redis ReleaseLock lua error: %w", err)
+	err := r.cb.Exec(func() error {
+		_, err := r.client.Eval(ctx, luaReleaseLock, []string{key}, token).Result()
+		if err != nil && err != redis.Nil {
+			return fmt.Errorf("redis ReleaseLock lua error: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, resilience.ErrCircuitOpen) {
+			r.logger.Warnf("Redis circuit OPEN, skipping lock release for %s (will auto-expire)", resource)
+			return nil // degrade: lock will auto-expire via TTL
+		}
+		return err
 	}
 	return nil
 }
@@ -274,25 +336,47 @@ func (r *TaskCacheRedis) CheckIdempotency(ctx context.Context, key string, ttl t
 	rKey := r.idempotencyKey(key)
 	ttlMs := ttl.Milliseconds()
 
-	result, err := r.client.Eval(ctx, luaIdempotencyCheck, []string{rKey}, idempotencyPlaceholder, ttlMs).Slice()
-	if err != nil {
-		return "", false, fmt.Errorf("redis CheckIdempotency lua error: %w", err)
-	}
+	var resultVal string
+	var exists bool
 
-	flag, _ := toInt64(result[0])
-	if flag == 1 {
-		val, _ := toString(result[1])
-		return val, true, nil
+	err := r.cb.Exec(func() error {
+		result, err := r.client.Eval(ctx, luaIdempotencyCheck, []string{rKey}, idempotencyPlaceholder, ttlMs).Slice()
+		if err != nil {
+			return fmt.Errorf("redis CheckIdempotency lua error: %w", err)
+		}
+		flag, _ := toInt64(result[0])
+		if flag == 1 {
+			resultVal, _ = toString(result[1])
+			exists = true
+		}
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, resilience.ErrCircuitOpen) {
+			r.logger.Warnf("Redis circuit OPEN, skipping idempotency check for %s (degraded)", key)
+			return "", false, nil // degrade: proceed without idempotency guard
+		}
+		return "", false, err
 	}
-	return "", false, nil
+	return resultVal, exists, nil
 }
 
 func (r *TaskCacheRedis) SetIdempotencyResult(ctx context.Context, key string, resultVal string, ttl time.Duration) error {
 	rKey := r.idempotencyKey(key)
 	ttlMs := ttl.Milliseconds()
-	_, err := r.client.Eval(ctx, luaIdempotencySetResult, []string{rKey}, resultVal, ttlMs).Result()
+	err := r.cb.Exec(func() error {
+		_, err := r.client.Eval(ctx, luaIdempotencySetResult, []string{rKey}, resultVal, ttlMs).Result()
+		if err != nil {
+			return fmt.Errorf("redis SetIdempotencyResult lua error: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("redis SetIdempotencyResult lua error: %w", err)
+		if errors.Is(err, resilience.ErrCircuitOpen) {
+			r.logger.Warnf("Redis circuit OPEN, skipping idempotency result set for %s", key)
+			return nil // degrade: skip
+		}
+		return err
 	}
 	return nil
 }
@@ -301,18 +385,42 @@ func (r *TaskCacheRedis) SetIdempotencyResult(ctx context.Context, key string, r
 
 func (r *TaskCacheRedis) IncrementProjectTaskCount(ctx context.Context, tenantID, projectID string, delta int64) (int64, error) {
 	key := r.counterKey(tenantID, "project:"+projectID)
-	val, err := r.client.Eval(ctx, luaHIncrBy, []string{key}, "task_count", delta).Int64()
+	var val int64
+	err := r.cb.Exec(func() error {
+		v, err := r.client.Eval(ctx, luaHIncrBy, []string{key}, "task_count", delta).Int64()
+		if err != nil {
+			return fmt.Errorf("redis IncrementProjectTaskCount lua error: %w", err)
+		}
+		val = v
+		return nil
+	})
 	if err != nil {
-		return 0, fmt.Errorf("redis IncrementProjectTaskCount lua error: %w", err)
+		if errors.Is(err, resilience.ErrCircuitOpen) {
+			r.logger.Warnf("Redis circuit OPEN, skipping project counter for %s", key)
+			return 0, nil // degrade: counter unavailable
+		}
+		return 0, err
 	}
 	return val, nil
 }
 
 func (r *TaskCacheRedis) IncrementUserAssignedCount(ctx context.Context, tenantID, userID string, delta int64) (int64, error) {
 	key := r.counterKey(tenantID, "user:"+userID)
-	val, err := r.client.Eval(ctx, luaHIncrBy, []string{key}, "assigned_count", delta).Int64()
+	var val int64
+	err := r.cb.Exec(func() error {
+		v, err := r.client.Eval(ctx, luaHIncrBy, []string{key}, "assigned_count", delta).Int64()
+		if err != nil {
+			return fmt.Errorf("redis IncrementUserAssignedCount lua error: %w", err)
+		}
+		val = v
+		return nil
+	})
 	if err != nil {
-		return 0, fmt.Errorf("redis IncrementUserAssignedCount lua error: %w", err)
+		if errors.Is(err, resilience.ErrCircuitOpen) {
+			r.logger.Warnf("Redis circuit OPEN, skipping user counter for %s", key)
+			return 0, nil // degrade: counter unavailable
+		}
+		return 0, err
 	}
 	return val, nil
 }
