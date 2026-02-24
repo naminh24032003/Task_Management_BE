@@ -44,12 +44,12 @@ type CircuitBreakerOption func(*CircuitBreaker)
 type CircuitBreaker struct {
 	mu sync.Mutex
 
-	name             string
-	state            State
-	failureCount     int
-	successCount     int
-	lastFailureTime  time.Time
-	halfOpenCalls    int
+	name            string
+	state           State
+	failureCount    int
+	successCount    int
+	lastFailureTime time.Time
+	halfOpenCalls   int
 
 	failureThreshold int
 	resetTimeout     time.Duration

@@ -99,7 +99,7 @@ func NewConsumer(config ConsumerConfig) (*Consumer, error) {
 		msgChan: make(chan kafka.Message, config.BufferSize),
 		done:    make(chan struct{}),
 		handlerCB: resilience.NewCircuitBreaker("kafka-handler",
-			resilience.WithFailureThreshold(10),       // tolerate more errors — Kafka is high-volume
+			resilience.WithFailureThreshold(10),         // tolerate more errors — Kafka is high-volume
 			resilience.WithResetTimeout(60*time.Second), // longer cooldown
 		),
 	}, nil

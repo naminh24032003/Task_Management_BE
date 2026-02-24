@@ -1,0 +1,207 @@
+# =============================================================================
+# Deploy to EKS
+# =============================================================================
+# Trigger: push to main branch, or manual dispatch
+#
+# Required GitHub Secrets:
+#   AWS_ACCESS_KEY_ID        - IAM user access key
+#   AWS_SECRET_ACCESS_KEY    - IAM user secret key
+#   AWS_REGION               - e.g. ap-southeast-1
+#   EKS_CLUSTER_NAME         - e.g. task-management-dev
+#   ECR_REGISTRY             - e.g. 123456789.dkr.ecr.ap-southeast-1.amazonaws.com
+# =============================================================================
+name: Deploy to EKS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Service to deploy (all, user-service, task-service, notification-service, bff-service)"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - user-service
+          - task-service
+          - notification-service
+          - bff-service
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Detect changes (for push trigger)
+  # ---------------------------------------------------------------------------
+  changes:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      user-service: ${{ steps.changes.outputs.user-service }}
+      task-service: ${{ steps.changes.outputs.task-service }}
+      notification-service: ${{ steps.changes.outputs.notification-service }}
+      bff-service: ${{ steps.changes.outputs.bff-service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            user-service:
+              - 'service/user-service/**'
+            task-service:
+              - 'service/task-service/**'
+              - 'shared/**'
+            notification-service:
+              - 'service/notification-service/**'
+              - 'shared/**'
+            bff-service:
+              - 'service/bff-service/**'
+
+  # ---------------------------------------------------------------------------
+  # Build & Push Docker Images to ECR
+  # ---------------------------------------------------------------------------
+  build-push:
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: always()
+    strategy:
+      matrix:
+        include:
+          - service: user-service
+            dockerfile: service/user-service/Dockerfile
+            context: ./service/user-service
+          - service: task-service
+            dockerfile: service/task-service/Dockerfile
+            context: .
+          - service: notification-service
+            dockerfile: service/notification-service/Dockerfile
+            context: .
+          - service: bff-service
+            dockerfile: service/bff-service/Dockerfile
+            context: ./service/bff-service
+    outputs:
+      image-tag: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Check if should build
+        id: should-build
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            if [ "${{ github.event.inputs.service }}" == "all" ] || [ "${{ github.event.inputs.service }}" == "${{ matrix.service }}" ]; then
+              echo "build=true" >> $GITHUB_OUTPUT
+            else
+              echo "build=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "build=${{ needs.changes.outputs[matrix.service] || 'false' }}" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.should-build.outputs.build == 'true'
+
+      - name: Configure AWS credentials
+        if: steps.should-build.outputs.build == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        if: steps.should-build.outputs.build == 'true'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Docker meta
+        if: steps.should-build.outputs.build == 'true'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.ECR_REGISTRY }}/task-management/${{ matrix.service }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        if: steps.should-build.outputs.build == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------------
+  # Deploy to EKS via Helm
+  # ---------------------------------------------------------------------------
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build-push]
+    if: always() && needs.build-push.result != 'failure'
+    strategy:
+      max-parallel: 2
+      matrix:
+        include:
+          - service: user-service
+            namespace: dev
+            values: apps/user-service/values-eks.yaml
+          - service: task-service
+            namespace: dev
+            values: apps/task-service/values-eks.yaml
+          - service: notification-service
+            namespace: dev
+            values: apps/notification-service/values-eks.yaml
+          - service: bff-service
+            namespace: dev
+            values: apps/bff-service/values-eks.yaml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ env.AWS_REGION }} \
+            --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: "3.14.0"
+
+      - name: Create namespace if not exists
+        run: |
+          kubectl create namespace ${{ matrix.namespace }} --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy ${{ matrix.service }}
+        run: |
+          IMAGE_TAG="${{ github.sha }}"
+          
+          helm upgrade --install ${{ matrix.service }} ./charts/microservice \
+            --namespace ${{ matrix.namespace }} \
+            --values ${{ matrix.values }} \
+            --set microservice.image.repository="${{ env.ECR_REGISTRY }}/task-management/${{ matrix.service }}" \
+            --set microservice.image.tag="${IMAGE_TAG}" \
+            --timeout 5m \
+            --wait \
+            --atomic
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/${{ matrix.service }} \
+            --namespace ${{ matrix.namespace }} \
+            --timeout=300s

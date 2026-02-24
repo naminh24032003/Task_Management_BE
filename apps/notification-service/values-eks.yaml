@@ -1,74 +1,66 @@
 # =============================================================================
-# BFF Service - EKS Environment Values
+# Notification Service - EKS Environment Values
 # =============================================================================
 microservice:
-  nameOverride: bff-service
+  nameOverride: notification-service
   replicaCount: 2
 
   # =========================================================
   # CONTAINER IMAGE (ECR)
   # =========================================================
   image:
-    repository: "${ECR_REGISTRY}/task-management/bff-service"
+    repository: "${ECR_REGISTRY}/task-management/notification-service"
     tag: "${IMAGE_TAG}"
     pullPolicy: Always
+
+  # Override CMD to load EKS config
+  args:
+    - "-conf"
+    - "./configs/config-eks.yaml"
 
   # =========================================================
   # ENVIRONMENT VARIABLES (ConfigMap)
   # =========================================================
   envVarsCM:
-    NODE_ENV: production
-
-    # Application
-    APP_PORT: "4000"
-    APP_METRICS_PORT: "9092"
-
-    # Auth mode: behind Kong
-    AUTH_MODE: "kong"
-
-    # GraphQL - disabled in production
-    GRAPHQL_PLAYGROUND: "false"
-    GRAPHQL_INTROSPECTION: "false"
-    GRAPHQL_DEBUG: "false"
-
-    # gRPC Services
-    GRPC_USER_SERVICE_URL: "user-service.dev.svc.cluster.local:50051"
-    GRPC_TASK_SERVICE_URL: "task-service.dev.svc.cluster.local:50052"
-
-    # Redis Cluster
+    GO_ENV: production
+    # MongoDB
+    MONGODB_DATABASE: "notification_db"
+    # Redis
     REDIS_HOST: "redis-cluster.redis.svc.cluster.local"
     REDIS_PORT: "6379"
-    REDIS_KEY_PREFIX: "bff-service:"
-
-    # Rate Limiting (production - stricter)
-    RATE_LIMIT_USER_LIMIT: "100"
-    RATE_LIMIT_USER_WINDOW: "60"
-    RATE_LIMIT_IP_LIMIT: "50"
-    RATE_LIMIT_IP_WINDOW: "60"
-
-    # CORS
-    CORS_ORIGINS: "https://taskmanagement.dev"
-
     # OpenTelemetry
     OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector.tracing.svc.cluster.local:4317"
-    OTEL_SERVICE_NAME: "bff-service"
+    OTEL_SERVICE_NAME: "notification-service"
+    # Kafka
+    KAFKA_BROKERS: "kafka.kafka.svc.cluster.local:9092"
+    KAFKA_CONSUMER_TOPIC: "task.events"
+    KAFKA_PRODUCER_TOPIC: "notification.events.v1"
+    KAFKA_CONSUMER_GROUP: "notification-service"
+    KAFKA_SASL_ENABLED: "true"
+    KAFKA_SASL_MECHANISM: "SCRAM-SHA-256"
+    KAFKA_SASL_USERNAME: "kafka-user"
+    KAFKA_WORKER_POOL_SIZE: "10"
+    KAFKA_BUFFER_SIZE: "200"
+    # User Service
+    USER_SERVICE_ADDR: "user-service.dev.svc.cluster.local:50051"
+    # Logging
+    LOG_LEVEL: "info"
+    LOG_FORMAT: "json"
 
   # =========================================================
-  # SENSITIVE ENVIRONMENT VARIABLES
+  # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
   # =========================================================
-  envVarsSecret: {}
-
-  envFromSecretRefs:
-    - bff-service-secrets
+  envVarsSecret:
+    MONGODB_URI: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
+    REDIS_PASSWORD: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
+    KAFKA_SASL_PASSWORD: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
 
   # =========================================================
   # CONTAINER PORTS
   # =========================================================
   containerPorts:
-    http:
-      port: 4000
     http-metrics:
-      port: 9092
+      port: 9093
 
   # =========================================================
   # SERVICE CONFIGURATION
@@ -76,11 +68,8 @@ microservice:
   service:
     type: ClusterIP
     ports:
-      http:
-        port: 4000
-        targetPort: http
       http-metrics:
-        port: 9092
+        port: 9093
         targetPort: http-metrics
 
   # =========================================================
@@ -108,7 +97,7 @@ microservice:
 
   readinessProbe:
     httpGet:
-      path: /health
+      path: /ready
       port: http-metrics
     initialDelaySeconds: 10
     periodSeconds: 5
@@ -116,12 +105,12 @@ microservice:
     failureThreshold: 3
 
   # =========================================================
-  # AUTOSCALING
+  # AUTOSCALING (HPA)
   # =========================================================
   autoscaling:
     enabled: true
     minReplicas: 2
-    maxReplicas: 8
+    maxReplicas: 5
     targetCPUUtilizationPercentage: 70
 
   # =========================================================
@@ -140,11 +129,17 @@ microservice:
       whenUnsatisfiable: DoNotSchedule
       labelSelector:
         matchLabels:
-          app.kubernetes.io/name: bff-service
+          app.kubernetes.io/name: notification-service
 
   # =========================================================
   # MONITORING
   # =========================================================
+  sentry:
+    enabled: false
+    dsn: ""
+    environment: production
+    tracesSampleRate: 0.1
+
   metrics:
     enabled: true
     port: http-metrics
@@ -154,25 +149,5 @@ microservice:
       labels:
         release: monitoring
 
-# =========================================================
-# SECRETS (managed by External Secrets Operator)
-# =========================================================
-secrets:
-  jwtSecret: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
-  redisPassword: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
-
-# =========================================================
-# INGRESS (BFF is behind Kong, own ingress disabled)
-# =========================================================
-bffIngress:
-  enabled: false
-  className: alb
-  annotations:
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
-  hosts:
-    - host: api.taskmanagement.dev
-      paths:
-        - path: /
-          pathType: Prefix
-  tls: []
+  extraVolumes: []
+  extraVolumeMounts: []

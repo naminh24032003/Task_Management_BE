@@ -1,0 +1,48 @@
+# =============================================================================
+# Notification Service - EKS Configuration
+# All values come from environment variables (K8s ConfigMap/Secret)
+# =============================================================================
+server:
+  http:
+    addr: ${HTTP_ADDR:0.0.0.0:9093}
+    timeout: ${SERVER_TIMEOUT:10s}
+
+data:
+  database:
+    source: ${MONGODB_URI}
+    name: ${MONGODB_DATABASE:notification_db}
+
+  redis:
+    addr: ${REDIS_HOST:redis-cluster.redis.svc.cluster.local}:${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD}
+
+  kafka:
+    brokers:
+      - ${KAFKA_BROKERS:kafka.kafka.svc.cluster.local:9092}
+    consumer_topic: ${KAFKA_CONSUMER_TOPIC:task.events}
+    producer_topic: ${KAFKA_PRODUCER_TOPIC:notification.events.v1}
+    consumer_group: ${KAFKA_CONSUMER_GROUP:notification-service}
+    worker_pool_size: ${KAFKA_WORKER_POOL_SIZE:10}
+    buffer_size: ${KAFKA_BUFFER_SIZE:200}
+    sasl:
+      enabled: ${KAFKA_SASL_ENABLED:true}
+      mechanism: ${KAFKA_SASL_MECHANISM:SCRAM-SHA-256}
+      username: ${KAFKA_SASL_USERNAME:kafka-user}
+      password: ${KAFKA_SASL_PASSWORD}
+
+  email:
+    enabled: ${EMAIL_ENABLED:false}
+    smtp_host: ${EMAIL_SMTP_HOST:smtp.gmail.com}
+    smtp_port: ${EMAIL_SMTP_PORT:587}
+    username: ${EMAIL_USERNAME:}
+    password: ${EMAIL_PASSWORD:}
+    from_address: ${EMAIL_FROM_ADDRESS:noreply@taskmanagement.com}
+    from_name: ${EMAIL_FROM_NAME:Task Management}
+
+  user_service:
+    address: ${USER_SERVICE_ADDR:user-service.dev.svc.cluster.local:50051}
+
+logging:
+  level: ${LOG_LEVEL:info}
+  format: ${LOG_FORMAT:json}
+  output: stdout

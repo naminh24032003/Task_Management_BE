@@ -1,37 +1,50 @@
+# =============================================================================
+# Task Service - EKS Configuration
+# All values come from environment variables (K8s ConfigMap/Secret)
+# =============================================================================
 server:
   http:
-    addr: 0.0.0.0:9091
-    timeout: 1s
+    addr: ${HTTP_ADDR:0.0.0.0:9091}
+    timeout: ${SERVER_TIMEOUT:10s}
   grpc:
-    addr: 0.0.0.0:50052
-    timeout: 1s
+    addr: ${GRPC_ADDR:0.0.0.0:50052}
+    timeout: ${SERVER_TIMEOUT:10s}
 
 data:
   database:
     driver: mongodb
-    # MongoDB Connection String for Task MongoDB Cluster in EKS
-    # This will be overridden by environment variables in production
-    # Format: mongodb://username:password@host:port/database?authSource=admin
     source: ${MONGODB_URI}
-    name: ${MONGODB_DATABASE:-task-service}
-    # Connection Pool
-    min_pool_size: 20
-    max_pool_size: 200
-    # Timeouts (in seconds)
-    connect_timeout: 10
-    server_selection_timeout: 30
-    socket_timeout: 60
-    # Read/Write Concerns
-    read_preference: primaryPreferred
-    read_concern: majority
-    write_concern: majority
+    name: ${MONGODB_DATABASE:task-service}
+    min_pool_size: ${MONGODB_POOL_MIN:10}
+    max_pool_size: ${MONGODB_POOL_MAX:100}
+    connect_timeout: ${MONGODB_CONNECT_TIMEOUT:10}
+    server_selection_timeout: ${MONGODB_SERVER_SELECTION_TIMEOUT:30}
+    socket_timeout: ${MONGODB_SOCKET_TIMEOUT:45}
+    read_preference: ${MONGODB_READ_PREFERENCE:primaryPreferred}
+    read_concern: ${MONGODB_READ_CONCERN:majority}
+    write_concern: ${MONGODB_WRITE_CONCERN:majority}
 
   redis:
-    addr: ${REDIS_ADDR}
+    addrs:
+      - ${REDIS_HOST:redis-cluster.redis.svc.cluster.local}:${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD}
+    key_prefix: "task-service:"
     read_timeout: 0.2s
     write_timeout: 0.2s
+    connect_timeout: 10s
+    max_retries: 3
+
+  kafka:
+    brokers:
+      - ${KAFKA_BROKERS:kafka.kafka.svc.cluster.local:9092}
+    topic_task_events: ${KAFKA_TOPIC_TASK_EVENTS:task.events}
+    sasl:
+      enabled: ${KAFKA_SASL_ENABLED:true}
+      mechanism: ${KAFKA_SASL_MECHANISM:SCRAM-SHA-256}
+      username: ${KAFKA_SASL_USERNAME:kafka-user}
+      password: ${KAFKA_SASL_PASSWORD}
 
 logging:
-  level: info
-  format: json
+  level: ${LOG_LEVEL:info}
+  format: ${LOG_FORMAT:json}
   output: stdout

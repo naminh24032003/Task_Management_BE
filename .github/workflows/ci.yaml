@@ -1,0 +1,121 @@
+# =============================================================================
+# CI Pipeline - Build & Test
+# =============================================================================
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  GO_VERSION: "1.23"
+  NODE_VERSION: "20"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Detect which services changed
+  # ---------------------------------------------------------------------------
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      user-service: ${{ steps.changes.outputs.user-service }}
+      task-service: ${{ steps.changes.outputs.task-service }}
+      notification-service: ${{ steps.changes.outputs.notification-service }}
+      bff-service: ${{ steps.changes.outputs.bff-service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            user-service:
+              - 'service/user-service/**'
+            task-service:
+              - 'service/task-service/**'
+              - 'shared/**'
+            notification-service:
+              - 'service/notification-service/**'
+              - 'shared/**'
+            bff-service:
+              - 'service/bff-service/**'
+
+  # ---------------------------------------------------------------------------
+  # Build & Test Go Services
+  # ---------------------------------------------------------------------------
+  go-services:
+    needs: changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - name: task-service
+            changed: ${{ needs.changes.outputs.task-service }}
+          - name: notification-service
+            changed: ${{ needs.changes.outputs.notification-service }}
+    steps:
+      - uses: actions/checkout@v4
+        if: matrix.service.changed == 'true'
+
+      - uses: actions/setup-go@v5
+        if: matrix.service.changed == 'true'
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: service/${{ matrix.service.name }}/go.sum
+
+      - name: Build
+        if: matrix.service.changed == 'true'
+        working-directory: service/${{ matrix.service.name }}
+        run: go build ./...
+
+      - name: Test
+        if: matrix.service.changed == 'true'
+        working-directory: service/${{ matrix.service.name }}
+        run: go test ./... -v -race -coverprofile=coverage.out
+
+      - name: Upload coverage
+        if: matrix.service.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.service.name }}
+          path: service/${{ matrix.service.name }}/coverage.out
+
+  # ---------------------------------------------------------------------------
+  # Build & Test Node.js Services
+  # ---------------------------------------------------------------------------
+  node-services:
+    needs: changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - name: user-service
+            changed: ${{ needs.changes.outputs.user-service }}
+          - name: bff-service
+            changed: ${{ needs.changes.outputs.bff-service }}
+    steps:
+      - uses: actions/checkout@v4
+        if: matrix.service.changed == 'true'
+
+      - uses: actions/setup-node@v4
+        if: matrix.service.changed == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: service/${{ matrix.service.name }}/package-lock.json
+
+      - name: Install dependencies
+        if: matrix.service.changed == 'true'
+        working-directory: service/${{ matrix.service.name }}
+        run: npm ci
+
+      - name: Build
+        if: matrix.service.changed == 'true'
+        working-directory: service/${{ matrix.service.name }}
+        run: npm run build
+
+      - name: Test
+        if: matrix.service.changed == 'true'
+        working-directory: service/${{ matrix.service.name }}
+        run: npm test --if-present

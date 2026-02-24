@@ -1,0 +1,156 @@
+# =============================================================================
+# User Service - EKS Environment Values
+# =============================================================================
+microservice:
+  nameOverride: user-service
+  replicaCount: 2
+
+  # =========================================================
+  # CONTAINER IMAGE (ECR)
+  # =========================================================
+  image:
+    # Replace <AWS_ACCOUNT_ID> and <REGION> with actual values
+    # Or use CI/CD to set --set image.repository=...
+    repository: "${ECR_REGISTRY}/task-management/user-service"
+    tag: "${IMAGE_TAG}"
+    pullPolicy: Always
+
+  # =========================================================
+  # ENVIRONMENT VARIABLES (ConfigMap) - Non-sensitive
+  # =========================================================
+  envVarsCM:
+    NODE_ENV: production
+    GRPC_URL: "0.0.0.0:50051"
+    METRICS_PORT: "9090"
+    # MongoDB Configuration
+    MONGODB_DATABASE: "userservice"
+    MONGODB_POOL_MIN: "10"
+    MONGODB_POOL_MAX: "100"
+    MONGODB_SOCKET_TIMEOUT: "45000"
+    MONGODB_SERVER_SELECTION_TIMEOUT: "30000"
+    # JWT Configuration
+    JWT_EXPIRES_IN: "3600"
+    # Redis Configuration
+    REDIS_HOST: "redis-cluster.redis.svc.cluster.local"
+    REDIS_PORT: "6379"
+    REDIS_KEY_PREFIX: "user-service:"
+    REDIS_CONNECT_TIMEOUT: "10000"
+    REDIS_COMMAND_TIMEOUT: "5000"
+    REDIS_MAX_RETRIES: "3"
+    # Kafka Configuration
+    KAFKA_BROKERS: "kafka.kafka.svc.cluster.local:9092"
+    KAFKA_USERNAME: "kafka-user"
+    KAFKA_CLIENT_ID: "user-service"
+    KAFKA_GROUP_ID: "user-service-group"
+    KAFKA_SASL_MECHANISM: "scram-sha-256"
+    # OpenTelemetry
+    OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector.tracing.svc.cluster.local:4317"
+    OTEL_SERVICE_NAME: "user-service"
+
+  # =========================================================
+  # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
+  # =========================================================
+  envVarsSecret: {}
+
+  envFromSecretRefs:
+    - user-service-secrets
+
+  # =========================================================
+  # CONTAINER PORTS
+  # =========================================================
+  containerPorts:
+    grpc:
+      port: 50051
+    http-metrics:
+      port: 9090
+
+  # =========================================================
+  # SERVICE CONFIGURATION
+  # =========================================================
+  service:
+    type: ClusterIP
+    ports:
+      grpc:
+        port: 50051
+        targetPort: grpc
+      http-metrics:
+        port: 9090
+        targetPort: http-metrics
+
+  # =========================================================
+  # RESOURCE REQUESTS & LIMITS (EKS - higher limits)
+  # =========================================================
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # =========================================================
+  # HEALTH PROBES
+  # =========================================================
+  livenessProbe: null
+  readinessProbe: null
+
+  # =========================================================
+  # AUTOSCALING (HPA)
+  # =========================================================
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  # =========================================================
+  # POD DISRUPTION BUDGET
+  # =========================================================
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  # =========================================================
+  # TOPOLOGY SPREAD
+  # =========================================================
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: user-service
+
+  # =========================================================
+  # MONITORING & ERROR TRACKING
+  # =========================================================
+  sentry:
+    enabled: false
+    dsn: ""
+    environment: production
+    tracesSampleRate: 0.1
+
+  metrics:
+    enabled: true
+    port: http-metrics
+    path: /metrics
+    interval: 30s
+    serviceMonitor:
+      labels:
+        release: monitoring
+
+  extraVolumes: []
+  extraVolumeMounts: []
+
+# =========================================================
+# SECRETS (managed by External Secrets Operator in production)
+# =========================================================
+secrets:
+  mongodbUri: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
+  jwtSecret: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
+  redisPassword: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
+  googleClientId: ""
+  googleClientSecret: ""
+  extra:
+    KAFKA_PASSWORD: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"

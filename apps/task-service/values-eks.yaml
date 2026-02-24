@@ -1,30 +1,49 @@
-# =========================================================
-# GLOBAL SETTINGS
-# =========================================================
+# =============================================================================
+# Task Service - EKS Environment Values
+# =============================================================================
 microservice:
   nameOverride: task-service
-  replicaCount: 3
+  replicaCount: 2
 
   # =========================================================
-  # CONTAINER IMAGE SETTINGS
+  # CONTAINER IMAGE (ECR)
   # =========================================================
   image:
-    repository: <AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/task-service
-    tag: latest
+    repository: "${ECR_REGISTRY}/task-management/task-service"
+    tag: "${IMAGE_TAG}"
     pullPolicy: Always
+
+  # Override CMD to load EKS config
+  args:
+    - "-conf"
+    - "./configs/config-eks.yaml"
 
   # =========================================================
   # ENVIRONMENT VARIABLES (ConfigMap)
   # =========================================================
   envVarsCM:
     GO_ENV: production
+    # MongoDB
+    MONGODB_DATABASE: "task-service"
+    # Redis
+    REDIS_HOST: "redis-cluster.redis.svc.cluster.local"
+    REDIS_PORT: "6379"
+    # OpenTelemetry
+    OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector.tracing.svc.cluster.local:4317"
+    OTEL_SERVICE_NAME: "task-service"
+    # Kafka
+    KAFKA_BROKERS: "kafka.kafka.svc.cluster.local:9092"
+    KAFKA_SASL_USERNAME: "kafka-user"
+    KAFKA_SASL_ENABLED: "true"
+    KAFKA_SASL_MECHANISM: "SCRAM-SHA-256"
 
   # =========================================================
   # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
   # =========================================================
   envVarsSecret:
-    MONGODB_URI: mongodb://root:MongoDB@Root2024Secure!@task-mongodb.mongodb-task.svc.cluster.local:27017/task-service?authSource=admin
-    REDIS_ADDR: redis-master.redis.svc.cluster.local:6379
+    MONGODB_URI: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
+    REDIS_PASSWORD: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
+    KAFKA_SASL_PASSWORD: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
 
   # =========================================================
   # CONTAINER PORTS
@@ -53,19 +72,18 @@ microservice:
   # =========================================================
   resources:
     requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
       cpu: 500m
       memory: 512Mi
-    limits:
-      cpu: 1000m
-      memory: 1Gi
 
   # =========================================================
   # HEALTH PROBES
   # =========================================================
   livenessProbe:
-    enabled: true
     httpGet:
-      path: /healthz
+      path: /health
       port: http-metrics
     initialDelaySeconds: 30
     periodSeconds: 10
@@ -73,9 +91,8 @@ microservice:
     failureThreshold: 3
 
   readinessProbe:
-    enabled: true
     httpGet:
-      path: /ready
+      path: /health
       port: http-metrics
     initialDelaySeconds: 10
     periodSeconds: 5
@@ -83,21 +100,38 @@ microservice:
     failureThreshold: 3
 
   # =========================================================
-  # AUTOSCALING
+  # AUTOSCALING (HPA)
   # =========================================================
   autoscaling:
     enabled: true
-    minReplicas: 3
-    maxReplicas: 10
+    minReplicas: 2
+    maxReplicas: 5
     targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 80
 
   # =========================================================
-  # MONITORING & ERROR TRACKING
+  # POD DISRUPTION BUDGET
+  # =========================================================
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  # =========================================================
+  # TOPOLOGY SPREAD
+  # =========================================================
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: task-service
+
+  # =========================================================
+  # MONITORING
   # =========================================================
   sentry:
-    enabled: true
-    dsn: "https://your-dsn@sentry.io/project"
+    enabled: false
+    dsn: ""
     environment: production
     tracesSampleRate: 0.1
 
@@ -110,18 +144,5 @@ microservice:
       labels:
         release: monitoring
 
-  # =========================================================
-  # VOLUMES - Mount config file for EKS environment
-  # =========================================================
-  extraVolumes:
-    - name: config
-      configMap:
-        name: task-service-app-config
-        items:
-          - key: config-eks.yaml
-            path: config.yaml
-
-  extraVolumeMounts:
-    - name: config
-      mountPath: /app/configs
-      readOnly: true
+  extraVolumes: []
+  extraVolumeMounts: []
