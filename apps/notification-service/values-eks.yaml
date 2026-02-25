@@ -84,11 +84,10 @@ microservice:
       memory: 512Mi
 
   # =========================================================
-  # HEALTH PROBES
+  # HEALTH PROBES (TCP - notification-service has no HTTP health endpoint)
   # =========================================================
   livenessProbe:
-    httpGet:
-      path: /health
+    tcpSocket:
       port: http-metrics
     initialDelaySeconds: 30
     periodSeconds: 10
@@ -96,8 +95,7 @@ microservice:
     failureThreshold: 3
 
   readinessProbe:
-    httpGet:
-      path: /ready
+    tcpSocket:
       port: http-metrics
     initialDelaySeconds: 10
     periodSeconds: 5
