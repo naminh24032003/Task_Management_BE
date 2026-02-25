@@ -120,7 +120,8 @@ jobs:
               echo "build=false" >> $GITHUB_OUTPUT
             fi
           else
-            echo "build=${{ needs.changes.outputs[matrix.service] || 'false' }}" >> $GITHUB_OUTPUT
+            # Always build all services to ensure SHA tag exists
+            echo "build=true" >> $GITHUB_OUTPUT
           fi
 
       - uses: actions/checkout@v4
@@ -243,34 +244,37 @@ jobs:
       - name: Deploy ${{ matrix.service }}
         if: steps.should-deploy.outputs.deploy == 'true'
         run: |
-          # Use short SHA if image exists, otherwise fallback to 'latest'
-          SHORT_SHA="${GITHUB_SHA::7}"
+          IMAGE_TAG="${GITHUB_SHA::7}"
+          echo "Deploying ${{ matrix.service }} with image tag: ${IMAGE_TAG}"
           
-          # Check if the image with this SHA exists in ECR
-          if aws ecr describe-images --repository-name task-management/${{ matrix.service }} --image-ids imageTag="${SHORT_SHA}" --region ${{ env.AWS_REGION }} 2>/dev/null; then
-            IMAGE_TAG="${SHORT_SHA}"
-            echo "Using image tag: ${IMAGE_TAG}"
-          else
-            IMAGE_TAG="latest"
-            echo "Image ${SHORT_SHA} not found, using: ${IMAGE_TAG}"
+          # Base helm args
+          HELM_ARGS=""
+          HELM_ARGS="${HELM_ARGS} --set microservice.image.repository=${{ env.ECR_REGISTRY }}/task-management/${{ matrix.service }}"
+          HELM_ARGS="${HELM_ARGS} --set microservice.image.tag=${IMAGE_TAG}"
+          HELM_ARGS="${HELM_ARGS} --set microservice.replicaCount=1"
+          HELM_ARGS="${HELM_ARGS} --set microservice.autoscaling.enabled=false"
+          HELM_ARGS="${HELM_ARGS} --set microservice.podDisruptionBudget.enabled=false"
+          HELM_ARGS="${HELM_ARGS} --set microservice.metrics.enabled=false"
+          HELM_ARGS="${HELM_ARGS} --set microservice.topologySpreadConstraints=null"
+          HELM_ARGS="${HELM_ARGS} --set secrets.jwtSecret=${{ secrets.JWT_SECRET }}"
+          HELM_ARGS="${HELM_ARGS} --set secrets.redisPassword=${{ secrets.REDIS_PASSWORD }}"
+          HELM_ARGS="${HELM_ARGS} --set secrets.mongodbUri=mongodb://appuser:${{ secrets.MONGODB_APP_PASSWORD }}@mongodb.dev.svc.cluster.local:27017/${{ matrix.service }}?authSource=${{ matrix.service }}"
+          HELM_ARGS="${HELM_ARGS} --set secrets.googleClientId=${{ secrets.GOOGLE_CLIENT_ID }}"
+          HELM_ARGS="${HELM_ARGS} --set secrets.googleClientSecret=${{ secrets.GOOGLE_CLIENT_SECRET }}"
+          HELM_ARGS="${HELM_ARGS} --set secrets.extra.KAFKA_PASSWORD="
+          
+          # task-service needs appConfig values for configmap template
+          if [ "${{ matrix.service }}" == "task-service" ]; then
+            HELM_ARGS="${HELM_ARGS} --set appConfig.mongodbUri=mongodb://appuser:${{ secrets.MONGODB_APP_PASSWORD }}@mongodb.dev.svc.cluster.local:27017/task-service?authSource=task-service"
+            HELM_ARGS="${HELM_ARGS} --set appConfig.mongodbDatabase=task-service"
+            HELM_ARGS="${HELM_ARGS} --set appConfig.redisAddr=redis-cluster.redis.svc.cluster.local:6379"
+            HELM_ARGS="${HELM_ARGS} --set appConfig.redisPassword=${{ secrets.REDIS_PASSWORD }}"
           fi
           
           helm upgrade --install ${{ matrix.service }} ./${{ matrix.chart }} \
             --namespace ${{ matrix.namespace }} \
             --values ${{ matrix.values }} \
-            --set microservice.image.repository="${{ env.ECR_REGISTRY }}/task-management/${{ matrix.service }}" \
-            --set microservice.image.tag="${IMAGE_TAG}" \
-            --set microservice.replicaCount=1 \
-            --set microservice.autoscaling.enabled=false \
-            --set microservice.podDisruptionBudget.enabled=false \
-            --set microservice.metrics.enabled=false \
-            --set microservice.topologySpreadConstraints=null \
-            --set secrets.jwtSecret="${{ secrets.JWT_SECRET }}" \
-            --set secrets.redisPassword="${{ secrets.REDIS_PASSWORD }}" \
-            --set secrets.mongodbUri="mongodb://appuser:${{ secrets.MONGODB_APP_PASSWORD }}@mongodb.dev.svc.cluster.local:27017/${{ matrix.service }}?authSource=${{ matrix.service }}" \
-            --set secrets.googleClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
-            --set secrets.googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-            --set 'secrets.extra.KAFKA_PASSWORD=' \
+            ${HELM_ARGS} \
             --timeout 8m \
             --wait
 
