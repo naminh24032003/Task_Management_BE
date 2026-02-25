@@ -55,11 +55,11 @@ microservice:
 
   # =========================================================
   # SENSITIVE ENVIRONMENT VARIABLES
+  # Populated via --set in CI/CD pipeline
   # =========================================================
-  envVarsSecret: {}
-
-  envFromSecretRefs:
-    - bff-service-secrets
+  envVarsSecret:
+    JWT_SECRET: "PLACEHOLDER"
+    REDIS_PASSWORD: "PLACEHOLDER"
 
   # =========================================================
   # CONTAINER PORTS

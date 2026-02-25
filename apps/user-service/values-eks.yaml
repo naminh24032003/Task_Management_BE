@@ -49,11 +49,15 @@ microservice:
 
   # =========================================================
   # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
+  # Populated via --set in CI/CD pipeline
   # =========================================================
-  envVarsSecret: {}
-
-  envFromSecretRefs:
-    - user-service-secrets
+  envVarsSecret:
+    MONGODB_URI: "PLACEHOLDER"
+    JWT_SECRET: "PLACEHOLDER"
+    REDIS_PASSWORD: "PLACEHOLDER"
+    GOOGLE_CLIENT_ID: "PLACEHOLDER"
+    GOOGLE_CLIENT_SECRET: "PLACEHOLDER"
+    KAFKA_PASSWORD: ""
 
   # =========================================================
   # CONTAINER PORTS

@@ -51,9 +51,9 @@ microservice:
   # SENSITIVE ENVIRONMENT VARIABLES (Secrets)
   # =========================================================
   envVarsSecret:
-    MONGODB_URI: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
-    REDIS_PASSWORD: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
-    KAFKA_SASL_PASSWORD: "PLACEHOLDER_OVERRIDE_VIA_EXTERNAL_SECRETS"
+    MONGODB_URI: "PLACEHOLDER"
+    REDIS_PASSWORD: "PLACEHOLDER"
+    KAFKA_SASL_PASSWORD: ""
 
   # =========================================================
   # CONTAINER PORTS
