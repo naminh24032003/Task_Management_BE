@@ -21,7 +21,6 @@ COPY service/bff-service/tsconfig*.json ./
 COPY service/bff-service/nest-cli.json ./
 
 # Install dependencies
-# Using npm install instead of npm ci since package-lock.json may be gitignored/out of sync
 RUN npm install
 
 # ─────────────────────────────────────────────────────────────
@@ -63,7 +62,7 @@ ENV APP_METRICS_PORT=9092
 
 # Copy package files and install production dependencies (as nestjs user)
 COPY --chown=nestjs:nodejs service/bff-service/package*.json ./
-RUN npm install --only=production && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copy built files
 COPY --chown=nestjs:nodejs --from=builder /build/service/bff-service/dist ./dist

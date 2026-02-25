@@ -39,7 +39,6 @@ WORKDIR /build/service/user-service
 COPY service/user-service/package*.json ./
 
 # Install full deps (including dev) - shared package is at correct relative path
-# Using npm install instead of npm ci since package-lock.json may be gitignored/out of sync
 RUN npm install
 
 # ─────────────────────────────────────────────────────────────
