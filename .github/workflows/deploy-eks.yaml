@@ -250,17 +250,19 @@ jobs:
             --values ${{ matrix.values }} \
             --set microservice.image.repository="${{ env.ECR_REGISTRY }}/task-management/${{ matrix.service }}" \
             --set microservice.image.tag="${IMAGE_TAG}" \
+            --set microservice.replicaCount=1 \
             --set microservice.autoscaling.enabled=false \
             --set microservice.podDisruptionBudget.enabled=false \
             --set microservice.metrics.enabled=false \
+            --set microservice.topologySpreadConstraints=null \
             --set secrets.jwtSecret="${{ secrets.JWT_SECRET }}" \
             --set secrets.redisPassword="${{ secrets.REDIS_PASSWORD }}" \
-            --set secrets.mongodbPassword="${{ secrets.MONGODB_APP_PASSWORD }}" \
+            --set secrets.mongodbUri="mongodb://appuser:${{ secrets.MONGODB_APP_PASSWORD }}@mongodb.dev.svc.cluster.local:27017/${{ matrix.service }}?authSource=${{ matrix.service }}" \
             --set secrets.googleClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
             --set secrets.googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-            --timeout 5m \
-            --wait \
-            --atomic
+            --set 'secrets.extra.KAFKA_PASSWORD=' \
+            --timeout 8m \
+            --wait
 
       - name: Verify deployment
         if: steps.should-deploy.outputs.deploy == 'true'
