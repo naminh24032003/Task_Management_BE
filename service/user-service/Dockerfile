@@ -47,7 +47,6 @@ RUN npm install
 # This replaces the sync-proto.sh script in Docker context
 # ─────────────────────────────────────────────────────────────
 COPY packages/proto/user ./proto/user
-COPY packages/proto/common ./proto/common
 COPY packages/proto/google ./proto/google
 
 # Copy source code (only src, not node_modules or other files)
