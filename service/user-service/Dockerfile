@@ -17,7 +17,7 @@ COPY packages/shared/ts/package*.json ./
 COPY packages/shared/ts/tsconfig.json ./
 
 # Install shared deps
-RUN npm ci
+RUN npm install
 
 # Copy shared source and build
 COPY packages/shared/ts/src ./src
