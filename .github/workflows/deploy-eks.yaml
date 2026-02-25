@@ -97,7 +97,7 @@ jobs:
         include:
           - service: user-service
             dockerfile: service/user-service/Dockerfile
-            context: ./service/user-service
+            context: .
           - service: task-service
             dockerfile: service/task-service/Dockerfile
             context: .
