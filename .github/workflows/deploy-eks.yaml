@@ -248,6 +248,8 @@ jobs:
           echo "Deploying ${{ matrix.service }} with image tag: ${IMAGE_TAG}"
           
           MONGODB_URI="mongodb://appuser:${{ secrets.MONGODB_APP_PASSWORD }}@mongodb.dev.svc.cluster.local:27017/${{ matrix.service }}?authSource=${{ matrix.service }}"
+          GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
+          GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}"
           
           # Base helm args (common to all services)
           HELM_ARGS=""
@@ -265,8 +267,8 @@ jobs:
               HELM_ARGS="${HELM_ARGS} --set-string microservice.envVarsSecret.MONGODB_URI=${MONGODB_URI}"
               HELM_ARGS="${HELM_ARGS} --set-string microservice.envVarsSecret.JWT_SECRET=${{ secrets.JWT_SECRET }}"
               HELM_ARGS="${HELM_ARGS} --set-string microservice.envVarsSecret.REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}"
-              HELM_ARGS="${HELM_ARGS} --set-string microservice.envVarsSecret.GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}"
-              HELM_ARGS="${HELM_ARGS} --set-string microservice.envVarsSecret.GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}"
+              HELM_ARGS="${HELM_ARGS} --set-string microservice.envVarsSecret.GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-placeholder-google-client-id}"
+              HELM_ARGS="${HELM_ARGS} --set-string microservice.envVarsSecret.GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-placeholder-google-client-secret}"
               HELM_ARGS="${HELM_ARGS} --set-string microservice.envVarsSecret.KAFKA_PASSWORD="
               ;;
             task-service)
