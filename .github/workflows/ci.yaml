@@ -108,7 +108,7 @@ jobs:
       - name: Install dependencies
         if: matrix.service.changed == 'true'
         working-directory: service/${{ matrix.service.name }}
-        run: npm ci
+        run: npm install
 
       - name: Build
         if: matrix.service.changed == 'true'
