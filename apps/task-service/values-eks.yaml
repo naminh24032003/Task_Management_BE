@@ -144,5 +144,11 @@ microservice:
       labels:
         release: monitoring
 
-  extraVolumes: []
-  extraVolumeMounts: []
+  extraVolumes:
+    - name: app-config
+      configMap:
+        name: task-service-app-config
+  extraVolumeMounts:
+    - name: app-config
+      mountPath: /app/configs/config-eks.yaml
+      subPath: config-eks.yaml
