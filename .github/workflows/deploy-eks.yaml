@@ -106,7 +106,7 @@ jobs:
             context: .
           - service: bff-service
             dockerfile: service/bff-service/Dockerfile
-            context: ./service/bff-service
+            context: .
     outputs:
       image-tag: ${{ steps.meta.outputs.version }}
     steps:
