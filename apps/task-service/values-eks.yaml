@@ -79,21 +79,19 @@ microservice:
       memory: 512Mi
 
   # =========================================================
-  # HEALTH PROBES
+  # HEALTH PROBES (TCP check - task-service has no /health endpoint)
   # =========================================================
   livenessProbe:
-    httpGet:
-      path: /health
-      port: http-metrics
+    tcpSocket:
+      port: grpc
     initialDelaySeconds: 30
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 3
 
   readinessProbe:
-    httpGet:
-      path: /health
-      port: http-metrics
+    tcpSocket:
+      port: grpc
     initialDelaySeconds: 10
     periodSeconds: 5
     timeoutSeconds: 3
