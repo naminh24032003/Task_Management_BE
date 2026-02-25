@@ -50,8 +50,8 @@ data:
     data:
       database:
         driver: mongodb
-        source: ${MONGODB_URI}
-        name: ${MONGODB_DATABASE:-task-service}
+        source: {{ .Values.appConfig.mongodbUri | default "mongodb://localhost:27017/task-service" }}
+        name: {{ .Values.appConfig.mongodbDatabase | default "task-service" }}
         min_pool_size: 20
         max_pool_size: 200
         connect_timeout: 10
@@ -62,9 +62,13 @@ data:
         write_concern: majority
 
       redis:
-        addr: ${REDIS_ADDR}
+        addrs:
+          - {{ .Values.appConfig.redisAddr | default "localhost:6379" }}
+        password: {{ .Values.appConfig.redisPassword | default "" }}
         read_timeout: 0.2s
         write_timeout: 0.2s
+        connect_timeout: 10s
+        max_retries: 3
 
     logging:
       level: info

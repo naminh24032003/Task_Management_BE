@@ -7,17 +7,19 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: rbac
 rules:
-  # Core resources - Kong cần đọc để discover backends
+  # Core resources
   - apiGroups: [""]
     resources:
       - services
       - endpoints
+      - pods
+      - nodes
     verbs:
       - get
       - list
       - watch
 
-  # Secrets - TLS certificates, credentials
+  # Secrets
   - apiGroups: [""]
     resources:
       - secrets
@@ -26,7 +28,7 @@ rules:
       - list
       - watch
 
-  # ConfigMaps - declarative config (nếu dùng)
+  # ConfigMaps
   - apiGroups: [""]
     resources:
       - configmaps
@@ -35,7 +37,7 @@ rules:
       - list
       - watch
 
-  # Events - Kong có thể ghi events (optional)
+  # Events
   - apiGroups: [""]
     resources:
       - events
@@ -43,7 +45,17 @@ rules:
       - create
       - patch
 
-  # Ingress resources - nếu bật Ingress Controller
+  # EndpointSlices (required by Kong ingress controller)
+  - apiGroups:
+      - discovery.k8s.io
+    resources:
+      - endpointslices
+    verbs:
+      - get
+      - list
+      - watch
+
+  # Ingress resources
   - apiGroups:
       - networking.k8s.io
     resources:
@@ -54,7 +66,7 @@ rules:
       - list
       - watch
 
-  # Ingress status - Kong update trạng thái ingress
+  # Ingress status
   - apiGroups:
       - networking.k8s.io
     resources:
@@ -62,21 +74,35 @@ rules:
     verbs:
       - update
 
-  # Kong CRDs - KongPlugin, KongIngress, KongConsumer, etc.
+  # Kong CRDs - ALL resources
   - apiGroups:
       - configuration.konghq.com
     resources:
-      - kongplugins
-      - kongclusterplugins
-      - kongconsumers
-      - kongcredentials
-      - kongingresses
+      - "*"
     verbs:
       - get
       - list
       - watch
 
-  # Gateway API (nếu dùng)
+  # Kong CRDs status
+  - apiGroups:
+      - configuration.konghq.com
+    resources:
+      - "*/status"
+    verbs:
+      - update
+
+  # CRD definitions (required for discovery)
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - get
+      - list
+      - watch
+
+  # Gateway API
   - apiGroups:
       - gateway.networking.k8s.io
     resources:
@@ -86,6 +112,7 @@ rules:
       - udproutes
       - tlsroutes
       - grpcroutes
+      - referencegrants
     verbs:
       - get
       - list

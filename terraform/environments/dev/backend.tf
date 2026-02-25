@@ -16,10 +16,10 @@
 
 terraform {
   backend "s3" {
-    bucket         = "task-management-terraform-state"
+    bucket         = "task-mgmt-tf-state-458108"
     key            = "environments/dev/terraform.tfstate"
     region         = "ap-southeast-1"
-    dynamodb_table = "task-management-terraform-locks"
+    dynamodb_table = "task-mgmt-tf-locks"
     encrypt        = true
   }
 }

@@ -1,5 +1,5 @@
 # =============================================================================
-# Dev Environment - Providers
+# Dev Environment - Providers (Phase 1: Core Infrastructure)
 # =============================================================================
 
 terraform {
@@ -9,14 +9,6 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.40"
-    }
-    helm = {
-      source  = "hashicorp/helm"
-      version = "~> 2.12"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.27"
     }
     tls = {
       source  = "hashicorp/tls"
@@ -33,32 +25,6 @@ provider "aws" {
       Project     = "task-management"
       Environment = var.environment
       ManagedBy   = "terraform"
-    }
-  }
-}
-
-# Configure Kubernetes provider with EKS cluster
-provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
-
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "aws"
-    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
-  }
-}
-
-# Configure Helm provider with EKS cluster
-provider "helm" {
-  kubernetes {
-    host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
-
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "aws"
-      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
     }
   }
 }

@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notification-service-app-config
+  namespace: dev
+data:
+  config-eks.yaml: |
+    server:
+      http:
+        addr: 0.0.0.0:9093
+        timeout: 10s
+
+    data:
+      database:
+        source: ${MONGODB_URI}
+        name: notification_db
+
+      redis:
+        addr: redis-cluster.redis.svc.cluster.local:6379
+        password: ${REDIS_PASSWORD}
+
+      kafka:
+        brokers:
+          - kafka.kafka.svc.cluster.local:9092
+        consumer_topic: task.events
+        producer_topic: notification.events.v1
+        consumer_group: notification-service
+        worker_pool_size: 10
+        buffer_size: 200
+        sasl:
+          enabled: false
+          mechanism: SCRAM-SHA-256
+          username: kafka-user
+          password: ""
+
+      email:
+        enabled: false
+        smtp_host: smtp.gmail.com
+        smtp_port: 587
+        username: ""
+        password: ""
+        from_address: noreply@taskmanagement.com
+        from_name: Task Management
+
+      user_service:
+        address: user-service.dev.svc.cluster.local:50051
+
+    logging:
+      level: info
+      format: json
+      output: stdout

@@ -1,0 +1,18 @@
+microservice:
+  image:
+    repository: "458108203578.dkr.ecr.ap-southeast-1.amazonaws.com/task-management/bff-service"
+    tag: "4ec4d93"
+  replicaCount: 1
+  envVarsCM:
+    REDIS_HOST: "redis-cluster.redis.svc.cluster.local"
+  autoscaling:
+    enabled: false
+  podDisruptionBudget:
+    enabled: false
+  topologySpreadConstraints: []
+  metrics:
+    enabled: false
+
+secrets:
+  jwtSecret: "eks-jwt-secret-key-task-management-2024"
+  redisPassword: "redisPass123"

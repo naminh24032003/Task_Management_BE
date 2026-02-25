@@ -8,4 +8,4 @@ appVersion: "1.0.0"
 dependencies:
   - name: microservice
     version: 0.1.0
-    repository: file://./charts
+    repository: "file://../../charts/microservice"

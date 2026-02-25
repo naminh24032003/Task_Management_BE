@@ -1,0 +1,52 @@
+# Kong EKS Override Values
+kong:
+  image:
+    repository: kong
+    tag: "3.6"
+
+  env:
+    database: "off"
+    log_level: info
+    untrusted_lua: "on"
+
+  ingressController:
+    enabled: true
+    installCRDs: false
+
+  admin:
+    enabled: true
+    type: ClusterIP
+    http:
+      enabled: true
+      servicePort: 8001
+
+  # LoadBalancer for EKS - AWS will create an ELB automatically
+  proxy:
+    enabled: true
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    http:
+      enabled: true
+      containerPort: 8000
+      servicePort: 80
+    tls:
+      enabled: false
+
+  serviceAccount:
+    create: true
+    name: "kong-kong"
+
+  deployment:
+    kong:
+      enabled: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

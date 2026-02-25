@@ -24,11 +24,6 @@ output "ecr_repository_urls" {
   value       = module.ecr.repository_urls
 }
 
-output "ecr_login_command" {
-  description = "Command to login to ECR"
-  value       = "aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${module.ecr.registry_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
-}
-
 # --- Network ---
 output "vpc_id" {
   description = "VPC ID"

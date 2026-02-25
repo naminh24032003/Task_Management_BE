@@ -1,0 +1,27 @@
+microservice:
+  image:
+    repository: "458108203578.dkr.ecr.ap-southeast-1.amazonaws.com/task-management/notification-service"
+    tag: "4ec4d93"
+  replicaCount: 1
+  envVarsSecret:
+    MONGODB_URI: "mongodb://appuser:appPass123@mongodb.dev.svc.cluster.local:27017/notification_db?authSource=notification_db"
+    REDIS_PASSWORD: "redisPass123"
+    KAFKA_SASL_PASSWORD: ""
+  envVarsCM:
+    REDIS_HOST: "redis-cluster.redis.svc.cluster.local"
+    REDIS_PORT: "6379"
+    KAFKA_SASL_ENABLED: "false"
+  autoscaling:
+    enabled: false
+  podDisruptionBudget:
+    enabled: false
+  topologySpreadConstraints: []
+  metrics:
+    enabled: false
+  extraVolumes:
+    - name: app-config
+      configMap:
+        name: notification-service-app-config
+  extraVolumeMounts:
+    - name: app-config
+      mountPath: /app/configs

@@ -46,34 +46,35 @@ FROM node:20-alpine AS production
 # Optional but recommended
 RUN apk add --no-cache dumb-init
 
+# Create non-root user FIRST (before copying files)
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001 -G nodejs
+
 WORKDIR /app
+RUN chown nestjs:nodejs /app
+
+# Switch to non-root user BEFORE install so all files are owned by nestjs
+USER nestjs
 
 # Set environment variables
 ENV NODE_ENV=production
 ENV APP_PORT=4000
 ENV APP_METRICS_PORT=9092
 
-# Copy package files and install production dependencies
-COPY service/bff-service/package*.json ./
+# Copy package files and install production dependencies (as nestjs user)
+COPY --chown=nestjs:nodejs service/bff-service/package*.json ./
 RUN npm install --only=production && npm cache clean --force
 
 # Copy built files
-COPY --from=builder /build/service/bff-service/dist ./dist
+COPY --chown=nestjs:nodejs --from=builder /build/service/bff-service/dist ./dist
 
 # ─────────────────────────────────────────────────────────────
 # RUNTIME PROTO: Copy from source of truth (packages/proto)
 # Same structure as local dev: ./proto/user/v1/user.proto
 # ─────────────────────────────────────────────────────────────
-COPY packages/proto/user ./proto/user
-COPY packages/proto/task ./proto/task
-COPY packages/proto/google ./proto/google
-
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001 -G nodejs
-
-# Change ownership
-RUN chown -R nestjs:nodejs /app
+COPY --chown=nestjs:nodejs packages/proto/user ./proto/user
+COPY --chown=nestjs:nodejs packages/proto/task ./proto/task
+COPY --chown=nestjs:nodejs packages/proto/google ./proto/google
 
 # Switch to non-root user
 USER nestjs

@@ -1,0 +1,142 @@
+# =============================================================================
+# Deploy Platform Services to EKS (one-time / manual)
+# =============================================================================
+# This deploys: MongoDB, Redis Cluster, Kafka, Kong Gateway
+# Run once to setup platform, or when platform config changes.
+#
+# Required GitHub Secrets:
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION,
+#   EKS_CLUSTER_NAME, MONGODB_ROOT_PASSWORD, MONGODB_APP_PASSWORD,
+#   REDIS_PASSWORD
+# =============================================================================
+name: Deploy Platform Services
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: "Component to deploy"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - mongodb
+          - redis
+          - kafka
+          - kong
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+
+jobs:
+  deploy-platform:
+    runs-on: ubuntu-latest
+    environment: prod_env
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ env.AWS_REGION }} \
+            --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: "3.14.0"
+
+      # ----- MongoDB -----
+      - name: Deploy MongoDB
+        if: inputs.component == 'all' || inputs.component == 'mongodb'
+        run: |
+          kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
+          
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+          
+          helm upgrade --install mongodb bitnami/mongodb \
+            --namespace dev \
+            --set architecture=standalone \
+            --set auth.rootPassword="${{ secrets.MONGODB_ROOT_PASSWORD }}" \
+            --set auth.databases[0]=user-service \
+            --set auth.databases[1]=task-service \
+            --set auth.databases[2]=notification-service \
+            --set auth.usernames[0]=appuser \
+            --set auth.usernames[1]=appuser \
+            --set auth.usernames[2]=appuser \
+            --set auth.passwords[0]="${{ secrets.MONGODB_APP_PASSWORD }}" \
+            --set auth.passwords[1]="${{ secrets.MONGODB_APP_PASSWORD }}" \
+            --set auth.passwords[2]="${{ secrets.MONGODB_APP_PASSWORD }}" \
+            --set persistence.size=8Gi \
+            --set tolerations[0].key=dedicated \
+            --set tolerations[0].value=platform \
+            --set tolerations[0].effect=NoSchedule \
+            --timeout 5m \
+            --wait
+
+      # ----- Redis Cluster -----
+      - name: Deploy Redis Cluster
+        if: inputs.component == 'all' || inputs.component == 'redis'
+        run: |
+          kubectl create namespace redis --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f scripts/redis-cluster-eks.yaml
+          
+          echo "Waiting for Redis pods..."
+          kubectl wait --for=condition=Ready pod -l app=redis-cluster -n redis --timeout=120s
+          
+          echo "Redis Cluster pods ready"
+
+      # ----- Kafka -----
+      - name: Deploy Kafka
+        if: inputs.component == 'all' || inputs.component == 'kafka'
+        run: |
+          kubectl create namespace kafka --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f scripts/kafka-eks.yaml
+          
+          echo "Waiting for Kafka pod..."
+          kubectl wait --for=condition=Ready pod -l app=kafka -n kafka --timeout=120s
+
+      # ----- Kong Gateway -----
+      - name: Deploy Kong
+        if: inputs.component == 'all' || inputs.component == 'kong'
+        run: |
+          kubectl create namespace kong --dry-run=client -o yaml | kubectl apply -f -
+          
+          helm repo add kong https://charts.konghq.com
+          helm repo update
+          
+          helm dependency build charts/platform/kong
+          
+          helm upgrade --install kong charts/platform/kong \
+            --namespace kong \
+            --values charts/platform/kong/values-eks.yaml \
+            --timeout 5m \
+            --wait
+
+      # ----- Verify -----
+      - name: Verify all platform services
+        run: |
+          echo "=== All Pods ==="
+          kubectl get pods --all-namespaces -l 'app in (mongodb,redis-cluster,kafka)' -o wide 2>/dev/null || true
+          kubectl get pods -n kong -o wide 2>/dev/null || true
+          
+          echo ""
+          echo "=== Services ==="
+          kubectl get svc -n dev 2>/dev/null || true
+          kubectl get svc -n redis 2>/dev/null || true
+          kubectl get svc -n kafka 2>/dev/null || true
+          kubectl get svc -n kong 2>/dev/null || true
+          
+          echo ""
+          echo "=== Kong External URL ==="
+          kubectl get svc kong-kong-proxy -n kong -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "Not available yet"

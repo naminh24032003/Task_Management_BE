@@ -8,7 +8,18 @@
 #   AWS_SECRET_ACCESS_KEY    - IAM user secret key
 #   AWS_REGION               - e.g. ap-southeast-1
 #   EKS_CLUSTER_NAME         - e.g. task-management-dev
-#   ECR_REGISTRY             - e.g. 123456789.dkr.ecr.ap-southeast-1.amazonaws.com
+#   ECR_REGISTRY             - e.g. 458108203578.dkr.ecr.ap-southeast-1.amazonaws.com
+#
+# Required GitHub Secrets for App Config:
+#   MONGODB_ROOT_PASSWORD    - MongoDB root password
+#   MONGODB_APP_PASSWORD     - MongoDB app user password
+#   REDIS_PASSWORD           - Redis cluster password
+#   JWT_SECRET               - JWT signing secret
+#   GOOGLE_CLIENT_ID         - Google OAuth client ID
+#   GOOGLE_CLIENT_SECRET     - Google OAuth client secret
+#   SMTP_HOST                - SMTP server host
+#   SMTP_USERNAME            - SMTP username
+#   SMTP_PASSWORD            - SMTP password
 # =============================================================================
 name: Deploy to EKS
 
@@ -28,11 +39,21 @@ on:
           - task-service
           - notification-service
           - bff-service
+      environment:
+        description: "Target environment"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  DEPLOY_NAMESPACE: dev
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -68,6 +89,7 @@ jobs:
   # ---------------------------------------------------------------------------
   build-push:
     runs-on: ubuntu-latest
+    environment: prod_env
     needs: [changes]
     if: always()
     strategy:
@@ -144,28 +166,47 @@ jobs:
   # ---------------------------------------------------------------------------
   deploy:
     runs-on: ubuntu-latest
+    environment: prod_env
     needs: [build-push]
     if: always() && needs.build-push.result != 'failure'
     strategy:
-      max-parallel: 2
+      max-parallel: 1
       matrix:
         include:
           - service: user-service
             namespace: dev
+            chart: apps/user-service
             values: apps/user-service/values-eks.yaml
           - service: task-service
             namespace: dev
+            chart: apps/task-service
             values: apps/task-service/values-eks.yaml
           - service: notification-service
             namespace: dev
+            chart: apps/notification-service
             values: apps/notification-service/values-eks.yaml
           - service: bff-service
             namespace: dev
+            chart: apps/bff-service
             values: apps/bff-service/values-eks.yaml
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check if should deploy
+        id: should-deploy
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            if [ "${{ github.event.inputs.service }}" == "all" ] || [ "${{ github.event.inputs.service }}" == "${{ matrix.service }}" ]; then
+              echo "deploy=true" >> $GITHUB_OUTPUT
+            else
+              echo "deploy=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "deploy=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Configure AWS credentials
+        if: steps.should-deploy.outputs.deploy == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -173,35 +214,59 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Configure kubectl
+        if: steps.should-deploy.outputs.deploy == 'true'
         run: |
           aws eks update-kubeconfig \
             --region ${{ env.AWS_REGION }} \
             --name ${{ env.EKS_CLUSTER_NAME }}
 
       - name: Install Helm
+        if: steps.should-deploy.outputs.deploy == 'true'
         uses: azure/setup-helm@v3
         with:
           version: "3.14.0"
 
+      - name: Build Helm dependencies
+        if: steps.should-deploy.outputs.deploy == 'true'
+        run: |
+          helm dependency build ${{ matrix.chart }}
+
       - name: Create namespace if not exists
+        if: steps.should-deploy.outputs.deploy == 'true'
         run: |
           kubectl create namespace ${{ matrix.namespace }} --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy ${{ matrix.service }}
+        if: steps.should-deploy.outputs.deploy == 'true'
         run: |
-          IMAGE_TAG="${{ github.sha }}"
+          IMAGE_TAG="${GITHUB_SHA::7}"
           
-          helm upgrade --install ${{ matrix.service }} ./charts/microservice \
+          helm upgrade --install ${{ matrix.service }} ./${{ matrix.chart }} \
             --namespace ${{ matrix.namespace }} \
             --values ${{ matrix.values }} \
             --set microservice.image.repository="${{ env.ECR_REGISTRY }}/task-management/${{ matrix.service }}" \
             --set microservice.image.tag="${IMAGE_TAG}" \
+            --set microservice.autoscaling.enabled=false \
+            --set microservice.podDisruptionBudget.enabled=false \
+            --set microservice.metrics.enabled=false \
+            --set secrets.jwtSecret="${{ secrets.JWT_SECRET }}" \
+            --set secrets.redisPassword="${{ secrets.REDIS_PASSWORD }}" \
+            --set secrets.mongodbPassword="${{ secrets.MONGODB_APP_PASSWORD }}" \
+            --set secrets.googleClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
+            --set secrets.googleClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
             --timeout 5m \
             --wait \
             --atomic
 
       - name: Verify deployment
+        if: steps.should-deploy.outputs.deploy == 'true'
         run: |
           kubectl rollout status deployment/${{ matrix.service }} \
             --namespace ${{ matrix.namespace }} \
             --timeout=300s
+          
+          echo "--- Pod Status ---"
+          kubectl get pods -n ${{ matrix.namespace }} -l app.kubernetes.io/name=${{ matrix.service }}
+          
+          echo "--- Recent Events ---"
+          kubectl get events -n ${{ matrix.namespace }} --sort-by='.lastTimestamp' | tail -5
