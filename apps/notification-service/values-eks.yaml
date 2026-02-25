@@ -87,6 +87,7 @@ microservice:
   # HEALTH PROBES (TCP - notification-service has no HTTP health endpoint)
   # =========================================================
   livenessProbe:
+    httpGet: null
     tcpSocket:
       port: http-metrics
     initialDelaySeconds: 30
@@ -95,6 +96,7 @@ microservice:
     failureThreshold: 3
 
   readinessProbe:
+    httpGet: null
     tcpSocket:
       port: http-metrics
     initialDelaySeconds: 10
