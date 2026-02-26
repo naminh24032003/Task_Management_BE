@@ -22,8 +22,8 @@ data:
     consumer_topic: ${KAFKA_CONSUMER_TOPIC:task.events}
     producer_topic: ${KAFKA_PRODUCER_TOPIC:notification.events.v1}
     consumer_group: ${KAFKA_CONSUMER_GROUP:notification-service}
-    worker_pool_size: ${KAFKA_WORKER_POOL_SIZE:10}
-    buffer_size: ${KAFKA_BUFFER_SIZE:200}
+    worker_pool_size: 10
+    buffer_size: 200
     sasl:
       enabled: ${KAFKA_SASL_ENABLED:true}
       mechanism: ${KAFKA_SASL_MECHANISM:SCRAM-SHA-256}
