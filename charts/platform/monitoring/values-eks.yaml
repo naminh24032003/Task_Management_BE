@@ -31,7 +31,12 @@ grafana:
     limits:
       cpu: 300m
       memory: 256Mi
-  
+
+  # Serve Grafana at /grafana sub-path (via Kong Gateway)
+  env:
+    GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+    GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+
   # Datasources: Prometheus + Loki + Tempo
   additionalDataSources:
     - name: Loki
@@ -93,6 +98,8 @@ prometheus:
                   values:
                     - m7i-flex.large
     retention: 3d
+    externalUrl: "/prometheus"
+    routePrefix: "/prometheus"
     resources:
       requests:
         cpu: 200m
@@ -206,6 +213,19 @@ prometheusOperator:
       operator: Equal
       value: platform
       effect: NoSchedule
+  admissionWebhooks:
+    patch:
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: platform
+          effect: NoSchedule
+    create:
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: platform
+          effect: NoSchedule
   resources:
     requests:
       cpu: 100m
