@@ -1,0 +1,53 @@
+# =============================================================================
+# Tempo - EKS Values (Single binary mode for distributed tracing)
+# NOTE: tolerations/affinity are at TOP LEVEL for grafana/tempo chart
+# =============================================================================
+
+# Top-level toleration so Tempo schedules on platform node
+tolerations:
+  - key: dedicated
+    operator: Equal
+    value: platform
+    effect: NoSchedule
+
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+            - key: node.kubernetes.io/instance-type
+              operator: In
+              values:
+                - m7i-flex.large
+
+tempo:
+  retention: 72h
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"
+  metricsGenerator:
+    enabled: true
+    remoteWriteUrl: "http://monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
+
+persistence:
+  enabled: true
+  size: 10Gi
+
+# Service for OTLP receivers
+service:
+  type: ClusterIP
+
+tempoQuery:
+  enabled: false
