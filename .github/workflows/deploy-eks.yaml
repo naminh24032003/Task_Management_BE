@@ -26,6 +26,11 @@ name: Deploy to EKS
 on:
   push:
     branches: [main]
+    # Only run when actual service code changes — skip docs/chart-only pushes
+    paths:
+      - "service/**"
+      - "packages/**"
+      - "apps/**"
   workflow_dispatch:
     inputs:
       service:
@@ -57,78 +62,104 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Detect changes (for push trigger)
+  # Detect which services changed / should deploy
+  # Works for BOTH push events and manual workflow_dispatch.
   # ---------------------------------------------------------------------------
   changes:
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
-      user-service: ${{ steps.changes.outputs.user-service }}
-      task-service: ${{ steps.changes.outputs.task-service }}
-      notification-service: ${{ steps.changes.outputs.notification-service }}
-      bff-service: ${{ steps.changes.outputs.bff-service }}
+      user-service: ${{ steps.resolve.outputs.user-service }}
+      task-service: ${{ steps.resolve.outputs.task-service }}
+      notification-service: ${{ steps.resolve.outputs.notification-service }}
+      bff-service: ${{ steps.resolve.outputs.bff-service }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: changes
+
+      # For push events: detect which service folders actually changed
+      - name: Detect changed paths (push only)
+        if: github.event_name == 'push'
+        uses: dorny/paths-filter@v3
+        id: paths
         with:
           filters: |
             user-service:
               - 'service/user-service/**'
             task-service:
               - 'service/task-service/**'
-              - 'shared/**'
+              - 'packages/**'
             notification-service:
               - 'service/notification-service/**'
-              - 'shared/**'
+              - 'packages/**'
             bff-service:
               - 'service/bff-service/**'
+              - 'packages/**'
+
+      # Resolve final per-service deploy flags for both trigger types
+      - name: Resolve deploy targets
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            INPUT="${{ github.event.inputs.service }}"
+            echo "Manual dispatch — service input: ${INPUT}"
+            for svc in user-service task-service notification-service bff-service; do
+              if [ "$INPUT" == "all" ] || [ "$INPUT" == "$svc" ]; then
+                echo "${svc}=true" >> $GITHUB_OUTPUT
+                echo "  DEPLOY: ${svc}"
+              else
+                echo "${svc}=false" >> $GITHUB_OUTPUT
+                echo "  skip:   ${svc}"
+              fi
+            done
+          else
+            echo "Push event — forwarding paths-filter results"
+            echo "user-service=${{ steps.paths.outputs.user-service }}" >> $GITHUB_OUTPUT
+            echo "task-service=${{ steps.paths.outputs.task-service }}" >> $GITHUB_OUTPUT
+            echo "notification-service=${{ steps.paths.outputs.notification-service }}" >> $GITHUB_OUTPUT
+            echo "bff-service=${{ steps.paths.outputs.bff-service }}" >> $GITHUB_OUTPUT
+            echo "  user-service:        ${{ steps.paths.outputs.user-service }}"
+            echo "  task-service:        ${{ steps.paths.outputs.task-service }}"
+            echo "  notification-service: ${{ steps.paths.outputs.notification-service }}"
+            echo "  bff-service:         ${{ steps.paths.outputs.bff-service }}"
+          fi
 
   # ---------------------------------------------------------------------------
   # Build & Push Docker Images to ECR
+  # Only builds services whose code actually changed.
   # ---------------------------------------------------------------------------
   build-push:
     runs-on: ubuntu-latest
     environment: prod_env
     needs: [changes]
-    if: always()
     strategy:
+      fail-fast: false
       matrix:
         include:
           - service: user-service
             dockerfile: service/user-service/Dockerfile
             context: .
+            changed: ${{ needs.changes.outputs.user-service }}
           - service: task-service
             dockerfile: service/task-service/Dockerfile
             context: .
+            changed: ${{ needs.changes.outputs.task-service }}
           - service: notification-service
             dockerfile: service/notification-service/Dockerfile
             context: .
+            changed: ${{ needs.changes.outputs.notification-service }}
           - service: bff-service
             dockerfile: service/bff-service/Dockerfile
             context: .
-    outputs:
-      image-tag: ${{ steps.meta.outputs.version }}
+            changed: ${{ needs.changes.outputs.bff-service }}
     steps:
-      - name: Check if should build
-        id: should-build
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            if [ "${{ github.event.inputs.service }}" == "all" ] || [ "${{ github.event.inputs.service }}" == "${{ matrix.service }}" ]; then
-              echo "build=true" >> $GITHUB_OUTPUT
-            else
-              echo "build=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            # Always build all services to ensure SHA tag exists
-            echo "build=true" >> $GITHUB_OUTPUT
-          fi
+      - name: Skip unchanged service
+        if: matrix.changed != 'true'
+        run: echo "⏭ ${{ matrix.service }} — no changes, skipping build"
 
       - uses: actions/checkout@v4
-        if: steps.should-build.outputs.build == 'true'
+        if: matrix.changed == 'true'
 
       - name: Configure AWS credentials
-        if: steps.should-build.outputs.build == 'true'
+        if: matrix.changed == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -136,16 +167,16 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        if: steps.should-build.outputs.build == 'true'
+        if: matrix.changed == 'true'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Set up Docker Buildx
-        if: steps.should-build.outputs.build == 'true'
+        if: matrix.changed == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Docker meta
-        if: steps.should-build.outputs.build == 'true'
+        if: matrix.changed == 'true'
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -159,62 +190,67 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push
-        if: steps.should-build.outputs.build == 'true'
+        if: matrix.changed == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build summary
+        if: matrix.changed == 'true'
+        run: |
+          echo "### ✅ Built ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image tag:** \`${GITHUB_SHA::7}\`" >> $GITHUB_STEP_SUMMARY
+
   # ---------------------------------------------------------------------------
   # Deploy to EKS via Helm
+  # Only deploys services that were actually built (changed).
   # ---------------------------------------------------------------------------
   deploy:
     runs-on: ubuntu-latest
     environment: prod_env
-    needs: [build-push]
-    if: always() && needs.build-push.result != 'failure'
+    needs: [changes, build-push]
+    if: needs.build-push.result != 'failure'
     strategy:
       max-parallel: 1
+      fail-fast: false
       matrix:
         include:
           - service: user-service
             namespace: dev
             chart: apps/user-service
             values: apps/user-service/values-eks.yaml
+            changed: ${{ needs.changes.outputs.user-service }}
           - service: task-service
             namespace: dev
             chart: apps/task-service
             values: apps/task-service/values-eks.yaml
+            changed: ${{ needs.changes.outputs.task-service }}
           - service: notification-service
             namespace: dev
             chart: apps/notification-service
             values: apps/notification-service/values-eks.yaml
+            changed: ${{ needs.changes.outputs.notification-service }}
           - service: bff-service
             namespace: dev
             chart: apps/bff-service
             values: apps/bff-service/values-eks.yaml
+            changed: ${{ needs.changes.outputs.bff-service }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Skip unchanged service
+        if: matrix.changed != 'true'
+        run: echo "⏭ ${{ matrix.service }} — no changes, skipping deploy"
 
-      - name: Check if should deploy
-        id: should-deploy
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            if [ "${{ github.event.inputs.service }}" == "all" ] || [ "${{ github.event.inputs.service }}" == "${{ matrix.service }}" ]; then
-              echo "deploy=true" >> $GITHUB_OUTPUT
-            else
-              echo "deploy=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "deploy=true" >> $GITHUB_OUTPUT
-          fi
+      - uses: actions/checkout@v4
+        if: matrix.changed == 'true'
 
       - name: Configure AWS credentials
-        if: steps.should-deploy.outputs.deploy == 'true'
+        if: matrix.changed == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -222,30 +258,29 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Configure kubectl
-        if: steps.should-deploy.outputs.deploy == 'true'
+        if: matrix.changed == 'true'
         run: |
           aws eks update-kubeconfig \
             --region ${{ env.AWS_REGION }} \
             --name ${{ env.EKS_CLUSTER_NAME }}
 
       - name: Install Helm
-        if: steps.should-deploy.outputs.deploy == 'true'
+        if: matrix.changed == 'true'
         uses: azure/setup-helm@v3
         with:
           version: "3.14.0"
 
       - name: Build Helm dependencies
-        if: steps.should-deploy.outputs.deploy == 'true'
-        run: |
-          helm dependency build ${{ matrix.chart }}
+        if: matrix.changed == 'true'
+        run: helm dependency build ${{ matrix.chart }}
 
       - name: Create namespace if not exists
-        if: steps.should-deploy.outputs.deploy == 'true'
+        if: matrix.changed == 'true'
         run: |
           kubectl create namespace ${{ matrix.namespace }} --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy ${{ matrix.service }}
-        if: steps.should-deploy.outputs.deploy == 'true'
+        if: matrix.changed == 'true'
         run: |
           IMAGE_TAG="${GITHUB_SHA::7}"
           echo "Deploying ${{ matrix.service }} with image tag: ${IMAGE_TAG}"
@@ -324,14 +359,16 @@ jobs:
           done
 
       - name: Verify deployment
-        if: steps.should-deploy.outputs.deploy == 'true'
+        if: matrix.changed == 'true'
         run: |
           kubectl rollout status deployment/${{ matrix.service }} \
             --namespace ${{ matrix.namespace }} \
             --timeout=300s
-          
+
           echo "--- Pod Status ---"
-          kubectl get pods -n ${{ matrix.namespace }} -l app.kubernetes.io/name=${{ matrix.service }}
-          
-          echo "--- Recent Events ---"
-          kubectl get events -n ${{ matrix.namespace }} --sort-by='.lastTimestamp' | tail -5
+          kubectl get pods -n ${{ matrix.namespace }} -l app.kubernetes.io/name=${{ matrix.service }} \
+            -o custom-columns='NAME:.metadata.name,STATUS:.status.phase,READY:.status.containerStatuses[0].ready,IMAGE:.spec.containers[0].image'
+
+          echo "### ✅ Deployed ${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image tag:** \`${GITHUB_SHA::7}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Namespace:** \`${{ matrix.namespace }}\`" >> $GITHUB_STEP_SUMMARY
