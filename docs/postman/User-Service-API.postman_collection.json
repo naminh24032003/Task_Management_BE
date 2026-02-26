@@ -2,14 +2,14 @@
   "info": {
     "_postman_id": "user-service-api-collection",
     "name": "User Service API",
-    "description": "API collection for User Service - Create and Get User APIs\n\nFlow: Kong -> gRPC Gateway -> User Service -> MongoDB",
+    "description": "⚠️ MINIKUBE ONLY - REST endpoints not exposed on AWS EKS\n\nOn AWS EKS, use BFF-GraphQL-API collection instead (all auth via GraphQL /graphql)\n\nThis collection calls REST endpoints (/v1/auth/login etc.) which are only available on local minikube via gRPC-gateway.\n\nFlow: Kong -> gRPC Gateway -> User Service -> MongoDB",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
       "value": "http://192.168.49.2:30080",
-      "description": "Base URL for API (Update with your minikube IP)"
+      "description": "⚠️ Minikube IP only - NOT for AWS EKS. On EKS use BFF-GraphQL-API collection."
     },
     {
       "key": "tenantId",

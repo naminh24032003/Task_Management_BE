@@ -2,14 +2,14 @@
   "info": {
     "_postman_id": "bff-graphql-api-collection",
     "name": "BFF GraphQL API",
-    "description": "GraphQL API collection for BFF Service\n\nArchitecture: Kong -> BFF (GraphQL) -> User/Task Service (gRPC)\n\nAll requests go through the /graphql endpoint.\n\nTested and verified on Minikube.",
+    "description": "GraphQL API collection for BFF Service\n\nArchitecture: Kong NLB -> BFF (GraphQL) -> User/Task Service (gRPC)\n\n✅ All requests go through: POST /graphql\n\n🌐 AWS EKS URL: http://a6671e74f33cd4af2be19ebf89874aa8-6be48b89dec3f532.elb.ap-southeast-1.amazonaws.com/graphql\n\n💻 Local Minikube: http://localhost:18080/graphql (kubectl port-forward -n kong svc/kong-kong-proxy 18080:80)\n\n📋 Flow:\n1. Run Register → creates user\n2. Run Login → auto-saves accessToken + refreshToken to collection variables\n3. All authenticated requests auto-use {{accessToken}} as Bearer token",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:18080",
-      "description": "Base URL - use kubectl port-forward -n kong svc/kong-kong-proxy 18080:80"
+      "value": "http://a6671e74f33cd4af2be19ebf89874aa8-6be48b89dec3f532.elb.ap-southeast-1.amazonaws.com",
+      "description": "AWS EKS NLB URL. For local minikube use: http://localhost:18080 (kubectl port-forward -n kong svc/kong-kong-proxy 18080:80)"
     },
     {
       "key": "tenantId",

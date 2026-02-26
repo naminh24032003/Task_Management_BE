@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Task Service API",
-    "description": "Task Management Service API - ClickUp Style\n\nBase URL: http://localhost:9091\n\n## Task Status Values:\n- 0: UNSPECIFIED\n- 1: OPEN (To Do)\n- 2: IN_PROGRESS\n- 3: BLOCKED\n- 4: REVIEW\n- 5: COMPLETE\n- 6: CLOSED\n- 7: CANCELLED\n\n## Task Priority Values:\n- 0: UNSPECIFIED\n- 1: LOW\n- 2: NORMAL\n- 3: HIGH\n- 4: URGENT",
+    "description": "⚠️ MINIKUBE ONLY - gRPC REST gateway not exposed on AWS EKS\n\nOn AWS EKS, use Task-Management-GraphQL collection instead (all tasks via /graphql)\n\nBase URL: http://localhost:9091 (kubectl port-forward svc/task-service 9091:9091 -n dev)\n\n## Task Status Values:\n- 0: UNSPECIFIED\n- 1: OPEN (To Do)\n- 2: IN_PROGRESS\n- 3: BLOCKED\n- 4: REVIEW\n- 5: COMPLETE\n- 6: CLOSED\n- 7: CANCELLED\n\n## Task Priority Values:\n- 0: UNSPECIFIED\n- 1: LOW\n- 2: NORMAL\n- 3: HIGH\n- 4: URGENT",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [

@@ -1,10 +1,32 @@
- {
+{
     "info": {
         "_postman_id": "a1b2c3d4-e5f6-4a5b-b6c7-d8e9f0a1b2c3",
         "name": "Task Management - GraphQL API",
-        "description": "Collection for Task Management Service via BFF GraphQL",
+        "description": "Collection for Task Management Service via BFF GraphQL\n\n✅ All requests go through: POST /graphql\n\n🌐 AWS EKS URL (set KONG_URL variable):\nhttp://a6671e74f33cd4af2be19ebf89874aa8-6be48b89dec3f532.elb.ap-southeast-1.amazonaws.com\n\n💻 Local Minikube: http://localhost:18080\n\n📋 Flow: Login via BFF-GraphQL-API collection first → copy accessToken → paste into x-user-id header requests here",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
+    "variable": [
+        {
+            "key": "KONG_URL",
+            "value": "http://a6671e74f33cd4af2be19ebf89874aa8-6be48b89dec3f532.elb.ap-southeast-1.amazonaws.com",
+            "description": "AWS EKS NLB URL. For local minikube use: http://localhost:18080"
+        },
+        {
+            "key": "accessToken",
+            "value": "",
+            "description": "JWT access token from login (copy from BFF-GraphQL-API collection after Login)"
+        },
+        {
+            "key": "tenantId",
+            "value": "tenant-1",
+            "description": "Tenant ID"
+        },
+        {
+            "key": "taskId",
+            "value": "",
+            "description": "Task ID (auto-set after create task)"
+        }
+    ],
     "item": [
         {
             "name": "System",
