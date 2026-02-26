@@ -127,8 +127,9 @@ Event-driven notification dispatcher.
 | Capability | Details |
 |---|---|
 | **Transport** | Kafka consumer (triggers), HTTP (metrics) |
+| **Concurrency** | Custom Worker Pool pattern with buffered channels for high throughput |
 | **Delivery channels** | Email (SMTP), Push (FCM/APNs), In-App |
-| **Resilience** | Redis-backed delivery status, retry logic, circuit breaker |
+| **Resilience** | Circuit breaker on message handling, exponential backoff retries, Redis-backed status |
 | **Templates** | Dynamic Golang templates per notification type |
 
 ### 🟠 BFF Service — `service/bff-service` (NestJS / TypeScript)
