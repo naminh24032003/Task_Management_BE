@@ -33,7 +33,7 @@ data:
   email:
     enabled: ${EMAIL_ENABLED:false}
     smtp_host: ${EMAIL_SMTP_HOST:smtp.gmail.com}
-    smtp_port: ${EMAIL_SMTP_PORT:587}
+    smtp_port: 587
     username: ${EMAIL_USERNAME:}
     password: ${EMAIL_PASSWORD:}
     from_address: ${EMAIL_FROM_ADDRESS:noreply@taskmanagement.com}
