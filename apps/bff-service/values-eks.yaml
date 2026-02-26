@@ -23,8 +23,8 @@ microservice:
     APP_PORT: "4000"
     APP_METRICS_PORT: "9092"
 
-    # Auth mode: behind Kong
-    AUTH_MODE: "kong"
+    # Auth mode: standalone (BFF validates JWT directly; Kong marks /graphql as public so no header injection)
+    AUTH_MODE: "standalone"
 
     # GraphQL - disabled in production
     GRAPHQL_PLAYGROUND: "false"
