@@ -1,658 +1,396 @@
-{
+﻿{
   "info": {
-    "_postman_id": "bff-graphql-api-collection",
-    "name": "BFF GraphQL API",
-    "description": "GraphQL API collection for BFF Service\n\nArchitecture: Kong NLB -> BFF (GraphQL) -> User/Task Service (gRPC)\n\n✅ All requests go through: POST /graphql\n\n🌐 AWS EKS URL: http://a6671e74f33cd4af2be19ebf89874aa8-6be48b89dec3f532.elb.ap-southeast-1.amazonaws.com/graphql\n\n💻 Local Minikube: http://localhost:18080/graphql (kubectl port-forward -n kong svc/kong-kong-proxy 18080:80)\n\n📋 Flow:\n1. Run Register → creates user\n2. Run Login → auto-saves accessToken + refreshToken to collection variables\n3. All authenticated requests auto-use {{accessToken}} as Bearer token",
+    "_postman_id": "bff-graphql-api-collection-v2",
+    "name": "BFF GraphQL API - EKS",
+    "description": "Complete GraphQL API collection for Task Management BFF Service\n\n\ud83c\udf10 AWS EKS: http://a6671e74f33cd4af2be19ebf89874aa8-6be48b89dec3f532.elb.ap-southeast-1.amazonaws.com\n\ud83d\udcbb Local Minikube: http://localhost:18080\n\n\ud83d\udccb Flow:\n1. Run Login \u2192 auto-saves accessToken + refreshToken + userId\n2. Run Create Task \u2192 auto-saves taskId\n3. All authenticated requests use {{accessToken}} Bearer token automatically\n\n\ud83d\udd11 Test account: devtest@example.com / Test@123456 / tenant-1",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://a6671e74f33cd4af2be19ebf89874aa8-6be48b89dec3f532.elb.ap-southeast-1.amazonaws.com",
-      "description": "AWS EKS NLB URL. For local minikube use: http://localhost:18080 (kubectl port-forward -n kong svc/kong-kong-proxy 18080:80)"
-    },
-    {
-      "key": "tenantId",
-      "value": "tenant-1",
-      "description": "Tenant ID for multi-tenancy"
-    },
-    {
-      "key": "accessToken",
-      "value": "",
-      "description": "JWT Access Token (auto-set after login/register)"
-    },
-    {
-      "key": "refreshToken",
-      "value": "",
-      "description": "JWT Refresh Token (auto-set after login/register)"
-    },
-    {
-      "key": "userId",
-      "value": "",
-      "description": "User ID (auto-set after login/register)"
-    }
+    { "key": "baseUrl", "value": "http://a6671e74f33cd4af2be19ebf89874aa8-6be48b89dec3f532.elb.ap-southeast-1.amazonaws.com", "description": "EKS NLB URL. For local minikube: http://localhost:18080" },
+    { "key": "tenantId", "value": "tenant-1" },
+    { "key": "accessToken", "value": "", "description": "Auto-set after Login" },
+    { "key": "refreshToken", "value": "", "description": "Auto-set after Login" },
+    { "key": "userId", "value": "", "description": "Auto-set after Login" },
+    { "key": "taskId", "value": "", "description": "Auto-set after Create Task" }
   ],
   "item": [
     {
-      "name": "Auth (Public)",
+      "name": "1. Auth",
       "item": [
         {
-          "name": "Register",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    var jsonData = pm.response.json();",
-                  "    if (jsonData.data && jsonData.data.register) {",
-                  "        var register = jsonData.data.register;",
-                  "        if (register.user) {",
-                  "            pm.collectionVariables.set('userId', register.user.id);",
-                  "        }",
-                  "        pm.test('User registered successfully', function () {",
-                  "            pm.expect(register.success).to.be.true;",
-                  "            pm.expect(register.user).to.be.an('object');",
-                  "            pm.expect(register.user.tenantId).to.equal(pm.collectionVariables.get('tenantId'));",
-                  "        });",
-                  "    }",
-                  "    if (jsonData.errors) {",
-                  "        pm.test('Registration failed', function() {",
-                  "            pm.expect.fail(jsonData.errors[0].message);",
-                  "        });",
-                  "    }",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "mutation Register($input: RegisterInput!) {\n  register(input: $input) {\n    user {\n      id\n      tenantId\n      email\n      firstName\n      lastName\n      displayName\n      status\n      roleIds\n    }\n    success\n    message\n  }\n}",
-                "variables": "{\n  \"input\": {\n    \"tenantId\": \"{{tenantId}}\",\n    \"email\": \"test@example.com\",\n    \"password\": \"Test@123456\",\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\"\n  }\n}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "Register a new user account.\n\nPassword requirements:\n- Minimum 8 characters\n- At least 1 uppercase letter\n- At least 1 lowercase letter\n- At least 1 number\n- At least 1 special character"
-          },
-          "response": []
-        },
-        {
           "name": "Login",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    var jsonData = pm.response.json();",
-                  "    if (jsonData.data && jsonData.data.login) {",
-                  "        var login = jsonData.data.login;",
-                  "        if (login.user) {",
-                  "            pm.collectionVariables.set('userId', login.user.id);",
-                  "        }",
-                  "        if (login.tokens) {",
-                  "            pm.collectionVariables.set('accessToken', login.tokens.accessToken);",
-                  "            pm.collectionVariables.set('refreshToken', login.tokens.refreshToken);",
-                  "        }",
-                  "        pm.test('Login successful', function () {",
-                  "            pm.expect(login.user).to.be.an('object');",
-                  "            pm.expect(login.user.tenantId).to.equal(pm.collectionVariables.get('tenantId'));",
-                  "            pm.expect(login.tokens).to.be.an('object');",
-                  "            pm.expect(login.tokens.accessToken).to.be.a('string');",
-                  "        });",
-                  "    }",
-                  "    if (jsonData.errors) {",
-                  "        pm.test('Login failed', function() {",
-                  "            pm.expect.fail(jsonData.errors[0].message);",
-                  "        });",
-                  "    }",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data && json.data.login) {",
+            "    var login = json.data.login;",
+            "    pm.collectionVariables.set('accessToken', login.tokens.accessToken);",
+            "    pm.collectionVariables.set('refreshToken', login.tokens.refreshToken);",
+            "    pm.collectionVariables.set('userId', login.user.id);",
+            "    pm.test('Login OK', () => { pm.expect(login.tokens.accessToken).to.be.a('string').and.not.empty; });",
+            "    console.log('Tokens saved. userId:', login.user.id);",
+            "}",
+            "if (json.errors) { pm.test('Login failed: ' + json.errors[0].message, () => pm.expect.fail()); }"
+          ]}}],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    user {\n      id\n      tenantId\n      email\n      firstName\n      lastName\n      displayName\n      status\n      roleIds\n      createdAt\n      updatedAt\n      lastLoginAt\n    }\n    tokens {\n      accessToken\n      refreshToken\n      expiresIn\n    }\n  }\n}",
-                "variables": "{\n  \"input\": {\n    \"tenantId\": \"{{tenantId}}\",\n    \"email\": \"test@example.com\",\n    \"password\": \"Test@123456\"\n  }\n}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "Login with email and password.\n\nReturns:\n- user: User object with tenantId, email, timestamps, etc.\n- tokens: accessToken, refreshToken, expiresIn (3600 seconds)"
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    tokens {\n      accessToken\n      refreshToken\n      expiresIn\n    }\n    user {\n      id\n      tenantId\n      email\n      firstName\n      lastName\n      displayName\n      status\n      roleIds\n    }\n  }\n}",
+              "variables": "{\n  \"input\": {\n    \"tenantId\": \"{{tenantId}}\",\n    \"email\": \"devtest@example.com\",\n    \"password\": \"Test@123456\"\n  }\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] },
+            "description": "Login. Auto-saves accessToken, refreshToken, userId.\n\nResponse shape: data.login.tokens.accessToken (NOT data.login.accessToken)"
           },
           "response": []
         },
         {
-          "name": "Google Login",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    var jsonData = pm.response.json();",
-                  "    if (jsonData.data && jsonData.data.googleLogin) {",
-                  "        var login = jsonData.data.googleLogin;",
-                  "        if (login.user) {",
-                  "            pm.collectionVariables.set('userId', login.user.id);",
-                  "        }",
-                  "        if (login.tokens) {",
-                  "            pm.collectionVariables.set('accessToken', login.tokens.accessToken);",
-                  "            pm.collectionVariables.set('refreshToken', login.tokens.refreshToken);",
-                  "        }",
-                  "    }",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Register",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data && json.data.register && json.data.register.user) {",
+            "    pm.collectionVariables.set('userId', json.data.register.user.id);",
+            "    pm.test('Register OK', () => pm.expect(json.data.register.success).to.be.true);",
+            "}",
+            "if (json.errors) { pm.test('Register failed: ' + json.errors[0].message, () => pm.expect.fail()); }"
+          ]}}],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "mutation GoogleLogin($input: GoogleLoginInput!) {\n  googleLogin(input: $input) {\n    user {\n      id\n      tenantId\n      email\n      firstName\n      lastName\n      displayName\n      status\n      roleIds\n    }\n    tokens {\n      accessToken\n      refreshToken\n      expiresIn\n    }\n    isNewUser\n  }\n}",
-                "variables": "{\n  \"input\": {\n    \"tenantId\": \"{{tenantId}}\",\n    \"idToken\": \"YOUR_GOOGLE_ID_TOKEN_HERE\"\n  }\n}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "Login with Google OAuth.\n\nRequires a valid Google ID token obtained from Google Sign-In.\n\nReturns isNewUser: true if this is a new account created via OAuth."
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "mutation Register($input: RegisterInput!) {\n  register(input: $input) {\n    user {\n      id\n      tenantId\n      email\n      firstName\n      lastName\n      status\n    }\n    success\n    message\n  }\n}",
+              "variables": "{\n  \"input\": {\n    \"tenantId\": \"{{tenantId}}\",\n    \"email\": \"newuser@example.com\",\n    \"password\": \"Test@123456\",\n    \"firstName\": \"New\",\n    \"lastName\": \"User\"\n  }\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] }
           },
           "response": []
         },
         {
           "name": "Refresh Token",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    var jsonData = pm.response.json();",
-                  "    if (jsonData.data && jsonData.data.refreshToken) {",
-                  "        var tokens = jsonData.data.refreshToken;",
-                  "        pm.collectionVariables.set('accessToken', tokens.accessToken);",
-                  "        pm.collectionVariables.set('refreshToken', tokens.refreshToken);",
-                  "        pm.test('Token refreshed successfully', function () {",
-                  "            pm.expect(tokens.accessToken).to.be.a('string');",
-                  "            pm.expect(tokens.refreshToken).to.be.a('string');",
-                  "            pm.expect(tokens.expiresIn).to.equal(3600);",
-                  "        });",
-                  "    }",
-                  "    if (jsonData.errors) {",
-                  "        pm.test('Refresh failed', function() {",
-                  "            pm.expect.fail(jsonData.errors[0].message);",
-                  "        });",
-                  "    }",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data && json.data.refreshToken) {",
+            "    pm.collectionVariables.set('accessToken', json.data.refreshToken.accessToken);",
+            "    pm.collectionVariables.set('refreshToken', json.data.refreshToken.refreshToken);",
+            "    pm.test('Refresh OK', () => pm.expect(json.data.refreshToken.accessToken).to.be.a('string'));",
+            "}",
+            "if (json.errors) { pm.test('Refresh failed: ' + json.errors[0].message, () => pm.expect.fail()); }"
+          ]}}],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "mutation RefreshToken($refreshToken: String!) {\n  refreshToken(refreshToken: $refreshToken) {\n    accessToken\n    refreshToken\n    expiresIn\n  }\n}",
-                "variables": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "Get new access token using refresh token.\n\nNo authentication header required - tenantId is extracted from the token itself.\n\nNote: After refresh, the old refresh token is invalidated (rotation)."
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "mutation RefreshToken($refreshToken: String!) {\n  refreshToken(refreshToken: $refreshToken) {\n    accessToken\n    refreshToken\n    expiresIn\n  }\n}",
+              "variables": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] },
+            "description": "Get new tokens. Old refresh token is invalidated (rotation). Auto-saves new tokens."
           },
           "response": []
         },
         {
           "name": "Logout",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    var jsonData = pm.response.json();",
-                  "    if (jsonData.data && jsonData.data.logout) {",
-                  "        pm.test('Logout successful', function () {",
-                  "            pm.expect(jsonData.data.logout.success).to.be.true;",
-                  "        });",
-                  "        // Clear tokens after logout",
-                  "        pm.collectionVariables.set('accessToken', '');",
-                  "        pm.collectionVariables.set('refreshToken', '');",
-                  "    }",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data && json.data.logout && json.data.logout.success) {",
+            "    pm.collectionVariables.set('accessToken', '');",
+            "    pm.collectionVariables.set('refreshToken', '');",
+            "    pm.test('Logout OK', () => pm.expect(json.data.logout.success).to.be.true);",
+            "    console.log('Logged out, tokens cleared');",
+            "}",
+            "if (json.errors) { pm.test('Logout failed: ' + json.errors[0].message, () => pm.expect.fail()); }"
+          ]}}],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "mutation Logout($refreshToken: String!) {\n  logout(refreshToken: $refreshToken) {\n    success\n    message\n  }\n}",
-                "variables": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "Logout and invalidate refresh token.\n\nNo authentication header required."
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "mutation Logout($refreshToken: String!) {\n  logout(refreshToken: $refreshToken) {\n    success\n    message\n  }\n}",
+              "variables": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] },
+            "description": "Logout. Takes refreshToken directly as arg (NOT input object). Clears tokens."
           },
           "response": []
         }
-      ],
-      "description": "Public authentication endpoints - no auth header required"
+      ]
     },
     {
-      "name": "Users (Authenticated)",
+      "name": "2. Users",
       "item": [
         {
-          "name": "Get Current User (Me)",
+          "name": "Me (Current User)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data && json.data.me) { pm.test('Me OK', () => pm.expect(json.data.me.id).to.be.a('string')); }",
+            "if (json.errors) { pm.test('Me failed: ' + json.errors[0].message, () => pm.expect.fail()); }"
+          ]}}],
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "query Me {\n  me {\n    id\n    tenantId\n    email\n    firstName\n    lastName\n    displayName\n    status\n    roleIds\n    createdAt\n    updatedAt\n    lastLoginAt\n  }\n}",
-                "variables": "{}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "Get current authenticated user's profile.\n\nRequires: Kong JWT plugin to inject x-user-id, x-tenant-id headers from token."
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "query Me {\n  me {\n    id\n    tenantId\n    email\n    firstName\n    lastName\n    displayName\n    status\n    roleIds\n    createdAt\n    updatedAt\n    lastLoginAt\n  }\n}",
+              "variables": "{}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] }
           },
           "response": []
         },
         {
           "name": "Get User by ID",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data && json.data.user) { pm.test('Get User OK', () => pm.expect(json.data.user.id).to.equal(pm.collectionVariables.get('userId'))); }",
+            "if (json.errors) { pm.test('Get User failed: ' + json.errors[0].message, () => pm.expect.fail()); }"
+          ]}}],
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "query GetUser($id: String!) {\n  user(id: $id) {\n    id\n    tenantId\n    email\n    firstName\n    lastName\n    displayName\n    status\n    roleIds\n    createdAt\n    updatedAt\n    lastLoginAt\n  }\n}",
-                "variables": "{\n  \"id\": \"{{userId}}\"\n}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "Get user details by user ID"
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "query GetUser($id: String!) {\n  user(id: $id) {\n    id\n    tenantId\n    email\n    firstName\n    lastName\n    displayName\n    status\n    roleIds\n    createdAt\n    updatedAt\n    lastLoginAt\n  }\n}",
+              "variables": "{\n  \"id\": \"{{userId}}\"\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] }
           },
           "response": []
         },
         {
-          "name": "List Users (Admin)",
+          "name": "List Users (Admin only  expect 403)",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "query ListUsers($input: ListUsersInput!) {\n  users(input: $input) {\n    users {\n      id\n      tenantId\n      email\n      firstName\n      lastName\n      displayName\n      status\n      roleIds\n    }\n    total\n    page\n    pageSize\n  }\n}",
-                "variables": "{\n  \"input\": {\n    \"page\": 1,\n    \"pageSize\": 10\n  }\n}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "List all users with pagination.\n\nRequires: admin role"
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "query ListUsers($input: ListUsersInput!) {\n  users(input: $input) {\n    users {\n      id\n      tenantId\n      email\n      firstName\n      lastName\n      displayName\n      status\n      roleIds\n    }\n    total\n    page\n    pageSize\n  }\n}",
+              "variables": "{\n  \"input\": {\n    \"page\": 1,\n    \"pageSize\": 10\n  }\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] },
+            "description": "Requires admin role. Returns 403 Forbidden for developer/regular users."
           },
           "response": []
         },
         {
           "name": "Update User",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "mutation UpdateUser($id: String!, $input: UpdateUserInput!) {\n  updateUser(id: $id, input: $input) {\n    id\n    tenantId\n    email\n    firstName\n    lastName\n    displayName\n    status\n    roleIds\n  }\n}",
-                "variables": "{\n  \"id\": \"{{userId}}\",\n  \"input\": {\n    \"firstName\": \"Updated\",\n    \"lastName\": \"Name\",\n    \"displayName\": \"Updated Display Name\"\n  }\n}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "Update user profile.\n\nUsers can only update themselves unless they have admin role."
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "mutation UpdateUser($id: String!, $input: UpdateUserInput!) {\n  updateUser(id: $id, input: $input) {\n    id\n    tenantId\n    email\n    firstName\n    lastName\n    displayName\n    status\n    roleIds\n  }\n}",
+              "variables": "{\n  \"id\": \"{{userId}}\",\n  \"input\": {\n    \"firstName\": \"Dev\",\n    \"lastName\": \"Test\",\n    \"displayName\": \"Dev Test User\"\n  }\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] }
           },
           "response": []
         },
         {
           "name": "Change Password",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data && json.data.changePassword) { pm.test('Change Password OK', () => pm.expect(json.data.changePassword.success).to.be.true); }",
+            "if (json.errors) { pm.test('Change Password failed: ' + json.errors[0].message, () => pm.expect.fail()); }"
+          ]}}],
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "mutation ChangePassword($input: ChangePasswordInput!) {\n  changePassword(input: $input) {\n    success\n    message\n  }\n}",
-                "variables": "{\n  \"input\": {\n    \"currentPassword\": \"Test@123456\",\n    \"newPassword\": \"NewTest@123456\"\n  }\n}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "Change current user's password"
-          },
-          "response": []
-        },
-        {
-          "name": "Create User (Admin)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "mutation CreateUser($input: CreateUserInput!) {\n  createUser(input: $input) {\n    id\n    tenantId\n    email\n    firstName\n    lastName\n    displayName\n    status\n    roleIds\n  }\n}",
-                "variables": "{\n  \"input\": {\n    \"tenantId\": \"{{tenantId}}\",\n    \"email\": \"newuser@example.com\",\n    \"password\": \"Test@123456\",\n    \"firstName\": \"New\",\n    \"lastName\": \"User\",\n    \"roleIds\": []\n  }\n}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "Create a new user.\n\nRequires: admin role"
-          },
-          "response": []
-        },
-        {
-          "name": "Delete User (Admin)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "mutation DeleteUser($id: String!) {\n  deleteUser(id: $id) {\n    success\n    message\n  }\n}",
-                "variables": "{\n  \"id\": \"{{userId}}\"\n}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "Soft delete user (marks as DELETED status).\n\nRequires: admin role"
-          },
-          "response": []
-        },
-        {
-          "name": "Assign Roles (Admin)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "mutation AssignRoles($input: AssignRolesInput!) {\n  assignRoles(input: $input) {\n    id\n    tenantId\n    email\n    roleIds\n  }\n}",
-                "variables": "{\n  \"input\": {\n    \"userId\": \"{{userId}}\",\n    \"roleIds\": [\"admin\"]\n  }\n}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "Assign roles to user.\n\nRequires: admin role"
-          },
-          "response": []
-        },
-        {
-          "name": "Remove Roles (Admin)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "graphql",
-              "graphql": {
-                "query": "mutation RemoveRoles($input: RemoveRolesInput!) {\n  removeRoles(input: $input) {\n    id\n    tenantId\n    email\n    roleIds\n  }\n}",
-                "variables": "{\n  \"input\": {\n    \"userId\": \"{{userId}}\",\n    \"roleIds\": [\"admin\"]\n  }\n}"
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/graphql",
-              "host": ["{{baseUrl}}"],
-              "path": ["graphql"]
-            },
-            "description": "Remove roles from user.\n\nRequires: admin role"
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "mutation ChangePassword($input: ChangePasswordInput!) {\n  changePassword(input: $input) {\n    success\n    message\n  }\n}",
+              "variables": "{\n  \"input\": {\n    \"currentPassword\": \"Test@123456\",\n    \"newPassword\": \"Test@1234567\"\n  }\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] },
+            "description": "Change password. After running, update currentPassword value before running again."
           },
           "response": []
         }
-      ],
-      "description": "User management endpoints - requires authentication.\n\nNote: These endpoints require Kong JWT plugin to be configured to inject user headers from the token."
+      ]
+    },
+    {
+      "name": "3. Tasks",
+      "item": [
+        {
+          "name": "Task Hello (Health Check  Public)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data) {",
+            "    if (json.data.taskPing) pm.test('taskPing OK', () => pm.expect(json.data.taskPing).to.equal('pong'));",
+            "    if (json.data.taskHello) pm.test('taskHello OK', () => pm.expect(json.data.taskHello.message).to.include('Hello'));",
+            "}"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "query {\n  taskPing\n  taskHello(name: \"Postman\") {\n    message\n  }\n}",
+              "variables": "{}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] },
+            "description": "No auth required. taskPing returns 'pong', taskHello returns 'Hello, Postman!'"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Task",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data && json.data.createTask) {",
+            "    pm.collectionVariables.set('taskId', json.data.createTask.id);",
+            "    pm.test('Create Task OK', () => pm.expect(json.data.createTask.id).to.be.a('string').and.not.empty);",
+            "    console.log('taskId saved:', json.data.createTask.id);",
+            "}",
+            "if (json.errors) { pm.test('Create Task failed: ' + json.errors[0].message, () => pm.expect.fail()); }"
+          ]}}],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "mutation CreateTask($input: CreateTaskInput!) {\n  createTask(input: $input) {\n    id\n    title\n    description\n    status\n    priority\n    projectId\n    spaceId\n    creatorId\n    tags\n    createdAt\n  }\n}",
+              "variables": "{\n  \"input\": {\n    \"title\": \"Test Task from Postman\",\n    \"description\": \"Created via GraphQL API test\",\n    \"priority\": \"HIGH\",\n    \"projectId\": \"default-project\",\n    \"tags\": [\"test\", \"api\"]\n  }\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] },
+            "description": "Create task. Auto-saves taskId.\n\nRequired: title, projectId\nOptional: description, priority (LOW/NORMAL/HIGH/URGENT), tags, dueDate, startDate, spaceId, assigneeIds"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task by ID",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data && json.data.task) { pm.test('Get Task OK', () => pm.expect(json.data.task.id).to.equal(pm.collectionVariables.get('taskId'))); }",
+            "if (json.errors) { pm.test('Get Task failed: ' + json.errors[0].message, () => pm.expect.fail()); }"
+          ]}}],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "query GetTask($id: ID!) {\n  task(id: $id) {\n    id\n    title\n    description\n    status\n    priority\n    projectId\n    spaceId\n    creatorId\n    assigneeIds\n    tags\n    dueDate\n    startDate\n    createdAt\n    updatedAt\n  }\n}",
+              "variables": "{\n  \"id\": \"{{taskId}}\"\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] }
+          },
+          "response": []
+        },
+        {
+          "name": "List Tasks",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data && json.data.tasks) {",
+            "    pm.test('List Tasks OK', () => {",
+            "        pm.expect(json.data.tasks.tasks).to.be.an('array');",
+            "        pm.expect(json.data.tasks.total).to.be.a('number');",
+            "    });",
+            "    console.log('Total tasks:', json.data.tasks.total);",
+            "}",
+            "if (json.errors) { pm.test('List Tasks failed: ' + json.errors[0].message, () => pm.expect.fail()); }"
+          ]}}],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "query ListTasks($input: ListTasksInput!) {\n  tasks(input: $input) {\n    tasks {\n      id\n      title\n      status\n      priority\n      projectId\n      creatorId\n      assigneeIds\n      tags\n      createdAt\n    }\n    total\n    page\n    pageSize\n  }\n}",
+              "variables": "{\n  \"input\": {\n    \"page\": 1,\n    \"pageSize\": 10\n  }\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] },
+            "description": "List tasks. Pagination field is `total` (not totalCount)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Task",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data && json.data.updateTask) {",
+            "    pm.test('Update Task OK', () => pm.expect(json.data.updateTask.id).to.equal(pm.collectionVariables.get('taskId')));",
+            "    console.log('Updated title:', json.data.updateTask.title);",
+            "}",
+            "if (json.errors) { pm.test('Update Task failed: ' + json.errors[0].message, () => pm.expect.fail()); }"
+          ]}}],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "mutation UpdateTask($id: ID!, $input: UpdateTaskInput!) {\n  updateTask(id: $id, input: $input) {\n    id\n    title\n    description\n    status\n    priority\n    tags\n    updatedAt\n  }\n}",
+              "variables": "{\n  \"id\": \"{{taskId}}\",\n  \"input\": {\n    \"title\": \"Updated Task Title\",\n    \"description\": \"Updated description via Postman\"\n  }\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] },
+            "description": "Partial field update. Supported fields: title, description, dueDate, startDate, tags, timeEstimateMinutes, parentTaskId, customFields.\n\nNote: does NOT update status/priority (use updateTaskStatus for that)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Task Status",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data && json.data.updateTaskStatus) {",
+            "    pm.test('Update Status OK', () => pm.expect(json.data.updateTaskStatus.id).to.equal(pm.collectionVariables.get('taskId')));",
+            "    console.log('New status:', json.data.updateTaskStatus.status);",
+            "}",
+            "if (json.errors) { pm.test('Update Status failed: ' + json.errors[0].message, () => pm.expect.fail()); }"
+          ]}}],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "mutation UpdateTaskStatus($id: ID!, $status: TaskStatus!) {\n  updateTaskStatus(id: $id, status: $status) {\n    id\n    title\n    status\n    updatedAt\n  }\n}",
+              "variables": "{\n  \"id\": \"{{taskId}}\",\n  \"status\": \"IN_PROGRESS\"\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] },
+            "description": "Valid status values: OPEN, IN_PROGRESS, IN_REVIEW, DONE, BLOCKED, COMPLETE, CLOSED"
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Task",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "mutation AssignTask($id: ID!, $input: AssignTaskInput!) {\n  assignTask(id: $id, input: $input) {\n    id\n    title\n    assigneeIds\n    updatedAt\n  }\n}",
+              "variables": "{\n  \"id\": \"{{taskId}}\",\n  \"input\": {\n    \"assigneeIds\": [\"{{userId}}\"]\n  }\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Task",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.data && json.data.deleteTask && json.data.deleteTask.success) {",
+            "    pm.collectionVariables.set('taskId', '');",
+            "    pm.test('Delete Task OK', () => pm.expect(json.data.deleteTask.success).to.be.true);",
+            "    console.log('Task deleted, taskId cleared');",
+            "}",
+            "if (json.errors) { pm.test('Delete Task failed: ' + json.errors[0].message, () => pm.expect.fail()); }"
+          ]}}],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "graphql", "graphql": {
+              "query": "mutation DeleteTask($id: ID!) {\n  deleteTask(id: $id) {\n    success\n    message\n  }\n}",
+              "variables": "{\n  \"id\": \"{{taskId}}\"\n}"
+            }},
+            "url": { "raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path": ["graphql"] },
+            "description": "Delete task. Clears {{taskId}} after success."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "event": [
-    {
-      "listen": "prerequest",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          ""
-        ]
-      }
-    },
-    {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          ""
-        ]
-      }
-    }
+    { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [""] } },
+    { "listen": "test", "script": { "type": "text/javascript", "exec": [
+      "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+      "var json = pm.response.json();",
+      "if (json.errors) { console.error('GraphQL errors:', JSON.stringify(json.errors)); }"
+    ]}}
   ]
 }
