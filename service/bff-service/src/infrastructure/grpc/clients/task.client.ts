@@ -8,10 +8,10 @@ import { CircuitBreaker, resilientCall, RetryOptions } from '../../resilience/re
 interface TaskServiceGrpc {
   Hello(data: { name: string }, metadata?: Metadata): Observable<any>;
   CreateTask(data: any, metadata?: Metadata): Observable<any>;
-  GetTask(data: { id: string }, metadata?: Metadata): Observable<any>;
+  GetTask(data: { id: string; tenant_id: string }, metadata?: Metadata): Observable<any>;
   ListTasks(data: any, metadata?: Metadata): Observable<any>;
   UpdateTask(data: any, metadata?: Metadata): Observable<any>;
-  DeleteTask(data: { id: string }, metadata?: Metadata): Observable<any>;
+  DeleteTask(data: { id: string; tenant_id: string; deleted_by: string }, metadata?: Metadata): Observable<any>;
   UpdateTaskStatus(data: any, metadata?: Metadata): Observable<any>;
   AssignTask(data: any, metadata?: Metadata): Observable<any>;
   BulkUpdateStatus(data: any, metadata?: Metadata): Observable<any>;
@@ -101,7 +101,7 @@ export class TaskGrpcClient implements OnModuleInit {
 
   async getTask(id: string, context?: { userId?: string; tenantId?: string; roles?: string[]; scopes?: string[] }) {
     const metadata = this.createMetadata(context);
-    return this.executeGrpcCall(this.taskService.GetTask({ id }, metadata), 'getTask');
+    return this.executeGrpcCall(this.taskService.GetTask({ id, tenant_id: context?.tenantId || '' }, metadata), 'getTask');
   }
 
   async listTasks(data: any, context?: { userId?: string; tenantId?: string; roles?: string[]; scopes?: string[] }) {
@@ -116,7 +116,7 @@ export class TaskGrpcClient implements OnModuleInit {
 
   async deleteTask(id: string, context?: { userId?: string; tenantId?: string; roles?: string[]; scopes?: string[] }) {
     const metadata = this.createMetadata(context);
-    return this.executeGrpcCall(this.taskService.DeleteTask({ id }, metadata), 'deleteTask');
+    return this.executeGrpcCall(this.taskService.DeleteTask({ id, tenant_id: context?.tenantId || '', deleted_by: context?.userId || '' }, metadata), 'deleteTask');
   }
 
   async updateTaskStatus(data: any, context?: { userId?: string; tenantId?: string; roles?: string[]; scopes?: string[] }) {

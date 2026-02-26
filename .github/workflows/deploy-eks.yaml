@@ -328,6 +328,8 @@ jobs:
             bff-service)
               HELM_ARGS="${HELM_ARGS} --set-string microservice.envVarsSecret.JWT_SECRET=${{ secrets.JWT_SECRET }}"
               HELM_ARGS="${HELM_ARGS} --set-string microservice.envVarsSecret.REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}"
+              HELM_ARGS="${HELM_ARGS} --set-string secrets.jwtSecret=${{ secrets.JWT_SECRET }}"
+              HELM_ARGS="${HELM_ARGS} --set-string secrets.redisPassword=${{ secrets.REDIS_PASSWORD }}"
               ;;
           esac
           
