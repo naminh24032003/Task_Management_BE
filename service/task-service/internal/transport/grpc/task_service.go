@@ -152,6 +152,34 @@ func (s *TaskService) AssignTask(ctx context.Context, req *taskv1.AssignTaskRequ
 	return &taskv1.UpdateTaskResponse{Task: s.toProto(task), Success: true}, nil
 }
 
+// UpdateTask handles full/partial task field updates
+func (s *TaskService) UpdateTask(ctx context.Context, req *taskv1.UpdateTaskRequest) (*taskv1.UpdateTaskResponse, error) {
+	dueDate := req.DueDate
+	startDate := req.StartDate
+	parentTaskID := req.ParentTaskId
+	timeEstimate := req.TimeEstimateMinutes
+
+	cmd := &command.UpdateTaskCommand{
+		ID:           req.GetId(),
+		TenantID:     req.GetTenantId(),
+		Title:        req.Title,
+		Description:  req.Description,
+		DueDate:      dueDate,
+		StartDate:    startDate,
+		ParentTaskID: parentTaskID,
+		TimeEstimate: timeEstimate,
+		Tags:         req.GetTags(),
+		CustomFields: req.GetCustomFields(),
+	}
+
+	if err := s.commandHandler.HandleUpdateTask(ctx, cmd); err != nil {
+		return nil, err
+	}
+
+	task, _ := s.queryHandler.HandleGetTask(ctx, &query.GetTaskQuery{ID: req.GetId(), TenantID: req.GetTenantId()})
+	return &taskv1.UpdateTaskResponse{Task: s.toProto(task), Success: true, Message: "Task updated successfully"}, nil
+}
+
 func (s *TaskService) DeleteTask(ctx context.Context, req *taskv1.DeleteTaskRequest) (*taskv1.DeleteTaskResponse, error) {
 	err := s.commandHandler.HandleDeleteTask(ctx, &command.DeleteTaskCommand{
 		ID:       req.GetId(),

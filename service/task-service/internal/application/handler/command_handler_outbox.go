@@ -212,6 +212,45 @@ func (h *CommandHandlerOutbox) HandleAssignTask(ctx context.Context, cmd *comman
 	return nil
 }
 
+// HandleUpdateTask handles generic task field updates with transactional outbox.
+func (h *CommandHandlerOutbox) HandleUpdateTask(ctx context.Context, cmd *command.UpdateTaskCommand) error {
+	// ── 1. Distributed lock ─────────────────────────────────
+	lockResource := fmt.Sprintf("task:%s:%s", cmd.TenantID, cmd.ID)
+	var lockToken string
+	if h.cache != nil {
+		var err error
+		lockToken, err = h.cache.AcquireLock(ctx, lockResource, taskLockTTL)
+		if err != nil {
+			return fmt.Errorf("failed to acquire lock: %w", err)
+		}
+		if lockToken == "" {
+			return fmt.Errorf("task %s is being modified by another request", cmd.ID)
+		}
+		defer h.cache.ReleaseLock(ctx, lockResource, lockToken) //nolint:errcheck
+	}
+
+	// ── 2. Load task ────────────────────────────────────────
+	task, err := h.taskFinder.FindByID(ctx, cmd.TenantID, cmd.ID)
+	if err != nil {
+		return fmt.Errorf("task not found: %w", err)
+	}
+
+	// ── 3. Apply field updates ──────────────────────────────
+	task.UpdateFields(cmd.Title, cmd.Description, cmd.DueDate, cmd.StartDate, cmd.ParentTaskID, cmd.TimeEstimate, cmd.Tags, cmd.CustomFields)
+
+	// ── 4. MongoDB transaction ──────────────────────────────
+	if err := h.unitOfWork.UpdateTaskWithEvents(ctx, task); err != nil {
+		return fmt.Errorf("failed to update task with events: %w", err)
+	}
+
+	// ── 5. Cache invalidation ───────────────────────────────
+	if h.cache != nil {
+		_ = h.cache.InvalidateTask(ctx, cmd.TenantID, cmd.ID)
+	}
+
+	return nil
+}
+
 // HandleDeleteTask handles delete task command with transactional outbox.
 // Lua-atomic: distributed lock → DB TX → cache invalidation → decrement counters.
 func (h *CommandHandlerOutbox) HandleDeleteTask(ctx context.Context, cmd *command.DeleteTaskCommand) error {

@@ -152,6 +152,46 @@ func (t *Task) Assign(assigneeIDs []string, actorID string) {
 	}
 }
 
+// UpdateFields updates editable task fields (partial update – nil means skip)
+func (t *Task) UpdateFields(title, description, dueDate, startDate, parentTaskID *string, timeEstimate *int32, tags []string, customFields map[string]string) {
+	if title != nil {
+		t.Title = *title
+	}
+	if description != nil {
+		t.Description = *description
+	}
+	if timeEstimate != nil {
+		t.TimeEstimateMinutes = *timeEstimate
+	}
+	if dueDate != nil {
+		if *dueDate == "" {
+			t.DueDate = nil
+		} else if parsed, err := time.Parse(time.RFC3339, *dueDate); err == nil {
+			t.DueDate = &parsed
+		}
+	}
+	if startDate != nil {
+		if *startDate == "" {
+			t.StartDate = nil
+		} else if parsed, err := time.Parse(time.RFC3339, *startDate); err == nil {
+			t.StartDate = &parsed
+		}
+	}
+	if parentTaskID != nil {
+		t.ParentTaskID = *parentTaskID
+	}
+	if tags != nil {
+		t.Tags = tags
+	}
+	for k, v := range customFields {
+		if t.CustomFields == nil {
+			t.CustomFields = make(map[string]string)
+		}
+		t.CustomFields[k] = v
+	}
+	t.UpdatedAt = time.Now()
+}
+
 // AddWatcher adds a watcher to the task
 func (t *Task) AddWatcher(watcherID string) {
 	for _, id := range t.WatcherIDs {
