@@ -6,13 +6,13 @@ import { CircuitBreaker, resilientCall, RetryOptions } from '../../resilience/re
 
 // gRPC service interfaces
 interface UserServiceGrpc {
-  GetUser(data: { userId: string }, metadata?: Metadata): Observable<any>;
+  GetUser(data: { user_id: string }, metadata?: Metadata): Observable<any>;
   GetMe(data: Record<string, never>, metadata?: Metadata): Observable<any>;
-  GetUserByEmail(data: { tenantId: string; email: string }, metadata?: Metadata): Observable<any>;
-  ListUsers(data: { page: number; pageSize: number; statusFilter?: number; search?: string }, metadata?: Metadata): Observable<any>;
+  GetUserByEmail(data: { tenant_id?: string; email: string }, metadata?: Metadata): Observable<any>;
+  ListUsers(data: { page: number; page_size: number; status_filter?: number; search?: string }, metadata?: Metadata): Observable<any>;
   CreateUser(data: any, metadata?: Metadata): Observable<any>;
   UpdateUser(data: any, metadata?: Metadata): Observable<any>;
-  DeleteUser(data: { userId: string }, metadata?: Metadata): Observable<any>;
+  DeleteUser(data: { user_id: string }, metadata?: Metadata): Observable<any>;
   ChangePassword(data: any, metadata?: Metadata): Observable<any>;
   AssignRoles(data: any, metadata?: Metadata): Observable<any>;
   RemoveRoles(data: any, metadata?: Metadata): Observable<any>;
@@ -22,9 +22,9 @@ interface AuthServiceGrpc {
   Register(data: any, metadata?: Metadata): Observable<any>;
   Login(data: any, metadata?: Metadata): Observable<any>;
   GoogleLogin(data: any, metadata?: Metadata): Observable<any>;
-  RefreshToken(data: { refreshToken: string }, metadata?: Metadata): Observable<any>;
-  ValidateToken(data: { accessToken: string }, metadata?: Metadata): Observable<any>;
-  Logout(data: { refreshToken: string }, metadata?: Metadata): Observable<any>;
+  RefreshToken(data: { refresh_token: string }, metadata?: Metadata): Observable<any>;
+  ValidateToken(data: { access_token: string }, metadata?: Metadata): Observable<any>;
+  Logout(data: { refresh_token: string }, metadata?: Metadata): Observable<any>;
 }
 
 interface GrpcCallMetrics {
