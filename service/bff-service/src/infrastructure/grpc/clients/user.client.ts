@@ -257,7 +257,7 @@ export class UserGrpcClient implements OnModuleInit {
 
   async refreshToken(refreshToken: string) {
     return this.executeGrpcCall(
-      this.authService.RefreshToken({ refreshToken }),
+      this.authService.RefreshToken({ refresh_token: refreshToken }),
       'refreshToken',
       this.authServiceCB,
     );
@@ -265,7 +265,7 @@ export class UserGrpcClient implements OnModuleInit {
 
   async validateToken(accessToken: string) {
     return this.executeGrpcCall(
-      this.authService.ValidateToken({ accessToken }),
+      this.authService.ValidateToken({ access_token: accessToken }),
       'validateToken',
       this.authServiceCB,
     );
@@ -273,7 +273,7 @@ export class UserGrpcClient implements OnModuleInit {
 
   async logout(refreshToken: string) {
     return this.executeGrpcCall(
-      this.authService.Logout({ refreshToken }),
+      this.authService.Logout({ refresh_token: refreshToken }),
       'logout',
       this.authServiceCB,
     );
@@ -284,7 +284,7 @@ export class UserGrpcClient implements OnModuleInit {
   async getUser(userId: string, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
     const metadata = this.createMetadata(context);
     return this.executeGrpcCall(
-      this.userService.GetUser({ userId }, metadata),
+      this.userService.GetUser({ user_id: userId }, metadata),
       'getUser',
     );
   }
@@ -299,7 +299,7 @@ export class UserGrpcClient implements OnModuleInit {
 
   async getUserByEmail(tenantId: string, email: string) {
     return this.executeGrpcCall(
-      this.userService.GetUserByEmail({ tenantId, email }),
+      this.userService.GetUserByEmail({ tenant_id: tenantId, email }),
       'getUserByEmail',
     );
   }
@@ -314,7 +314,7 @@ export class UserGrpcClient implements OnModuleInit {
     const metadata = this.createMetadata(context);
     return this.executeGrpcCall(
       this.userService.ListUsers(
-        { page, pageSize, statusFilter, search },
+        { page, page_size: pageSize, status_filter: statusFilter, search },
         metadata,
       ),
       'listUsers',
@@ -334,7 +334,7 @@ export class UserGrpcClient implements OnModuleInit {
   async deleteUser(userId: string, context?: { userId?: string; tenantId?: string; roles?: string[] }) {
     const metadata = this.createMetadata(context);
     return this.executeGrpcCall(
-      this.userService.DeleteUser({ userId }, metadata),
+      this.userService.DeleteUser({ user_id: userId }, metadata),
       'deleteUser',
     );
   }

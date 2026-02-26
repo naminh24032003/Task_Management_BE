@@ -261,8 +261,8 @@ export class UserResolver {
     this.logger.log(`AssignRoles to user: ${input.userId}`);
     const result = await this.userClient.assignRoles(
       {
-        userId: input.userId,
-        roleIds: input.roleIds,
+        user_id: input.userId,
+        role_ids: input.roleIds,
       },
       {
         userId: currentUser.sub,
@@ -283,8 +283,8 @@ export class UserResolver {
     this.logger.log(`RemoveRoles from user: ${input.userId}`);
     const result = await this.userClient.removeRoles(
       {
-        userId: input.userId,
-        roleIds: input.roleIds,
+        user_id: input.userId,
+        role_ids: input.roleIds,
       },
       {
         userId: currentUser.sub,
