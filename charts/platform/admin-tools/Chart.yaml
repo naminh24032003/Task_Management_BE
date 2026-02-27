@@ -1,0 +1,5 @@
+apiVersion: v2
+name: admin-tools
+description: Admin UI tools for Kafka (Kafdrop), MongoDB (Mongo Express), Redis (RedisInsight)
+type: application
+version: 0.1.0

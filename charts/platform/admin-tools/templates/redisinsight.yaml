@@ -1,0 +1,71 @@
+{{- if .Values.redisCommander.enabled }}
+# ─── Redis Commander Deployment ───────────────────────────────────────────────
+# Supports URL_PREFIX env var so it serves correctly under /redis-commander
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-commander
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: redis-commander
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-commander
+  template:
+    metadata:
+      labels:
+        app: redis-commander
+    spec:
+      containers:
+        - name: redis-commander
+          image: {{ .Values.redisCommander.image }}
+          ports:
+            - containerPort: {{ .Values.redisCommander.port }}
+          env:
+            - name: REDIS_HOSTS
+              value: "cluster:{{ .Values.redisCommander.redisHost }}:{{ .Values.redisCommander.redisPort }}:0:{{ .Values.redisCommander.redisPassword }}"
+            # Serve under sub-path
+            - name: URL_PREFIX
+              value: {{ .Values.redisCommander.urlPrefix }}
+            - name: TRUST_PROXY
+              value: "true"
+          resources:
+            {{- toYaml .Values.redisCommander.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.redisCommander.urlPrefix }}/
+              port: {{ .Values.redisCommander.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.redisCommander.urlPrefix }}/
+              port: {{ .Values.redisCommander.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 15
+      {{- with .Values.redisCommander.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.redisCommander.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-commander
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: redis-commander
+spec:
+  selector:
+    app: redis-commander
+  ports:
+    - port: {{ .Values.redisCommander.port }}
+      targetPort: {{ .Values.redisCommander.port }}
+      name: http
+{{- end }}

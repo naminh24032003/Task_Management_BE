@@ -1,0 +1,47 @@
+# ExternalName services in the kong namespace
+# These proxy requests from Kong to the actual services in other namespaces.
+
+{{- if .Values.kafdrop.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafdrop-external
+  namespace: kong
+spec:
+  type: ExternalName
+  externalName: kafdrop.{{ .Values.namespace }}.svc.cluster.local
+  ports:
+    - port: {{ .Values.kafdrop.port }}
+      name: http
+{{- end }}
+
+{{- if .Values.mongoExpress.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-express-external
+  namespace: kong
+spec:
+  type: ExternalName
+  externalName: mongo-express.{{ .Values.namespace }}.svc.cluster.local
+  ports:
+    - port: {{ .Values.mongoExpress.port }}
+      name: http
+{{- end }}
+
+{{- if .Values.redisCommander.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-commander-external
+  namespace: kong
+spec:
+  type: ExternalName
+  externalName: redis-commander.{{ .Values.namespace }}.svc.cluster.local
+  ports:
+    - port: {{ .Values.redisCommander.port }}
+      name: http
+{{- end }}

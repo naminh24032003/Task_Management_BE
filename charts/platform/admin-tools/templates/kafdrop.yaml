@@ -1,0 +1,70 @@
+{{- if .Values.kafdrop.enabled }}
+# ─── Kafdrop Deployment ──────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafdrop
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: kafdrop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafdrop
+  template:
+    metadata:
+      labels:
+        app: kafdrop
+    spec:
+      containers:
+        - name: kafdrop
+          image: {{ .Values.kafdrop.image }}
+          ports:
+            - containerPort: {{ .Values.kafdrop.port }}
+          env:
+            - name: KAFKA_BROKERCONNECT
+              value: {{ .Values.kafdrop.kafkaBroker }}
+            # Serve Kafdrop under /kafdrop sub-path
+            - name: SERVER_SERVLET_CONTEXT_PATH
+              value: {{ .Values.kafdrop.contextPath }}
+            - name: JVM_OPTS
+              value: "-Xms64M -Xmx128M"
+          resources:
+            {{- toYaml .Values.kafdrop.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.kafdrop.contextPath }}/actuator/health
+              port: {{ .Values.kafdrop.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.kafdrop.contextPath }}/actuator/health
+              port: {{ .Values.kafdrop.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 15
+      {{- with .Values.kafdrop.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.kafdrop.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafdrop
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: kafdrop
+spec:
+  selector:
+    app: kafdrop
+  ports:
+    - port: {{ .Values.kafdrop.port }}
+      targetPort: {{ .Values.kafdrop.port }}
+      name: http
+{{- end }}

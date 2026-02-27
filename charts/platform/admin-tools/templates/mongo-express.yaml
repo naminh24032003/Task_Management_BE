@@ -1,0 +1,77 @@
+{{- if .Values.mongoExpress.enabled }}
+# ─── Mongo Express Deployment ─────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-express
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: mongo-express
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-express
+  template:
+    metadata:
+      labels:
+        app: mongo-express
+    spec:
+      containers:
+        - name: mongo-express
+          image: {{ .Values.mongoExpress.image }}
+          ports:
+            - containerPort: {{ .Values.mongoExpress.port }}
+          env:
+            - name: ME_CONFIG_MONGODB_SERVER
+              value: {{ .Values.mongoExpress.mongodbHost }}
+            - name: ME_CONFIG_MONGODB_PORT
+              value: {{ .Values.mongoExpress.mongodbPort | quote }}
+            - name: ME_CONFIG_MONGODB_ADMINUSERNAME
+              value: {{ .Values.mongoExpress.mongodbAdminUsername }}
+            - name: ME_CONFIG_MONGODB_ADMINPASSWORD
+              value: {{ .Values.mongoExpress.mongodbAdminPassword | quote }}
+            # Serve under /mongo-express sub-path
+            - name: ME_CONFIG_SITE_BASEURL
+              value: {{ .Values.mongoExpress.baseUrl }}
+            # Disable basic auth for internal access (behind Kong)
+            - name: ME_CONFIG_BASICAUTH
+              value: "false"
+          resources:
+            {{- toYaml .Values.mongoExpress.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.mongoExpress.baseUrl }}
+              port: {{ .Values.mongoExpress.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.mongoExpress.baseUrl }}
+              port: {{ .Values.mongoExpress.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 15
+      {{- with .Values.mongoExpress.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.mongoExpress.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-express
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: mongo-express
+spec:
+  selector:
+    app: mongo-express
+  ports:
+    - port: {{ .Values.mongoExpress.port }}
+      targetPort: {{ .Values.mongoExpress.port }}
+      name: http
+{{- end }}

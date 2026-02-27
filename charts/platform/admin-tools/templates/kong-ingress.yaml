@@ -1,0 +1,47 @@
+# Admin tools ingress — no JWT auth (internal monitoring/admin use)
+# Each tool handles its own sub-path, so strip-path is false.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: admin-tools-ingress
+  namespace: kong
+  annotations:
+    konghq.com/strip-path: "false"
+    konghq.com/preserve-host: "true"
+    konghq.com/protocols: "http"
+spec:
+  ingressClassName: kong
+  rules:
+  - http:
+      paths:
+      {{- if .Values.kafdrop.enabled }}
+      # Kafdrop — Kafka web UI
+      - path: {{ .Values.kafdrop.contextPath }}
+        pathType: Prefix
+        backend:
+          service:
+            name: kafdrop-external
+            port:
+              number: {{ .Values.kafdrop.port }}
+      {{- end }}
+      {{- if .Values.mongoExpress.enabled }}
+      # Mongo Express — MongoDB web UI
+      - path: /mongo-express
+        pathType: Prefix
+        backend:
+          service:
+            name: mongo-express-external
+            port:
+              number: {{ .Values.mongoExpress.port }}
+      {{- end }}
+      {{- if .Values.redisCommander.enabled }}
+      # Redis Commander — Redis web UI
+      - path: {{ .Values.redisCommander.urlPrefix }}
+        pathType: Prefix
+        backend:
+          service:
+            name: redis-commander-external
+            port:
+              number: {{ .Values.redisCommander.port }}
+      {{- end }}

@@ -1,0 +1,76 @@
+# Namespace for all admin tool deployments
+namespace: admin
+
+# ─── Kafdrop ─────────────────────────────────────────────────────────────────
+# Web UI for Apache Kafka
+kafdrop:
+  enabled: true
+  image: obsidiandynamics/kafdrop:4.0.2
+  kafkaBroker: kafka.kafka.svc.cluster.local:9092
+  # Sub-path served by Kafdrop — must match Kong route path
+  contextPath: /kafdrop
+  port: 9000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: platform
+      effect: NoSchedule
+  nodeSelector: {}
+
+# ─── Mongo Express ───────────────────────────────────────────────────────────
+# Web UI for MongoDB
+mongoExpress:
+  enabled: true
+  image: mongo-express:1.0.2
+  mongodbHost: mongodb.dev.svc.cluster.local
+  mongodbPort: "27017"
+  mongodbAdminUsername: root
+  mongodbAdminPassword: mongoRootPass123
+  # Sub-path — must match Kong route path (trailing slash required)
+  baseUrl: /mongo-express/
+  port: 8081
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: platform
+      effect: NoSchedule
+  nodeSelector: {}
+
+# ─── Redis Commander ─────────────────────────────────────────────────────────
+# Web UI for Redis — supports URL_PREFIX for sub-path routing via Kong
+redisCommander:
+  enabled: true
+  image: ghcr.io/joeferner/redis-commander:latest
+  redisHost: redis-cluster.redis.svc.cluster.local
+  redisPort: "6379"
+  redisPassword: redisPass123
+  # Sub-path — must match Kong route path
+  urlPrefix: /redis-commander
+  port: 8081
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: platform
+      effect: NoSchedule
+  nodeSelector: {}
