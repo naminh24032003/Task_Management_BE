@@ -85,6 +85,12 @@ spec:
           startupProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          lifecycle:
+            preStop:
+              exec:
+                # Give the load balancer time to deregister the pod before SIGTERM reaches the app.
+                # K8s runs preStop BEFORE sending SIGTERM, so in-flight requests can drain cleanly.
+                command: ["/bin/sh", "-c", "sleep {{ .Values.preStopSleepSeconds | default 5 }}"]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.extraVolumeMounts }}
@@ -95,6 +101,7 @@ spec:
       volumes:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds | default 30 }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

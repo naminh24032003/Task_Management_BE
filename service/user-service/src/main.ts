@@ -42,9 +42,27 @@ async function bootstrap() {
     },
   );
 
+  // Enable NestJS shutdown lifecycle hooks
+  app.enableShutdownHooks();
+
   await app.listen();
   console.log(`🚀 User Service gRPC running at ${grpcUrl}`);
   console.log(`📄 Using proto: ${protoPath}`);
+
+  // Graceful shutdown — K8s sends SIGTERM when terminating a pod
+  // Flow: SIGTERM → drain gRPC connections → close metrics server → exit
+  const shutdown = async (signal: string) => {
+    console.log(`${signal} received — starting graceful shutdown`);
+    // 1. Stop the metrics HTTP server
+    metricsServer.close(() => console.log('Metrics server closed'));
+    // 2. Close NestJS microservice (drains gRPC connections)
+    await app.close();
+    console.log('Application closed cleanly');
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 bootstrap();

@@ -110,6 +110,9 @@ async function bootstrap() {
     logger.log(`  - Health:  http://0.0.0.0:${metricsPort}/health`);
   });
 
+  // Enable NestJS shutdown lifecycle hooks (calls beforeApplicationShutdown / onApplicationShutdown)
+  app.enableShutdownHooks();
+
   // Main application
   const port = configService.get<number>('app.port', 4000);
   await app.listen(port, '0.0.0.0');
@@ -123,6 +126,21 @@ async function bootstrap() {
   if (playground) {
     logger.log(`  - Apollo Studio: http://0.0.0.0:${port}/graphql`);
   }
+
+  // Graceful shutdown — K8s sends SIGTERM when terminating a pod
+  // Flow: SIGTERM → stop accepting new requests → finish in-flight → close servers → exit
+  const shutdown = async (signal: string) => {
+    logger.log(`${signal} received — starting graceful shutdown`);
+    // 1. Stop the raw metrics/health HTTP server
+    metricsServer.close(() => logger.log('Metrics server closed'));
+    // 2. Close NestJS app (closes HTTP server + all connections)
+    await app.close();
+    logger.log('Application closed cleanly');
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 bootstrap().catch((error) => {

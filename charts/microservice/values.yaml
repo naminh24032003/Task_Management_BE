@@ -4,3 +4,9 @@ sentry:
   dsn: ""
   environment: "development"
   tracesSampleRate: 1.0
+
+# Graceful shutdown
+# preStop sleep gives the load balancer time to deregister the pod before the
+# app receives SIGTERM. Must be < terminationGracePeriodSeconds.
+preStopSleepSeconds: 5
+terminationGracePeriodSeconds: 30
