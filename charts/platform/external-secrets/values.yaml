@@ -1,0 +1,6 @@
+aws:
+  region: ap-southeast-1
+
+# IRSA role ARN for External Secrets Operator service account
+# Created by Terraform / setup script; referenced in ClusterSecretStore
+irsaRoleArn: "arn:aws:iam::458108203578:role/task-management-eso-role"

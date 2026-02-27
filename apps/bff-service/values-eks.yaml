@@ -2,6 +2,13 @@
 # BFF Service - EKS Environment Values
 # =============================================================================
 microservice:
+  # External Secrets — syncs KMS-encrypted secret from AWS Secrets Manager
+  externalSecret:
+    enabled: true
+    clusterSecretStoreName: aws-secrets-manager
+    secretManagerSecretName: task-management/dev/bff-service
+    refreshInterval: "1h"
+
   nameOverride: bff-service
   replicaCount: 2
 

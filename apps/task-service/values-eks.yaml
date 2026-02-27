@@ -10,6 +10,13 @@ appConfig:
   redisPassword: "redisPass123"
 
 microservice:
+  # External Secrets — syncs KMS-encrypted secret from AWS Secrets Manager
+  externalSecret:
+    enabled: true
+    clusterSecretStoreName: aws-secrets-manager
+    secretManagerSecretName: task-management/dev/task-service
+    refreshInterval: "1h"
+
   nameOverride: task-service
   replicaCount: 2
 

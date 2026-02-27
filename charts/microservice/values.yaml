@@ -56,6 +56,20 @@ networkPolicy:
   enabled: true
 
 # =============================================================================
+# External Secrets (KMS-encrypted via AWS Secrets Manager)
+# When enabled, creates an ExternalSecret that syncs from Secrets Manager into
+# a K8s Secret. The plain envVarsSecret values are ignored when this is enabled.
+# =============================================================================
+externalSecret:
+  enabled: false
+  # Name of the ClusterSecretStore to use (must exist in cluster)
+  clusterSecretStoreName: "aws-secrets-manager"
+  # Full ARN or name of the secret in AWS Secrets Manager
+  secretManagerSecretName: ""
+  # How often ESO should refresh the secret from Secrets Manager
+  refreshInterval: "1h"
+
+# =============================================================================
 # Deployment Rolling Update Strategy
 # maxSurge: 0 prevents extra pods being created during rollout (needed when nodes
 # are near ENI pod limit). maxUnavailable: 1 allows one pod to terminate first.

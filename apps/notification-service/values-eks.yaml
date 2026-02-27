@@ -2,6 +2,13 @@
 # Notification Service - EKS Environment Values
 # =============================================================================
 microservice:
+  # External Secrets — syncs KMS-encrypted secret from AWS Secrets Manager
+  externalSecret:
+    enabled: true
+    clusterSecretStoreName: aws-secrets-manager
+    secretManagerSecretName: task-management/dev/notification-service
+    refreshInterval: "1h"
+
   nameOverride: notification-service
   replicaCount: 2
 
