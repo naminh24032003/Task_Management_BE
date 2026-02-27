@@ -1,0 +1,90 @@
+{{- if .Values.networkPolicy.enabled }}
+# NetworkPolicy — default deny all ingress, allow only:
+#   1. Kong proxy → app port (external traffic via NLB)
+#   2. Prometheus → metrics port (scraping)
+#   3. Same namespace → any port (inter-service gRPC calls)
+#   4. Egress: DNS + dev(MongoDB) + redis + kafka + tracing(OTel)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "microservice.fullname" . }}
+  labels:
+    {{- include "microservice.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "microservice.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Allow traffic from Kong proxy pods (handles all external HTTP/gRPC)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kong
+      ports:
+        {{- range $name, $config := .Values.containerPorts }}
+        - port: {{ $config.port }}
+          protocol: {{ $config.protocol | default "TCP" }}
+        {{- end }}
+
+    # Allow Prometheus scraping from monitoring namespace
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        {{- range $name, $config := .Values.containerPorts }}
+        {{- if contains "metric" $name }}
+        - port: {{ $config.port }}
+          protocol: TCP
+        {{- end }}
+        {{- end }}
+
+    # Allow inter-service calls within the same namespace (gRPC between services)
+    - from:
+        - podSelector: {}  # any pod in same namespace
+
+  egress:
+    # DNS resolution (kube-dns in kube-system)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+
+    # Same namespace: MongoDB + other services
+    - to:
+        - podSelector: {}
+
+    # Redis namespace
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: redis
+
+    # Kafka namespace
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kafka
+
+    # Tracing namespace (OTel collector / Tempo)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tracing
+
+    # Logging namespace (Loki via promtail — services log to stdout only,
+    # but OTel SDK may push logs directly)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: logging
+{{- end }}

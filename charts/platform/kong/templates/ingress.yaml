@@ -7,8 +7,8 @@ metadata:
     konghq.com/strip-path: "false"
     konghq.com/preserve-host: "true"
     konghq.com/protocols: "http,https"
-    # Apply JWT authentication plugin
-    konghq.com/plugins: jwt-auth
+    # Apply JWT authentication + rate limiting to all routes
+    konghq.com/plugins: jwt-auth,rate-limiting-global
 spec:
   ingressClassName: kong
   rules:

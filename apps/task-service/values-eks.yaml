@@ -1,6 +1,14 @@
 # =============================================================================
 # Task Service - EKS Environment Values
 # =============================================================================
+
+# App config file values (rendered into ConfigMap task-service-app-config)
+appConfig:
+  mongodbUri: "mongodb://appuser:appPass123@mongodb.dev.svc.cluster.local:27017/task-service?authSource=task-service"
+  mongodbDatabase: "task-service"
+  redisAddr: "redis-cluster.redis.svc.cluster.local:6379"
+  redisPassword: "redisPass123"
+
 microservice:
   nameOverride: task-service
   replicaCount: 2
@@ -104,7 +112,7 @@ microservice:
   # =========================================================
   autoscaling:
     enabled: true
-    minReplicas: 2
+    minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
 

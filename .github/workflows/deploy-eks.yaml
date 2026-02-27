@@ -293,9 +293,9 @@ jobs:
           HELM_ARGS=""
           HELM_ARGS="${HELM_ARGS} --set microservice.image.repository=${{ env.ECR_REGISTRY }}/task-management/${{ matrix.service }}"
           HELM_ARGS="${HELM_ARGS} --set microservice.image.tag=${IMAGE_TAG}"
+          # Keep 1 replica in dev to conserve cluster capacity.
+          # HPA will auto-scale if CPU > threshold (metrics-server required).
           HELM_ARGS="${HELM_ARGS} --set microservice.replicaCount=1"
-          HELM_ARGS="${HELM_ARGS} --set microservice.autoscaling.enabled=false"
-          HELM_ARGS="${HELM_ARGS} --set microservice.podDisruptionBudget.enabled=false"
           HELM_ARGS="${HELM_ARGS} --set microservice.metrics.enabled=false"
           HELM_ARGS="${HELM_ARGS} --set microservice.topologySpreadConstraints=null"
           

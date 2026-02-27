@@ -13,6 +13,12 @@ kong:
     tracing_instrumentations: all
     tracing_sampling_rate: "1.0"
 
+# Redis password used by the rate-limiting plugin distributed counter
+# Override in values-eks.yaml or via --set
+kongPlugins:
+  rateLimiting:
+    redisPassword: "redisPass123"
+
   # Bật Ingress Controller để dùng Kubernetes Ingress
   ingressController:
     enabled: true

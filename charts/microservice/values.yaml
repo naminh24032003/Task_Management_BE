@@ -5,6 +5,67 @@ sentry:
   environment: "development"
   tracesSampleRate: 1.0
 
+# =============================================================================
+# Security Context
+# Dockerfiles already create non-root users — these enforce it at K8s level.
+# =============================================================================
+
+# Pod-level: applies to all containers in the pod
+podSecurityContext:
+  runAsNonRoot: true
+  # fsGroup: 1001  # uncomment if volume mounts need group ownership
+  seccompProfile:
+    type: RuntimeDefault  # use the node's default seccomp profile (syscall filter)
+
+# Container-level: apply to each individual container
+securityContext:
+  allowPrivilegeEscalation: false  # prevent sudo / setuid exploits
+  runAsNonRoot: true               # K8s enforces container user != root
+  runAsUser: 1001                  # numeric UID — required when Dockerfile USER is a named user (K8s can't resolve names at admission)
+  capabilities:
+    drop:
+      - ALL                        # drop all Linux capabilities
+  # readOnlyRootFilesystem: true   # enable per-service if app writes no temp files
+
+# =============================================================================
+# Horizontal Pod Autoscaler
+# Requires metrics-server to be deployed in the cluster.
+# =============================================================================
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+  # targetMemoryUtilizationPercentage: 80
+
+# =============================================================================
+# Pod Disruption Budget
+# Prevents all pods from being evicted simultaneously during node drain/upgrade.
+# =============================================================================
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  # maxUnavailable: 1
+
+# =============================================================================
+# Network Policy
+# Default: deny all ingress except Kong proxy, Prometheus, and same-namespace.
+# Egress: allow DNS + dev + redis + kafka + tracing namespaces.
+# =============================================================================
+networkPolicy:
+  enabled: true
+
+# =============================================================================
+# Deployment Rolling Update Strategy
+# maxSurge: 0 prevents extra pods being created during rollout (needed when nodes
+# are near ENI pod limit). maxUnavailable: 1 allows one pod to terminate first.
+# =============================================================================
+deploymentStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 0
+    maxUnavailable: 1
+
 # Graceful shutdown
 # preStop sleep gives the load balancer time to deregister the pod before the
 # app receives SIGTERM. Must be < terminationGracePeriodSeconds.

@@ -1,0 +1,36 @@
+# =============================================================================
+# Kong Rate Limiting Plugin (Global)
+# Applied to all routes served by Kong via the ingress annotation:
+#   konghq.com/plugins: jwt-auth,rate-limiting-global
+#
+# Strategy:
+#   - 100 req/min per authenticated consumer (identified by JWT sub claim)
+#   - 30 req/min per IP for unauthenticated or unknown consumers
+#   - Uses Redis cluster for distributed counter (shared across Kong replicas)
+#   - Returns HTTP 429 with Retry-After header when limit exceeded
+# =============================================================================
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongClusterPlugin
+metadata:
+  name: rate-limiting-global
+  annotations:
+    kubernetes.io/ingress.class: kong
+  labels:
+    global: "false"   # not auto-applied; must be added to ingress annotation
+plugin: rate-limiting
+config:
+  # Limits
+  minute: 100                    # requests per minute per consumer/IP
+  policy: redis                  # use Redis for distributed counter (works across Kong replicas)
+  redis_host: redis-cluster.redis.svc.cluster.local
+  redis_port: 6379
+  redis_password: {{ .Values.kongPlugins.rateLimiting.redisPassword | quote }}
+  redis_timeout: 2000            # ms — fail open if Redis unreachable
+  redis_database: 1              # use db 1 (db 0 used by app)
+  # Identification strategy: prefer consumer (JWT sub), fall back to IP
+  limit_by: consumer
+  fault_tolerant: true           # if Redis down, allow requests through (fail open)
+  hide_client_headers: false     # return X-RateLimit-Remaining-Minute header
+  error_code: 429
+  error_message: "Rate limit exceeded. Please retry after the indicated time."
