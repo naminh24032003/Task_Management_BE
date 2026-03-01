@@ -1,0 +1,38 @@
+---
+# Self-signed ClusterIssuer — used as root CA for internal TLS
+# For production with public domain: replace with Let's Encrypt ACME issuer
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+---
+# Self-signed CA Certificate (root CA for internal services)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: task-management-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: task-management-ca
+  secretName: task-management-ca-secret
+  duration: 87600h  # 10 years
+  renewBefore: 8760h  # renew 1 year before expiry
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# CA-backed ClusterIssuer — services use this to get certs signed by our CA
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: ca-issuer
+spec:
+  ca:
+    secretName: task-management-ca-secret

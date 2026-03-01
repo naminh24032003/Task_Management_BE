@@ -1,0 +1,7 @@
+apiVersion: v2
+name: cert-manager-config
+description: cert-manager ClusterIssuers config for task-management EKS cluster
+type: application
+version: 0.1.0
+# Note: cert-manager itself is installed separately via:
+# helm upgrade --install cert-manager jetstack/cert-manager (see values.yaml comments)

@@ -1,0 +1,42 @@
+## cert-manager Installation
+##
+## helm upgrade --install cert-manager jetstack/cert-manager \
+##   --namespace cert-manager --create-namespace \
+##   --version v1.14.7 \
+##   --set crds.enabled=true \
+##   --set tolerations[0].key=dedicated \
+##   --set tolerations[0].value=platform \
+##   --set tolerations[0].operator=Equal \
+##   --set tolerations[0].effect=NoSchedule \
+##   --set cainjector.tolerations[0].key=dedicated \
+##   --set cainjector.tolerations[0].value=platform \
+##   --set cainjector.tolerations[0].operator=Equal \
+##   --set cainjector.tolerations[0].effect=NoSchedule \
+##   --set webhook.tolerations[0].key=dedicated \
+##   --set webhook.tolerations[0].value=platform \
+##   --set webhook.tolerations[0].operator=Equal \
+##   --set webhook.tolerations[0].effect=NoSchedule \
+##   --set startupapicheck.tolerations[0].key=dedicated \
+##   --set startupapicheck.tolerations[0].value=platform \
+##   --set startupapicheck.tolerations[0].operator=Equal \
+##   --set startupapicheck.tolerations[0].effect=NoSchedule
+
+crds:
+  enabled: true
+
+# All components run on the platform node (m7i-flex.large)
+# to avoid ENI pod limit on t3.small worker nodes
+tolerations: &platformToleration
+  - key: dedicated
+    value: platform
+    operator: Equal
+    effect: NoSchedule
+
+cainjector:
+  tolerations: *platformToleration
+
+webhook:
+  tolerations: *platformToleration
+
+startupapicheck:
+  tolerations: *platformToleration
