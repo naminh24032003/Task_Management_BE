@@ -266,24 +266,27 @@ export class UserGrpcClient implements OnModuleInit {
   }
 
   async refreshToken(refreshToken: string) {
+    const metadata = this.createMetadata();
     return this.executeGrpcCall(
-      this.authService.RefreshToken({ refresh_token: refreshToken }),
+      this.authService.RefreshToken({ refresh_token: refreshToken }, metadata),
       'refreshToken',
       this.authServiceCB,
     );
   }
 
   async validateToken(accessToken: string) {
+    const metadata = this.createMetadata();
     return this.executeGrpcCall(
-      this.authService.ValidateToken({ access_token: accessToken }),
+      this.authService.ValidateToken({ access_token: accessToken }, metadata),
       'validateToken',
       this.authServiceCB,
     );
   }
 
   async logout(refreshToken: string) {
+    const metadata = this.createMetadata();
     return this.executeGrpcCall(
-      this.authService.Logout({ refresh_token: refreshToken }),
+      this.authService.Logout({ refresh_token: refreshToken }, metadata),
       'logout',
       this.authServiceCB,
     );

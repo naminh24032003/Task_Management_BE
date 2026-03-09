@@ -29,8 +29,15 @@ export class RedisSubscriberService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisSubscriberService.name);
   private subscriber: Cluster | null = null;
   private readonly notificationSubject = new Subject<NotificationEvent>();
+  /** Tracks whether the Redis subscriber is connected and healthy */
+  private _isHealthy = false;
 
   public readonly notifications$ = this.notificationSubject.asObservable();
+
+  /** Expose Redis subscriber health for K8s readiness checks */
+  get isHealthy(): boolean {
+    return this._isHealthy;
+  }
 
   constructor(private configService: ConfigService) {}
 
@@ -57,11 +64,22 @@ export class RedisSubscriberService implements OnModuleInit, OnModuleDestroy {
       });
 
       this.subscriber.on('connect', () => {
+        this._isHealthy = true;
         this.logger.log('Redis Cluster subscriber connected');
       });
 
       this.subscriber.on('error', (error: Error) => {
+        this._isHealthy = false;
         this.logger.warn(`Redis Cluster subscriber error: ${error.message}`);
+      });
+
+      this.subscriber.on('close', () => {
+        this._isHealthy = false;
+        this.logger.warn('Redis Cluster subscriber connection closed');
+      });
+
+      this.subscriber.on('reconnecting', () => {
+        this.logger.log('Redis Cluster subscriber reconnecting…');
       });
 
       // Subscribe to the notification real-time channel
@@ -76,6 +94,7 @@ export class RedisSubscriberService implements OnModuleInit, OnModuleDestroy {
         `Subscribed to Redis Pub/Sub channel: ${REALTIME_CHANNEL}`,
       );
     } catch (error) {
+      this._isHealthy = false;
       this.logger.error(
         `Failed to initialize Redis subscriber: ${error}. Real-time notifications disabled.`,
       );

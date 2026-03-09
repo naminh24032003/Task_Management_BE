@@ -6,11 +6,30 @@ import * as express from 'express';
 import * as compression from 'compression';
 import { collectDefaultMetrics, Registry, Counter, Histogram } from 'prom-client';
 import { AppModule } from './app.module';
+import { RedisSubscriberService } from './infrastructure/redis/redis-subscriber.service';
 
 // ── Body size constants ───────────────────────────────────────────────────────
 // GraphQL queries are JSON — 256 KB is generous for any legitimate operation.
 // Larger payloads are almost certainly an attack or a client bug.
 const BODY_LIMIT = '256kb';
+
+// ── Path normalizer for Prometheus labels ─────────────────────────────────────
+// Replace dynamic segments (UUIDs, Mongo ObjectIDs, numeric IDs) with :id
+// to keep Prometheus time-series cardinality bounded.
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+const OBJECTID_RE = /[0-9a-f]{24}/gi;
+const NUMERIC_ID_RE = /\/\d+(?=\/|$)/g;
+
+function normalizePath(raw: string): string {
+  // Known static paths — fast short-circuit
+  if (raw === '/graphql' || raw === '/health' || raw === '/healthz' || raw === '/ready') {
+    return raw;
+  }
+  return raw
+    .replace(UUID_RE, ':id')
+    .replace(OBJECTID_RE, ':id')
+    .replace(NUMERIC_ID_RE, '/:id');
+}
 
 // ── Process-level error guards ─────────────────────────────────────────────────
 // Catch any Promise rejection not attached to a .catch() handler.
@@ -73,6 +92,9 @@ async function bootstrap() {
   app.use(compression({
     filter: (req, res) => {
       if (req.headers['x-no-compression']) return false;
+      // Don't compress multipart (file uploads) — already binary
+      const contentType = req.headers['content-type'] || '';
+      if (contentType.includes('multipart/')) return false;
       return compression.filter(req, res);
     },
     threshold: 1024,   // only compress responses ≥ 1 KB
@@ -146,15 +168,20 @@ async function bootstrap() {
 
     res.on('finish', () => {
       const duration = (Date.now() - start) / 1000;
-      const path = req.path || req.url;
       const method = req.method;
       const status = res.statusCode;
+
+      // ── Normalize path for Prometheus labels ──────────────────────────
+      // Raw req.path may contain UUIDs, IDs, etc. which creates unbounded
+      // cardinality in Prometheus → OOM. Map to a fixed set of known routes.
+      const rawPath = req.path || req.url;
+      const path = normalizePath(rawPath);
 
       httpRequestsTotal.inc({ method, path, status });
       httpRequestDuration.observe({ method, path, status }, duration);
 
       // Track GraphQL operations
-      if (path === '/graphql' && req.body?.operationName) {
+      if (rawPath === '/graphql' && req.body?.operationName) {
         graphqlOperationsTotal.inc({
           operation_type: req.body.query?.trim().startsWith('mutation') ? 'mutation' : 'query',
           operation_name: req.body.operationName,
@@ -184,8 +211,18 @@ async function bootstrap() {
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
     } else if (req.url === '/ready') {
+      // Readiness check — returns 503 if Redis is down so K8s stops routing traffic
+      const redisSubscriber = app.get(RedisSubscriberService);
+      const redisUp = redisSubscriber.isHealthy;
+      const status = redisUp ? 'ok' : 'degraded';
+      res.statusCode = redisUp ? 200 : 503;
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ status: 'ok' }));
+      res.end(JSON.stringify({
+        status,
+        checks: {
+          redis: redisUp ? 'connected' : 'disconnected',
+        },
+      }));
     } else {
       res.statusCode = 404;
       res.end('Not Found');

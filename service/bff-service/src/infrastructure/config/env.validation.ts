@@ -181,6 +181,14 @@ export function validateEnv(env: EnvRecord): ValidatedEnv {
   const REDIS_HOST = env.REDIS_HOST ?? 'localhost';
   const REDIS_PORT = optionalPort(env, 'REDIS_PORT', 6379, errors);
 
+  // In production, Redis host must be explicitly set (not relying on default)
+  if (NODE_ENV === 'production' && (!env.REDIS_HOST || env.REDIS_HOST === 'localhost')) {
+    errors.push({
+      variable: 'REDIS_HOST',
+      message: 'must be set to a real Redis host in production (not "localhost")',
+    });
+  }
+
   const GRAPHQL_MAX_DEPTH      = optionalPositiveInt(env, 'GRAPHQL_MAX_DEPTH',      10,   errors);
   const GRAPHQL_MAX_COMPLEXITY = optionalPositiveInt(env, 'GRAPHQL_MAX_COMPLEXITY',  200,  errors);
   const GRAPHQL_MAX_TOKENS     = optionalPositiveInt(env, 'GRAPHQL_MAX_TOKENS',      1000, errors);

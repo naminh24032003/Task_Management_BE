@@ -17,6 +17,12 @@ import {
   NotificationEvent,
 } from '../redis/redis-subscriber.service';
 
+// ── Limits ──────────────────────────────────────────────────────────────────
+/** Max concurrent WebSocket connections per userId (prevents tab-storm OOM) */
+const MAX_SOCKETS_PER_USER = 10;
+/** Idle timeout — disconnect sockets with no activity after this period (ms) */
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
 @WebSocketGateway({
   cors: {
     origin: (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
@@ -25,7 +31,17 @@ import {
         callback(null, true);
         return;
       }
-      callback(null, true);
+      // ── CORS whitelist ──────────────────────────────────────────────────
+      // Read allowed origins from env CORS_ORIGINS (comma-separated).
+      // Falls back to http://localhost:3000 for local dev.
+      const allowed = (process.env.CORS_ORIGINS || 'http://localhost:3000')
+        .split(',')
+        .map((o) => o.trim());
+      if (allowed.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`WebSocket CORS rejected origin: ${origin}`), false);
+      }
     },
     credentials: true,
   },
@@ -43,6 +59,8 @@ export class NotificationGateway
   private readonly userSockets = new Map<string, Set<string>>();
   // Map of socket ID → userId
   private readonly socketUsers = new Map<string, string>();
+  // Map of socket ID → idle timer (cleared on any activity)
+  private readonly idleTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private subscription: Subscription;
 
   constructor(
@@ -71,15 +89,31 @@ export class NotificationGateway
         return;
       }
 
+      // ── Connection cap per user ──────────────────────────────────────────
+      const existing = this.userSockets.get(userId);
+      if (existing && existing.size >= MAX_SOCKETS_PER_USER) {
+        this.logger.warn(
+          `User ${userId} exceeded max ${MAX_SOCKETS_PER_USER} WS connections — rejecting ${client.id}`,
+        );
+        client.emit('error', { message: 'Too many connections' });
+        client.disconnect(true);
+        return;
+      }
+
       // Register the user-socket mapping
       this.socketUsers.set(client.id, userId);
-      if (!this.userSockets.has(userId)) {
+      if (!existing) {
         this.userSockets.set(userId, new Set());
       }
       this.userSockets.get(userId)!.add(client.id);
 
       // Join user-specific room for targeted broadcasts
       client.join(`user:${userId}`);
+
+      // ── Idle timeout ─────────────────────────────────────────────────────
+      this.resetIdleTimer(client);
+      // Reset idle timer on any incoming message from client
+      client.onAny(() => this.resetIdleTimer(client));
 
       this.logger.log(
         `Client connected: ${client.id} (user: ${userId}), ` +
@@ -97,6 +131,13 @@ export class NotificationGateway
   }
 
   handleDisconnect(client: Socket) {
+    // Clear idle timer
+    const timer = this.idleTimers.get(client.id);
+    if (timer) {
+      clearTimeout(timer);
+      this.idleTimers.delete(client.id);
+    }
+
     const userId = this.socketUsers.get(client.id);
     if (userId) {
       this.socketUsers.delete(client.id);
@@ -213,9 +254,30 @@ export class NotificationGateway
     return this.socketUsers.size;
   }
 
+  // ── Idle timer management ────────────────────────────────────────────────
+  private resetIdleTimer(client: Socket): void {
+    const existing = this.idleTimers.get(client.id);
+    if (existing) clearTimeout(existing);
+
+    const timer = setTimeout(() => {
+      this.logger.log(`Idle timeout — disconnecting socket ${client.id}`);
+      client.emit('error', { message: 'Connection idle timeout' });
+      client.disconnect(true);
+    }, IDLE_TIMEOUT_MS);
+
+    // Don't let the timer hold the process alive during shutdown
+    timer.unref();
+    this.idleTimers.set(client.id, timer);
+  }
+
   onModuleDestroy() {
     if (this.subscription) {
       this.subscription.unsubscribe();
     }
+    // Clear all idle timers
+    for (const timer of this.idleTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.idleTimers.clear();
   }
 }
