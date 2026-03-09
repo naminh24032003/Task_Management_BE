@@ -11,6 +11,7 @@ import (
 	kratosHttp "github.com/go-kratos/kratos/v2/transport/http"
 	"github.com/google/wire"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/task-management/go-shared/middleware"
 
 	"notification-service/internal/app/consumer"
 )
@@ -61,6 +62,7 @@ func NewHTTPServer(
 		kratosHttp.Timeout(timeout),
 		kratosHttp.Middleware(
 			recovery.Recovery(),
+			middleware.SecurityHeadersMiddleware(), // Enterprise cache-control + security headers
 		),
 	}
 

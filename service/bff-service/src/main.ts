@@ -2,8 +2,34 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as http from 'http';
+import * as express from 'express';
+import * as compression from 'compression';
 import { collectDefaultMetrics, Registry, Counter, Histogram } from 'prom-client';
 import { AppModule } from './app.module';
+
+// ── Body size constants ───────────────────────────────────────────────────────
+// GraphQL queries are JSON — 256 KB is generous for any legitimate operation.
+// Larger payloads are almost certainly an attack or a client bug.
+const BODY_LIMIT = '256kb';
+
+// ── Process-level error guards ─────────────────────────────────────────────────
+// Catch any Promise rejection not attached to a .catch() handler.
+// Without this, Node ≥ 15 exits with code 1; ≤ 14 silently swallows the error.
+process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+  const logger = new Logger('UnhandledRejection');
+  logger.error(`Unhandled promise rejection at: ${String(promise)}`, String(reason));
+  // Do NOT process.exit() here — let K8s liveness probe detect degradation.
+  // The app stays up so in-flight requests finish; the pod will be restarted
+  // if the rejection indicates a broken state (e.g. DB connection lost).
+});
+
+// Catch synchronous throw escaping all try/catch.
+process.on('uncaughtException', (error: Error) => {
+  const logger = new Logger('UncaughtException');
+  logger.error('Uncaught exception — process will exit after flush', error.stack);
+  // Give existing transports (Winston/pino) 500 ms to flush before hard exit.
+  setTimeout(() => process.exit(1), 500).unref();
+});
 
 // Create Prometheus registry
 const register = new Registry();
@@ -40,6 +66,28 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
+  // ── Response compression ──────────────────────────────────────────────────
+  // Compresses responses ≥ 1KB with gzip (brotli available via Accept-Encoding).
+  // Must be registered BEFORE body parsers so the response stream is wrapped early.
+  // Exclude already-compressed types: images, video, gzip, br.
+  app.use(compression({
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    },
+    threshold: 1024,   // only compress responses ≥ 1 KB
+    level: 6,          // zlib compression level (1=fast, 9=small); 6 is the sweet spot
+  }));
+
+  // ── Explicit body-size limits ──────────────────────────────────────────────
+  // NestJS/Express does NOT set a body limit by default for urlencoded bodies,
+  // and its default for json() is 100 KB — too small for some payloads but
+  // also implicitly unbounded for custom parsers. Hardening both.
+  app.use(express.json({ limit: BODY_LIMIT }));
+  app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
+  // Raw buffer body (e.g. webhook signature verification)
+  app.use(express.raw({ type: 'application/octet-stream', limit: BODY_LIMIT }));
+
   // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
@@ -59,6 +107,37 @@ async function bootstrap() {
     credentials: true,
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+  });
+
+  // ── Enterprise Security & Cache-Control Headers ───────────────────────────
+  // Applied at Express middleware level so ALL routes (including GraphQL POST)
+  // receive the baseline headers before NestJS interceptors run.
+  app.use((_req: any, res: any, next: any) => {
+    // Cache directives — never store API / GraphQL responses
+    res.setHeader('Cache-Control', 'no-store');            // No storage anywhere
+    res.setHeader('Pragma', 'no-cache');                   // HTTP/1.0 backward compat
+    res.setHeader('Surrogate-Control', 'no-store');        // CDN: Fastly/Varnish/CloudFront
+    // Security headers
+    res.setHeader('X-Content-Type-Options', 'nosniff');    // Prevent MIME sniffing
+    res.setHeader('X-Frame-Options', 'DENY');              // Block clickjacking
+    res.setHeader('X-XSS-Protection', '0');                // Disable legacy XSS filter
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+    // ── Content-Security-Policy ───────────────────────────────────────────────
+    // This is a pure JSON API — it should never load scripts, images or frames.
+    // The strictest possible CSP for API-only responses:
+    //   default-src 'none'   → block all content loading (no HTML rendered)
+    //   frame-ancestors 'none' → block embedding in <iframe> / <frame>
+    //   base-uri 'none'      → block <base> tag injection
+    //   form-action 'none'   → block <form> submission re-targeting
+    res.setHeader('Content-Security-Policy',
+      "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+    );
+    // HSTS — only when behind HTTPS termination (Kong / Nginx / ALB)
+    if (_req.headers?.['x-forwarded-proto'] === 'https' || (_req as any).secure) {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    }
+    next();
   });
 
   // Request logging and metrics middleware
@@ -89,6 +168,15 @@ async function bootstrap() {
   // Metrics endpoint on separate port
   const metricsPort = configService.get<number>('app.metricsPort', 9092);
   const metricsServer = http.createServer(async (req, res) => {
+    // Security + cache-control on every response from the internal server
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Surrogate-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '0');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
     if (req.url === '/metrics') {
       res.setHeader('Content-Type', register.contentType);
       res.end(await register.metrics());

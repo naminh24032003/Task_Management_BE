@@ -3,6 +3,7 @@ import { ClientGrpc } from '@nestjs/microservices';
 import { Observable, lastValueFrom, timeout, catchError } from 'rxjs';
 import { Metadata } from '@grpc/grpc-js';
 import { CircuitBreaker, resilientCall, RetryOptions } from '../../resilience/resilience';
+import { RequestContextService } from '../../request-context/request-context.service';
 
 // gRPC service interfaces (based on task.proto)
 interface TaskServiceGrpc {
@@ -42,7 +43,10 @@ export class TaskGrpcClient implements OnModuleInit {
     jitterFactor: 0.3,
   };
 
-  constructor(@Inject('TASK_SERVICE') private client: ClientGrpc) { }
+  constructor(
+    @Inject('TASK_SERVICE') private client: ClientGrpc,
+    private readonly contextService: RequestContextService,
+  ) { }
 
   onModuleInit() {
     this.taskService = this.client.getService<TaskServiceGrpc>('TaskService');
@@ -51,6 +55,13 @@ export class TaskGrpcClient implements OnModuleInit {
 
   private createMetadata(context?: { userId?: string; tenantId?: string; roles?: string[]; scopes?: string[] }): Metadata {
     const metadata = new Metadata();
+
+    // Forward x-request-id for distributed tracing across service boundaries
+    const requestId = this.contextService.getRequestId();
+    if (requestId) {
+      metadata.set('x-request-id', requestId);
+    }
+
     if (context?.userId) {
       metadata.set('x-user-id', context.userId);
     }

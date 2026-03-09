@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { CacheControlInterceptor, HttpExceptionFilter } from '@task-management/shared';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { GraphQLProtectionPlugin } from './infrastructure/graphql/graphql-protection.plugin';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
@@ -22,6 +25,8 @@ import {
   authConfig,
 } from './infrastructure/config';
 import { TracingModule } from './infrastructure/tracing/tracing.module';
+import { RequestContextModule } from './infrastructure/request-context/request-context.module';
+import { validateEnv } from './infrastructure/config/env.validation';
 
 @Module({
   imports: [
@@ -30,6 +35,7 @@ import { TracingModule } from './infrastructure/tracing/tracing.module';
       isGlobal: true,
       load: [appConfig, graphqlConfig, grpcConfig, redisConfig, authConfig],
       envFilePath: ['.env.local', '.env'],
+      validate: validateEnv,
     }),
     TracingModule,
 
@@ -77,6 +83,23 @@ import { TracingModule } from './infrastructure/tracing/tracing.module';
     HealthModule,
     RateLimitingModule,
     WebSocketModule,
+    RequestContextModule,
+  ],
+  providers: [
+    // CacheControlInterceptor is registered via APP_INTERCEPTOR so that
+    // Reflector DI is available for reading @CachePolicy() decorators.
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: CacheControlInterceptor,
+    },
+    // GraphQL protection: depth + complexity + token limits.
+    // @Plugin() decorator makes Apollo auto-discover it from the DI container.
+    GraphQLProtectionPlugin,
+    // Global HTTP exception filter — consistent JSON error responses, no stack trace leak.
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
+    },
   ],
 })
 export class AppModule { }

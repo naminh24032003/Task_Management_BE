@@ -5,6 +5,7 @@ import (
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
 	"github.com/go-kratos/kratos/v2/transport/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/task-management/go-shared/middleware"
 )
 
 // HTTPServerConfig holds HTTP server configuration
@@ -20,6 +21,7 @@ func NewHTTPServer(
 	var opts = []http.ServerOption{
 		http.Middleware(
 			recovery.Recovery(),
+			middleware.SecurityHeadersMiddleware(), // Enterprise cache-control + security headers
 		),
 	}
 
@@ -29,7 +31,8 @@ func NewHTTPServer(
 	srv := http.NewServer(opts...)
 
 	// Register Prometheus metrics endpoint
-	srv.Handle("/metrics", promhttp.Handler())
+	// Wrap with WithSecurityHeaders because srv.Handle() bypasses Kratos middleware.
+	srv.Handle("/metrics", middleware.WithSecurityHeaders(promhttp.Handler()))
 
 	// Register routes here
 	// Example: taskv1.RegisterTaskServiceHTTPServer(srv, taskService)

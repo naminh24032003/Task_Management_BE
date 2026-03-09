@@ -1,3 +1,4 @@
+export * from './cache-control.interceptor';
 export * from './logging.interceptor';
 export * from './tracing.interceptor';
 export * from './timeout.interceptor';

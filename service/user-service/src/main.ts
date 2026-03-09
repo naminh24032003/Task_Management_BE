@@ -13,6 +13,15 @@ async function bootstrap() {
 
   // Start simple HTTP server for metrics
   const metricsServer = http.createServer(async (req, res) => {
+    // Security + cache-control on every response
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Surrogate-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '0');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
     if (req.url === '/metrics') {
       res.setHeader('Content-Type', register.contentType);
       res.end(await register.metrics());

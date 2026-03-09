@@ -3,6 +3,7 @@ import { ClientGrpc } from '@nestjs/microservices';
 import { Observable, lastValueFrom, timeout, catchError } from 'rxjs';
 import { Metadata } from '@grpc/grpc-js';
 import { CircuitBreaker, resilientCall, RetryOptions } from '../../resilience/resilience';
+import { RequestContextService } from '../../request-context/request-context.service';
 
 // gRPC service interfaces
 interface UserServiceGrpc {
@@ -64,7 +65,10 @@ export class UserGrpcClient implements OnModuleInit {
     jitterFactor: 0.3,
   };
 
-  constructor(@Inject('USER_SERVICE') private client: ClientGrpc) { }
+  constructor(
+    @Inject('USER_SERVICE') private client: ClientGrpc,
+    private readonly contextService: RequestContextService,
+  ) { }
 
   onModuleInit() {
     this.userService = this.client.getService<UserServiceGrpc>('UserService');
@@ -74,6 +78,12 @@ export class UserGrpcClient implements OnModuleInit {
 
   private createMetadata(context?: { userId?: string; tenantId?: string; roles?: string[] }): Metadata {
     const metadata = new Metadata();
+
+    // Forward x-request-id for distributed tracing across service boundaries
+    const requestId = this.contextService.getRequestId();
+    if (requestId) {
+      metadata.set('x-request-id', requestId);
+    }
 
     // Add trace ID for distributed tracing (OpenTelemetry handles this automatically)
     // We can still add metadata if needed, but standard tracing uses Headers
